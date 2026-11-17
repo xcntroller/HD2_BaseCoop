@@ -7,10 +7,10 @@
 - Canonical branch: `feature/coop-001-build-baseline`
 - Base commit: `7e033adde95881baad06c6877cbbd6eef8197d96`
 - Dependencies: none
-- Last checkpoint: claim commit (this commit; resolve with `git log -1 -- docs/tasks/COOP-001.md`)
+- Last checkpoint: `ca28d52c` (build isolation and portable MSVC selection); next handoff commit contains this update
 - Checkpoint location: `origin/feature/coop-001-build-baseline`; `.worktrees/COOP-001`
 - Review/integration: not ready; baseline acceptance remains required
-- Pull request: none
+- Pull request: https://github.com/xcntroller/HD2_BaseCoop/pull/2 (draft)
 
 ## Branch authority and completion PR
 
@@ -50,9 +50,9 @@ temporary directories, so verify cache separation across worktrees.
 ## Handoff
 
 - Completed: read design/workflow/index; fetched origin and checked branches, worktrees and PRs. No existing task branch or handoff. Kickoff coordinator accepted the claim on `coord/coop-work-queue`. Created canonical branch/worktree from integrated main.
-- Remaining: finish engine/game links, solo and real host/guest runtime baseline, documentation and review.
-- Next action: finish MSVC/Wine build with the worktree-local wrapper, then launch a copied game installation.
-- Blockers: initial Fedora/MSVC gap addressed by local portable MSVC 19.44.35230 + Windows SDK 10.0.26100.0 + Windows Python 3.13.9 in isolated Wine 11.21 prefix. Engine initially failed link because absolute dlltool output names produced overlong import symbols; regenerating with short relative names. Runtime baseline remains untested.
+- Remaining: finish real host/guest in-mission actions, documentation and review; build and solo training run passed.
+- Next action: equip/accept both native co-op participants on Sicily2, spawn and verify replicated movement/actions, then finish baseline guide and review.
+- Blockers: none currently. MSVC/Wine and game data available. Native Wine DirectPlay server is insufficient; copied the already installed native DirectPlay components into private test prefixes and selected IPv4. `port` changes domain to internet, so tested LAN command orders `port 11001 domain local`; otherwise key validation fails. Guest has now connected to native host player setup.
 - Decisions: preserve the port's required runnable math/toolchain behavior. Scope expanded in coordinator ledger 6c0421e6 to permit `HD2_VCVARS32` override in engine build script, plus `_re/tools/build_isolated.py` and focused process tests; no engine/gameplay source changes.
 - Local state: portable tooling, download manifests/cache, compiler logs and Wine prefix are ignored under `.worktrees/COOP-001/build/`; installed Steam game remains untouched. Build-tool changes are in the next checkpoint.
-- Validation: `python _re/tools/test_build_isolated.py -v` passes 3 process-level concurrency/failure/lock tests. `rw_data.dll` built successfully x86. Engine sources compiled; first link failed, being corrected. GCC fallback fails on missing `gnu/stubs-32.h`; native Linux runnable build cannot execute `.bat`. No runtime claims yet.
+- Validation: Linux and clean embedded Windows Python/Wine pass 3 process-level isolation/lock/failure tests. Two real MSVC c_str.cpp checks ran concurrently in distinct worktrees and passed independently. All 78 LS3DF and 272 game translation units compiled; matching x86 DLL/executable links passed (game `/arch:IA32`, zero game diagnostics). Native x64 dlltool needs `-m i386 -f --32` to make every import archive member i386. Solo original Campaign/Tutorial: automatic squad/active soldier, loading/scripted scene, W movement, I inventory and normal return/exit passed. Native co-op host and guest now connected on Sicily2; mission actions pending. Detailed exact commands/evidence are being consolidated in docs/build_baseline.md.

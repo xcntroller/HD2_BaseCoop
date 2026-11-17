@@ -62,6 +62,9 @@ def main():
     parser.add_argument("tool", choices=TOOLS)
     parser.add_argument("arguments", nargs=argparse.REMAINDER)
     args = parser.parse_args()
+    if os.name != "nt" and args.tool != "check":
+        parser.error("MSVC builds need Windows Python; on Linux use Windows Python under Wine "
+                     "(see docs/build_baseline.md). Native 'check' is syntax-only.")
     arguments = args.arguments[1:] if args.arguments[:1] == ["--"] else args.arguments
     return run(args.tool, arguments)
 

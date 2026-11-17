@@ -39,9 +39,10 @@ class IsolatedBuildTests(unittest.TestCase):
     def start(self, root, *args):
         # Import the real wrapper while giving it an independent fake worktree.
         command = [sys.executable, "-c",
-                   "import sys; from pathlib import Path; import build_isolated; "
+                   "import sys; sys.path.insert(0, sys.argv.pop(1)); "
+                   "from pathlib import Path; import build_isolated; "
                    "sys.exit(build_isolated.run('ls3df', sys.argv[2:], Path(sys.argv[1])))",
-                   str(root), *args]
+                   str(Path(build_isolated.__file__).parent), str(root), *args]
         child = subprocess.Popen(command, cwd=Path(build_isolated.__file__).parent,
                                  stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
         self.addCleanup(self.stop, child)
