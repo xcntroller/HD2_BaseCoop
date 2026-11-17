@@ -2,15 +2,15 @@
 
 ## Coordination
 
-- Status: ready
-- Owner/session: unassigned
+- Status: review
+- Owner/session: Codex COOP-011 / thread `01a1ebe7-2361-7503-8dcb-6e0739646604`, 2026-11-18
 - Canonical branch: `feature/coop-011-shared-declarations`
-- Base commit: not started
+- Base commit: `9aec1d7e1f777de186801cb1b2c320ff851746c6`
 - Dependencies: COOP-002 (document-level contracts merged as `9f59ff4790f02ef73e3e02c850f79cfa9ba95130`)
-- Last checkpoint: none
-- Checkpoint location: none
-- Review/integration: none
-- Pull request: none
+- Last checkpoint: implementation and validation `bfc60e41`; PR metadata/handoff is this subsequent commit
+- Checkpoint location: `.worktrees/COOP-011`; `origin/feature/coop-011-shared-declarations`; claim acknowledged at coordinator commit `72ced131`
+- Review/integration: consumer/API reviews passed; target and native conformance passed; pending final integration review
+- Pull request: https://github.com/xcntroller/HD2_BaseCoop/pull/6
 
 ## Branch authority and completion PR
 
@@ -68,25 +68,93 @@ require notifying consumers; do not copy competing definitions into implementati
 
 ## Validation evidence
 
-None yet; this is a planned follow-up, not implementation delivered by COOP-002.
-The target compiler requirement remains unmet until a worker runs it. Toolchain guidance
-and availability evidence can be reused from COOP-001 without depending on its runtime
-baseline result or treating unavailable tools as a passing compile.
+Declaration-only component; **Source-only**. Implemented shared values/interfaces and
+standalone fixtures; not wired into game dispatch, controllers, menus or legacy structures.
+No game data, original assets, installed binaries, compiler files or build outputs committed.
+
+The [harness README](../../_re/harness/campaign_contracts/README.md) gives prerequisites,
+exact reproduction commands, flags, API semantics and consumer coverage. All outputs are
+private invocation directories under this worktree's ignored `build/campaign_contracts/`;
+Wine uses this worktree's own `build/wine-prefix`, separate from COOP-001 runtime tests.
+
+Checks actually run on 2026-11-18 (final header/fixture content in this implementation commit):
+
+- Intended target: MSVC **19.44.35230 x86**, toolset `14.44.35207`, Windows SDK
+  `10.0.26100.0`, Windows Python `3.13.9`, Wine `11.21 (Staging)`. Exact entry command
+  from `.worktrees/COOP-011`:
+
+  ```bash
+  env -u WAYLAND_DISPLAY DISPLAY=:99 WINEPREFIX="$PWD/build/wine-prefix" WINEDEBUG=-all wine64 cmd /c 'Z:\home\control\Documents\Projects\HD2SS\HD2_BaseCoop\.worktrees\COOP-001\build\tooling\run-python.bat' 'Z:\home\control\Documents\Projects\HD2SS\HD2_BaseCoop\.worktrees\COOP-011\_re\harness\campaign_contracts\run.py' --compiler msvc
+  ```
+
+  Exit **0**. `header_only.cpp` and `conformance.cpp` compile with `/std:c++17 /EHsc
+  /W4 /WX /permissive- /Zc:__cplusplus /arch:IA32 /MT /O2`; `_M_IX86` and 32-bit
+  pointer assertions pass. Fixture links `/MACHINE:X86 /SUBSYSTEM:CONSOLE` and runs,
+  printing the expected identity/DTO/interface/immutable-lifetime success line.
+  Six intentional misuse cases fail compilation (exit 2 each). Final logs and exact
+  compiler argv: `build/campaign_contracts/msvc-x_yfbzp4/{commands.json,environment.json,*.log}`.
+  `/Bv` records compiler passes `19.44.35230.0`. No engine libraries/data used.
+- Supplementary native: `python3 _re/harness/campaign_contracts/run.py --compiler gcc`.
+  GCC `16.2.1 20261029`, native Python 3, C++17 with `-Wall -Wextra -Werror -pedantic`.
+  Exit **0**; header/object compile, fixture execution and all six expected failures
+  pass. Final logs: `build/campaign_contracts/gcc-5w9hqyfz/`.
+- `git diff --check`: pass; final changed-path/commit review limited to this task.
+  Changed Markdown link check: 2 documents, 6 local file links; pass.
+- Early target fixture compile exposed a signed/unsigned optional comparison under
+  `/WX`; corrected to `5u`. Rerun passed. This was fixture code, not a suppressed warning.
+
+Not run: full game build, native preparation rendering, ownership/equipment model behavior,
+codec round trips or host/guest gameplay. They are outside this declaration-only gate;
+no playable feature or target game artifact is claimed.
+
+## Explicit consumer/API review
+
+- COOP-004/005/006: coordinator Codex, thread `01a1ebd1-3990-7553-920e-7cfee0148527`,
+  read-only header and fixture review on 2026-11-18: **PASS**, no blocking findings.
+  Reviewed distinct identities, optional actor zero, generations/control tokens, explicit
+  target/control revision sets, immutable lifetimes, all preparation operations/events,
+  injected catalog/policy boundaries and codec ownership of framing/negotiation.
+- COOP-003/007: UI owner Codex, thread `01a1ebd2-c9c0-73a1-9495-337780d904f6`,
+  read-only API/source review on 2026-11-18: **PASS** after corrections below; no remaining
+  blocking UI API findings. Reviewed snapshot completeness, four optional slots,
+  host-unassigned AI rights, scripted/read-only state, pending/result correlation,
+  readiness revisions, catalog injection and screen-close lifetime behavior.
+- Resolved findings: changed skill values to floats, preserving fractional campaign
+  stats (`src/game/soldier.h` and `debriefing.cpp::AddStat`); fixture retains `80.25f`.
+  Scoped status events by session/generations/view and documented invalidation/reread
+  semantics so old Loading/Closed cannot replace current state. Fixture requests now
+  increase IDs across families. Added backpack weight/capacity and belt weight values.
+- No new product decisions: unresolved selection/deployment/other policies remain explicit
+  values and blockers. No legacy `IsLocalGame`, engine interfaces or serialized layouts changed.
 
 ## PR test instructions and delivery
 
-- Delivery: declaration component; **Source-only** unless the later worker supplies an artifact.
-- Prerequisites: intended MSVC x86 toolchain; game installation not needed for standalone headers.
-- How to test: worker records exact compile/conformance commands after choosing the fixture.
-- Validation actually run: none; no shared headers are introduced in COOP-002.
-- Not run: target compilation and consumer conformance, pending claim/implementation.
+- Delivery: declaration component; **Source-only**. Fixture executables are local ignored
+  validation artifacts; production gameplay and fake UI integration are not supplied.
+- Prerequisites: Windows Python 3, MSVC x86 C++17 and Windows SDK (or the documented
+  local portable MSVC/Wine environment). No game installation, mission or player setup.
+- Reviewer steps: from worktree root run `python _re\harness\campaign_contracts\run.py
+  --compiler msvc` in an x86 developer environment. Expect exit 0, standalone header and
+  executable success, six expected compile failures and the fixture success line.
+  Optional native command above reproduces supplemental checks. Inspect each diagnostic,
+  `commands.json`, and full diff; do not substitute GCC for target validation.
+- Actual checks and limitations are listed separately above.
 
 ## Handoff
 
-- Completed: bounded declaration scope and canonical branch reserved by coordinator during COOP-002.
-- Remaining: shared declarations, target compile fixture and consumer review.
-- Next action: request a coordinator claim, then create the canonical branch/worktree from integrated main and implement the header/fixture.
-- Blockers: none for claim; COOP-002 is integrated. Intended MSVC x86 compiler must be available before review; COOP-001 has established a local portable MSVC/Wine toolchain.
-- Decisions: follow confirmed campaign behavior and COOP-002 engineering contracts; leave product policies explicit.
-- Local state: no implementation branch/worktree exists for this planned task.
-- Review notes: COOP-004/005/006/007 become implementation-ready only after this result merges (and COOP-003 for UI).
+- Completed: coordinator claim, canonical branch/worktree, distinct identity/key values,
+  context/lifecycle/control and ownership DTOs, complete preparation request/snapshot/result/
+  event declarations, seven-method interface, immutable injection boundaries, target/native
+  fixtures and explicit consumer reviews. Root checkout preserved on main.
+- Remaining: final integrator review, PR merge and actual merge/done metadata. No known
+  implementation or target-validation blocker remains.
+- Next action: coordinator performs final review of PR #6, reproduces relevant checks,
+  then integrates and records the actual merged SHA/done metadata and downstream readiness.
+- Decisions: confirmed design and COOP-002 contracts only; the fixture chooses no product policy.
+- Publication: PR #6 created through authenticated `gh` after connector create returned
+  403 (integration lacks repository PR write access). Branch pushes succeeded normally.
+- Local state: branch and all source/evidence checkpoints published to origin; private compiler
+  artifacts remain in this worktree's ignored build directory. No other worktree edited.
+- Review notes: COOP-004/005/006/007 can implement against the shared header only after
+  integration; COOP-007 also requires already-merged COOP-003. Notify consumers before
+  future shared-header edits. Coordinator owns dependency/index/ledger updates.
