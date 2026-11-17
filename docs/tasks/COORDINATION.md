@@ -33,7 +33,7 @@ remaining validation, and proposed merge order. Integrate serially against curre
 ## Coordinator handoff
 
 - Completed: fetched origin, checked all branch refs, worktrees and PRs; no prior COOP-001 or coordinator claim exists. Accepted the user-assigned COOP-001 claim.
-- Active writers: COOP-001, COOP-002 and COOP-003 in independent worktrees; only COOP-001 coordinator thread writes the ledger. COOP-003 kickoff row from 7f54ee71 is acknowledged and retained; asked its writer to stop ledger edits. Scope: build/run guidance and focused `_re/tools/` fixes; inspect engine scripts as consumers; no gameplay or engine port changes.
+- Active writers: COOP-001, COOP-002 and COOP-003 in independent worktrees; only COOP-001 coordinator thread writes the ledger. COOP-003 kickoff row from 7f54ee71 is acknowledged and retained; asked its writer to stop ledger edits. Scope: build/run guidance and focused `_re/tools/` fixes; explicit toolchain override in engine build scripts if needed for portable MSVC; inspect all temporary output consumers; no gameplay or engine source changes.
 - Blocked tasks/decisions: see individual task records and the campaign design.
 - Next coordinator action: Record COOP-001 environment checkpoint; receive COOP-002/003 checkpoint and review requests through coordinator thread.
 - Transfer acknowledgment: initial kickoff, no prior writer; do not infer a future handoff from inactivity.
