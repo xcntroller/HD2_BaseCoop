@@ -43,6 +43,11 @@ def sources(only=None):
 
 
 def find_vcvars():
+    override = os.environ.get("HD2_VCVARS32")
+    if override:
+        if not os.path.isfile(override):
+            sys.exit("HD2_VCVARS32 does not name an existing x86 environment batch file: " + override)
+        return os.path.abspath(override)
     if os.path.exists(VSWHERE):
         r = subprocess.run([VSWHERE, "-latest", "-products", "*", "-requires",
                             "Microsoft.VisualStudio.Component.VC.Tools.x86.x64", "-property",

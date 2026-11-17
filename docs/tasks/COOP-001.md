@@ -50,8 +50,9 @@ temporary directories, so verify cache separation across worktrees.
 ## Handoff
 
 - Completed: read design/workflow/index; fetched origin and checked branches, worktrees and PRs. No existing task branch or handoff. Kickoff coordinator accepted the claim on `coord/coop-work-queue`. Created canonical branch/worktree from integrated main.
-- Remaining: environment inventory, build, runtime baseline, output isolation evidence.
-- Next action: inspect available toolchains/game installation and the upstream build scripts.
-- Blockers: environment inventory in progress. Fedora host has Python/GCC/Wine; runnable scripts require Windows MSVC x86. Steam game data discovered outside the repository; version/runtime prerequisites still need verification.
-- Decisions: preserve the port's required runnable math/toolchain behavior.
-- Validation: none for this task.
+- Remaining: finish engine/game links, solo and real host/guest runtime baseline, documentation and review.
+- Next action: finish MSVC/Wine build with the worktree-local wrapper, then launch a copied game installation.
+- Blockers: initial Fedora/MSVC gap addressed by local portable MSVC 19.44.35230 + Windows SDK 10.0.26100.0 + Windows Python 3.13.9 in isolated Wine 11.21 prefix. Engine initially failed link because absolute dlltool output names produced overlong import symbols; regenerating with short relative names. Runtime baseline remains untested.
+- Decisions: preserve the port's required runnable math/toolchain behavior. Scope expanded in coordinator ledger 6c0421e6 to permit `HD2_VCVARS32` override in engine build script, plus `_re/tools/build_isolated.py` and focused process tests; no engine/gameplay source changes.
+- Local state: portable tooling, download manifests/cache, compiler logs and Wine prefix are ignored under `.worktrees/COOP-001/build/`; installed Steam game remains untouched. Build-tool changes are in the next checkpoint.
+- Validation: `python _re/tools/test_build_isolated.py -v` passes 3 process-level concurrency/failure/lock tests. `rw_data.dll` built successfully x86. Engine sources compiled; first link failed, being corrected. GCC fallback fails on missing `gnu/stubs-32.h`; native Linux runnable build cannot execute `.bat`. No runtime claims yet.
