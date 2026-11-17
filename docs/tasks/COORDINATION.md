@@ -9,7 +9,7 @@ creating or updating the operational branch. Do not merge its WIP ledger into `m
 - Owner/session: Codex / COOP-001 session, 2026-11-18; kickoff coordinator (solo worker).
 - Contact/shared channel: This task conversation and this published ledger; claims are acknowledged by ledger commits.
 - Integrator: Codex; separate review pass required before any integration.
-- Latest checkpoint: none; `HEAD` identifies the ledger update when committing this record.
+- Latest checkpoint: `HEAD` identifies this ledger update.
 - Publication: `origin/coord/coop-work-queue` (ordinary push; no force updates).
 - Next action: establish COOP-001 environment/build evidence; preserve other ready tasks for their owners.
 
@@ -17,6 +17,7 @@ creating or updating the operational branch. Do not merge its WIP ledger into `m
 
 | Task | Owner/session | Task branch | Status | Accessible checkpoint or PR | Next action |
 | --- | --- | --- | --- | --- | --- |
+| COOP-003 | Codex COOP-003 session (2026-11-18); explicitly assigned by user | `docs/coop-003-preparation-ui` | active; claim acknowledged by this ledger commit | Base `7e033add`; canonical task branch to be created | Audit campaign UI and produce specification/resource inventory/original mockup. Scope: `docs/ui/`, `docs/tasks/COOP-003.md`. Coordinate proposed model needs with COOP-002 through durable consumer notes. |
 | COOP-001 | Codex / 2026-11-18 user assignment | `feature/coop-001-build-baseline` | active | Base `7e033adde95881baad06c6877cbbd6eef8197d96`; `.worktrees/COOP-001` | Inventory toolchain/data; build and verify baseline. |
 
 Only the coordinator adds or reassigns claims. A missing row is not sufficient evidence
