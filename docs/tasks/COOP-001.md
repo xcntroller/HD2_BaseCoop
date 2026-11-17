@@ -2,14 +2,14 @@
 
 ## Coordination
 
-- Status: ready
-- Owner/session: unassigned
+- Status: active
+- Owner/session: Codex / user-assigned COOP-001, 2026-11-18
 - Canonical branch: `feature/coop-001-build-baseline`
-- Base commit: not started
+- Base commit: `7e033adde95881baad06c6877cbbd6eef8197d96`
 - Dependencies: none
-- Last checkpoint: none
-- Checkpoint location: none
-- Review/integration: none
+- Last checkpoint: claim commit (this commit; resolve with `git log -1 -- docs/tasks/COOP-001.md`)
+- Checkpoint location: `origin/feature/coop-001-build-baseline`; `.worktrees/COOP-001`
+- Review/integration: not ready; baseline acceptance remains required
 - Pull request: none
 
 ## Branch authority and completion PR
@@ -49,9 +49,9 @@ temporary directories, so verify cache separation across worktrees.
 
 ## Handoff
 
-- Completed: initial task scope only; no baseline run has been performed for this fork.
+- Completed: read design/workflow/index; fetched origin and checked branches, worktrees and PRs. No existing task branch or handoff. Kickoff coordinator accepted the claim on `coord/coop-work-queue`. Created canonical branch/worktree from integrated main.
 - Remaining: environment inventory, build, runtime baseline, output isolation evidence.
 - Next action: inspect available toolchains/game installation and the upstream build scripts.
-- Blockers: not yet investigated; do not assume the repository includes game data.
+- Blockers: environment inventory in progress. Fedora host has Python/GCC/Wine; runnable scripts require Windows MSVC x86. Steam game data discovered outside the repository; version/runtime prerequisites still need verification.
 - Decisions: preserve the port's required runnable math/toolchain behavior.
 - Validation: none for this task.
