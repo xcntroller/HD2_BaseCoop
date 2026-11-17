@@ -7,10 +7,10 @@
 - Canonical branch: `feature/coop-011-shared-declarations`
 - Base commit: `9aec1d7e1f777de186801cb1b2c320ff851746c6`
 - Dependencies: COOP-002 (document-level contracts merged as `9f59ff4790f02ef73e3e02c850f79cfa9ba95130`)
-- Last checkpoint: implementation/evidence commit containing this record; resolve with `git log -1 -- docs/tasks/COOP-011.md`
+- Last checkpoint: implementation and validation `bfc60e41`; PR metadata/handoff is this subsequent commit
 - Checkpoint location: `.worktrees/COOP-011`; `origin/feature/coop-011-shared-declarations`; claim acknowledged at coordinator commit `72ced131`
 - Review/integration: consumer/API reviews passed; target and native conformance passed; pending final integration review
-- Pull request: none
+- Pull request: https://github.com/xcntroller/HD2_BaseCoop/pull/6
 
 ## Branch authority and completion PR
 
@@ -99,6 +99,7 @@ Checks actually run on 2026-11-18 (final header/fixture content in this implemen
   Exit **0**; header/object compile, fixture execution and all six expected failures
   pass. Final logs: `build/campaign_contracts/gcc-5w9hqyfz/`.
 - `git diff --check`: pass; final changed-path/commit review limited to this task.
+  Changed Markdown link check: 2 documents, 6 local file links; pass.
 - Early target fixture compile exposed a signed/unsigned optional comparison under
   `/WX`; corrected to `5u`. Rerun passed. This was fixture code, not a suppressed warning.
 
@@ -147,9 +148,11 @@ no playable feature or target game artifact is claimed.
   fixtures and explicit consumer reviews. Root checkout preserved on main.
 - Remaining: final integrator review, PR merge and actual merge/done metadata. No known
   implementation or target-validation blocker remains.
-- Next action: publish the implementation/evidence checkpoint, create the completion PR
-  targeting main, record its URL and ask the coordinator for final integration review.
+- Next action: coordinator performs final review of PR #6, reproduces relevant checks,
+  then integrates and records the actual merged SHA/done metadata and downstream readiness.
 - Decisions: confirmed design and COOP-002 contracts only; the fixture chooses no product policy.
+- Publication: PR #6 created through authenticated `gh` after connector create returned
+  403 (integration lacks repository PR write access). Branch pushes succeeded normally.
 - Local state: branch and all source/evidence checkpoints published to origin; private compiler
   artifacts remain in this worktree's ignored build directory. No other worktree edited.
 - Review notes: COOP-004/005/006/007 can implement against the shared header only after
