@@ -1032,7 +1032,6 @@ void ReturnFromMenuDeployment(C_GameApp &app, R reason, bool keepSession)
         session.reset();
     auto *menu = new C_MainMenu();
     app.m_state = menu;
-    menu->Start(nullptr);
     menu->RestoreCampaignPreparation(std::move(session), reason);
 }
 

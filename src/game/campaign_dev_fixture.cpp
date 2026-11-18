@@ -293,10 +293,8 @@ R ImportFixture(const C_CampaignSession &session, int missionNumber, S_CampaignN
         presentation.m_Soldier = record.m_Soldier;
         presentation.m_Profile = SoldierProfileKey("original-roster/" + std::to_string(record.m_ProfileIndex));
         presentation.m_DisplayName = profile->fullName.c_str();
-        if (includeAmmo) {
-            presentation.m_Portrait = AssetKey("original-portrait/" + std::to_string(record.m_ProfileIndex));
-            presentation.m_Preview = presentation.m_Portrait;
-        }
+        if (includeAmmo)
+            presentation.m_Preview = AssetKey("original-portrait/" + std::to_string(record.m_ProfileIndex));
         snapshot.m_Soldiers.push_back(std::move(presentation));
         snapshot.m_Slots[i].m_Soldier = record.m_Soldier;
         catalog.m_Soldiers.push_back({record.m_Soldier, profile->stats[STAT_STRENGTH], {}});

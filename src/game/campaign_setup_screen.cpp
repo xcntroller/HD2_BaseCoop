@@ -4,6 +4,7 @@
 
 #include "game/control.h"
 #include "game/controls.h"
+#include "game/items_module.h"
 #include "game/screen.h"
 #include "ls3d/i3d.h"
 
@@ -231,6 +232,7 @@ bool C_MainMenu::OpenCampaignPreparation()
     if (!model)
         return false;
     if (!m_campaignPreparation) {
+        g_itemsModule.EnsureItemsLoaded();
         auto screen = std::make_unique<C_CampaignPreparationNativeUI>(*model);
         if (!screen->IsUsable()) {
             m_campaignSetup->Close();
@@ -292,6 +294,7 @@ std::unique_ptr<C_CampaignSetupSession> C_MainMenu::TakeCampaignDeployment()
 void C_MainMenu::RestoreCampaignPreparation(std::unique_ptr<C_CampaignSetupSession> session, Reason reason)
 {
     m_campaignSetup = std::move(session);
+    Start(nullptr);
     if (reason != Reason::None)
         m_campaignSetupError = C_str("The mission could not start. Check the session and try again.");
     PostMenuAction(MENU_MSG_OPEN_SCREEN, MAIN_SCREEN_SINGLEPLAYER);

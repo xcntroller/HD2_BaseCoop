@@ -276,8 +276,14 @@ void C_CampaignSetupSession::Receive(PlayerId peer, CampaignProtocol::T_Message 
 {
     // Requests belong to the preparation generation until the runtime takes
     // over. The guest still accepts a new preparation generation after abort.
-    if (m_Preparation && (!m_MissionReceive || m_State == State::Guest) && m_Preparation->Receive(peer, message))
+    if (m_Preparation && (!m_MissionReceive || m_State == State::Guest) && m_Preparation->Receive(peer, message)) {
+        if (!m_MissionQueue.empty()) {
+            const auto state = m_Preparation->GetSnapshot().m_Snapshot;
+            if (state && state->m_Context.m_Phase == E_CampaignPhase::Preparation)
+                m_MissionQueue.clear();
+        }
         return;
+    }
     if (m_MissionReceive) {
         m_MissionReceive(peer, std::move(message));
         return;
@@ -331,7 +337,13 @@ R C_CampaignSetupSession::ReopenPreparation()
     auto reason = m_Ownership->ReturnToSetup(mission);
     if (reason == R::None)
         reason = m_Ownership->StartPreparation();
-    return reason == R::None ? m_Preparation->ReopenHost() : reason;
+    if (reason == R::None)
+        reason = m_Preparation->ReopenHost();
+    if (reason == R::None)
+        LogSetup("host reopened campaign preparation",
+            m_Ownership->GetSession().GetPreparationGeneration().Value(),
+            m_Ownership->GetSession().GetContext().m_MissionGeneration.Value());
+    return reason;
 }
 
 void C_CampaignSetupSession::Update()

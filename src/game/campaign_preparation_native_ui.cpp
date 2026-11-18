@@ -9,6 +9,8 @@
 #include <string_view>
 #include <tuple>
 
+#include "common/config_file.h"
+#include "common/os_files.h"
 #include "game/campaign.h"
 #include "game/campaign_preparation_live.h"
 #include "game/campaign_preparation_screen.h"
@@ -44,6 +46,59 @@ std::string LocalText(int id)
     return id >= 0 && g_texts.Has(id) ? g_texts.Get(id).c_str() : "";
 }
 
+std::string OriginalBriefing()
+{
+    const auto *mission = g_campaign->GetMissionDefinition(kOriginalCampaign, kArcticMission);
+    if (!mission)
+        return {};
+    std::string briefing;
+    const auto append = [&](std::string_view line) {
+        if (line.empty())
+            return;
+        if (!briefing.empty())
+            briefing += '\n';
+        briefing.append(line);
+    };
+    const int text = mission->GetText(1);
+    if (text >= 0) {
+        for (int id = text + 3; id <= text + 9; ++id) {
+            const auto line = LocalText(id);
+            if (line.empty())
+                break;
+            append(line);
+        }
+    }
+    const auto language = g_gameProfile.GetLanguage();
+    for (int i = 0; i < mission->GetChildCount(); ++i) {
+        const auto *step = mission->GetChild(i);
+        if (step->GetType() == CAMPAIGN_NODE_PLAY)
+            break;
+        if (step->GetType() != CAMPAIGN_NODE_VIDEO)
+            continue;
+        const auto *video = static_cast<const C_CampaignVideo *>(step);
+        if (!video->IsBriefing())
+            continue;
+        std::string name = video->GetFileName();
+        const auto extension = name.rfind('.');
+        if (extension != std::string::npos)
+            name.resize(extension);
+        const C_fstr path("%s\\text\\%s\\subtitles\\%s.txt", GetGameDirectory(), language.c_str(), name.c_str());
+        C_GameTexts script;
+        if (!FileExists(path.c_str()) || !script.Load(path.c_str()))
+            continue;
+        for (const auto &entry : script.GetTexts()) {
+            const std::string_view line = entry.text.c_str();
+            const auto open = line.find('<');
+            const auto separator = line.find(',', open);
+            const auto close = line.find('>', separator);
+            if (!line.empty() && line.front() != 'S' && open != std::string_view::npos &&
+                separator != std::string_view::npos && close != std::string_view::npos)
+                append(line.substr(close + 1));
+        }
+    }
+    return briefing;
+}
+
 constexpr std::pair<std::string_view, const char *> kLabels[] = {
     {"COOP_PREP_TITLE", "CO-OP CAMPAIGN / PREPARATION"},
     {"COOP_PREP_RECEIVING", "Receiving preparation..."},
@@ -73,27 +128,17 @@ constexpr std::pair<std::string_view, const char *> kLabels[] = {
 
 class C_Presentation final : public I_CampaignPreparationPresentation {
 public:
-    explicit C_Presentation(C_CampaignPreparationLive &model) : m_Model(model) {}
+    explicit C_Presentation(C_CampaignPreparationLive &model)
+        : m_Model(model), m_Briefing(OriginalBriefing()) {}
 
     std::string Text(TextKey key) const override
     {
         if (key.Value() == "original-arctic1/operation")
             return LocalText(g_campaign->GetMissionOperationId(kOriginalCampaign, kArcticMission));
-        const int title = g_campaign->GetMissionText(kOriginalCampaign, kArcticMission, 1);
         if (key.Value() == "original-arctic1/mission")
             return LocalText(g_campaign->GetMissionId(kOriginalCampaign, kArcticMission));
-        if (key.Value() == "original-arctic1/briefing" && title >= 0) {
-            std::string briefing;
-            for (int id = title + 3; id <= title + 9; ++id) {
-                const auto line = LocalText(id);
-                if (line.empty())
-                    break;
-                if (!briefing.empty())
-                    briefing += "\n";
-                briefing += line;
-            }
-            return briefing;
-        }
+        if (key.Value() == "original-arctic1/briefing")
+            return m_Briefing;
         if (key.Value() == "campaign.equipment.unarmed_confirmation")
             return "A soldier has no weapon.";
         return {};
@@ -168,6 +213,7 @@ public:
 
 private:
     C_CampaignPreparationLive &m_Model;
+    std::string m_Briefing;
 };
 
 class C_Painter final : public I_CampaignPreparationPainter {
@@ -278,6 +324,9 @@ public:
             m_Preview = std::make_unique<C_MenuSoldier>();
             m_Preview->Setup(bounds[0], bounds[1], bounds[2], bounds[3]);
             if (m_Preview->GetModel()) {
+                auto *camera = m_Preview->GetScene()->GetActiveCamera();
+                camera->SetFOV(.58f);
+                camera->Update();
                 m_Preview->SetFace(profile->faceTexture.c_str());
                 for (const auto &[place, type, count] : m_PreviewItems)
                     for (std::uint32_t i = 0; i < count; ++i)
@@ -462,12 +511,10 @@ void C_CampaignPreparationNativeUI::KeyInput(float *pressed)
 void C_CampaignPreparationNativeUI::MouseInput(C_Cursor &cursor, int timeDelta)
 {
     cursor.Update(timeDelta);
-    if (GetForegroundWindow() != GetIGraph()->GetHWND()) {
-        m_View->m_MouseDown = false;
-        m_View->m_PressedControl.reset();
-        return;
-    }
-    const bool down = (GetAsyncKeyState(VK_LBUTTON) & 0x8000) != 0;
+    const auto root = GetAncestor(GetIGraph()->GetHWND(), GA_ROOT);
+    const bool focused = GetAncestor(GetForegroundWindow(), GA_ROOT) == root;
+    const int primary = GetSystemMetrics(SM_SWAPBUTTON) ? VK_RBUTTON : VK_LBUTTON;
+    const bool down = cursor.IsButtonDown(1) || (focused && (GetAsyncKeyState(primary) & 0x8000) != 0);
     if (down == m_View->m_MouseDown)
         return;
     m_View->m_MouseDown = down;
