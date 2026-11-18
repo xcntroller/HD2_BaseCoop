@@ -7,7 +7,7 @@
 - Canonical branch: `feature/coop-010-two-player-mission`
 - Base commit: `6f1bdd96075b074a6a7b958257af5f56f8374fb5`
 - Dependencies: COOP-008, COOP-009 and their transitive merged dependencies
-- Last checkpoint: bounded world-chunk scheduling and callback receive timestamps (this commit)
+- Last checkpoint: runtime verification of source checkpoint `33ad68fe` (this commit)
 - Checkpoint location: `.worktrees/COOP-010` and the canonical branch on origin
 - Review/integration: claim acknowledged by coordination ledger commit `69cb6361`
 - Pull request: [#22](https://github.com/xcntroller/HD2_BaseCoop/pull/22) (draft)
@@ -143,6 +143,15 @@ roster/loadouts/policies as fixtures, not approved production menu behavior.
     failure, and elapsed-time and clock-rollback rejection. MSVC isolated
     check compiled both changed network units with zero diagnostics and the
     incremental game linked successfully.
+  - On source checkpoint `33ad68fe`, a private guest copy with one extra
+    line in the physical `Scripts.dta` archive reached campaign negotiation
+    and received ContentMismatch (reason 32). The host did not load a mission.
+    Restoring the file byte-for-byte from the installation and joining the same
+    host admitted PlayerId 3 on provider slot 1. The host bound all four
+    soldiers and timed out at mission time 0 again as expected.
+  - Original-mode smoke on that build reached the solo main menu and the
+    native Sicily2 LAN player setup. Both LAN instances listed both peers as
+    preparing. Tutorial and native Sicily2 gameplay regressions remain pending.
   - Build and runtime evidence is preserved in the root checkout's ignored
     `build/coop-010-evidence/` directory. Guest initial-world reconstruction,
     synchronized gameplay, in-play AI handoff and the original-mode runtime
