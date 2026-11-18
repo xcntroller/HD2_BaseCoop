@@ -1205,17 +1205,23 @@ const C_str &C_Campaign::GetOperationName(int campaign, int operation)   // 0x00
     return node ? static_cast<C_CampaignOperation *>(node)->GetName() : none;
 }
 
-int C_Campaign::GetMissionId(int campaign, int missionNumber)   // 0x006b9040
+const C_MissionDef *C_Campaign::GetMissionDefinition(int campaign, int missionNumber)
 {
     int operation = 0;
     int mission = 0;
     if (campaign < 0 || campaign >= GetCount() || !FindMission(campaign, missionNumber, &operation, &mission))
-        return -1;
-    C_CampaignNode *node = m_campaigns[campaign]->GetChildOfType(CAMPAIGN_NODE_OPERATION, operation, false);
+        return nullptr;
+    auto *node = m_campaigns[campaign]->GetChildOfType(CAMPAIGN_NODE_OPERATION, operation, false);
     if (!node)
-        return -1;
-    node = static_cast<C_CampaignContainer *>(node)->GetChildOfType(CAMPAIGN_NODE_MISSION, mission, false);
-    return node ? node->GetId() : -1;
+        return nullptr;
+    return static_cast<const C_MissionDef *>(
+        static_cast<C_CampaignContainer *>(node)->GetChildOfType(CAMPAIGN_NODE_MISSION, mission, false));
+}
+
+int C_Campaign::GetMissionId(int campaign, int missionNumber)   // 0x006b9040
+{
+    const auto *mission = GetMissionDefinition(campaign, missionNumber);
+    return mission ? mission->GetId() : -1;
 }
 
 const C_str &C_Campaign::GetMissionImage(int campaign, int missionNumber)   // 0x006b90e0

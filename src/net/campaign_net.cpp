@@ -51,6 +51,7 @@ struct S_Peer {
 };
 
 std::atomic<bool> g_enabled{false};
+std::atomic<R> g_joinFailure{R::None};
 // Protect the provider connection registry and queue. Admission, game callbacks,
 // and DirectPlay calls execute on the game thread outside this lock.
 std::mutex g_queueLock;
@@ -165,6 +166,7 @@ bool BeginCampaignNet(const S_CampaignNetConfig &config, bool host)
     g_host = host;
     g_startedAt = NowMs();
     g_awaitingServer = !host;
+    g_joinFailure.store(R::None);
     g_lastPlayer = host ? config.m_Host.Value() : 0;
     g_enabled.store(true);
     return true;
@@ -196,7 +198,7 @@ bool IsCampaignNet()
 bool QueueCampaignPeer(std::uint32_t connection, int slot)
 {
     std::lock_guard<std::mutex> lock(g_queueLock);
-    if (!IsCampaignNet() || g_links.size() >= kMaxParticipants ||
+    if (!IsCampaignNet() || g_links.size() >= (g_host ? kMaxParticipants - 1 : 1) ||
         g_events.size() >= kMaxQueuedPackets + 32 || g_links.count(connection) ||
         g_lastPlayer == std::numeric_limits<std::uint64_t>::max())
         return false;
@@ -204,6 +206,11 @@ bool QueueCampaignPeer(std::uint32_t connection, int slot)
     g_links.emplace(connection, link);
     g_events.push_back({E_Event::Connected, link, NowMs(), {}});
     return true;
+}
+
+void QueueCampaignJoinFailure(E_CampaignReason reason)
+{
+    g_joinFailure.store(reason);
 }
 
 void QueueCampaignDeparture(std::uint32_t connection)
@@ -280,11 +287,16 @@ void ProcessCampaignNet(C_NetGame &net)
         else if (!g_host)
             net.Close(false);
     }
-    if (g_awaitingServer && now - g_startedAt >= kTimeoutMs) {
-        g_awaitingServer = false;
-        if (g_config.m_Departed)
-            g_config.m_Departed({}, R::Timeout);
-        net.Close(false);
+    if (g_awaitingServer) {
+        auto reason = g_joinFailure.exchange(R::None);
+        if (reason == R::None && now - g_startedAt >= kTimeoutMs)
+            reason = R::Timeout;
+        if (reason != R::None) {
+            g_awaitingServer = false;
+            if (g_config.m_Departed)
+                g_config.m_Departed({}, reason);
+            net.Close(false);
+        }
     }
 }
 

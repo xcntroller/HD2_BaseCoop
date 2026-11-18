@@ -11,6 +11,7 @@
 #include <windows.h>
 
 #include "common/c_str.h"
+#include "game/campaign_setup_session.h"
 #include "game/menu_state.h"
 
 class C_Control;
@@ -39,6 +40,7 @@ enum : uint32_t {
     MAIN_SCREEN_GAME_INFO = 12,                     // "Game info"
     MAIN_SCREEN_CONNECT = 13,                       // "MP Connect console" (on the "confirm" model)
     MAIN_SCREEN_ADD_SERVER = 14,                    // "ADD SERVER" (on the "password" model)
+    MAIN_SCREEN_CAMPAIGN_SETUP = 15,
 };
 // The menu's messages of its own (target 0).
 enum : uint32_t {
@@ -127,6 +129,13 @@ protected:
                                     uint32_t value);    // 0x0063b7f0
     static bool OnSingleplayerButton(void *menu, void *argument, C_Control *control, uint32_t notification,
                                      uint32_t value);   // 0x0063b9a0
+
+    void DescribeCampaignPicker(S_ScreenDesc *desc, I3D_frame *model);
+    void DescribeCampaignSetup(S_ScreenDesc *desc, I3D_frame *model);
+    void RefreshCampaignSetup();
+    static bool OnCampaignPicker(void *menu, void *, C_Control *, uint32_t, uint32_t);
+    static bool OnCampaignSetup(void *menu, void *, C_Control *control, uint32_t notification, uint32_t);
+    static bool OnCampaignSetupButton(void *menu, void *, C_Control *control, uint32_t notification, uint32_t);
 
     // ---- the screens' further descriptions (by kind; later sub-parts) ----
     // The profile screen: the profiles found (ScanProfiles) as the list's lines (its second control). True.
@@ -451,4 +460,8 @@ protected:
     C_str m_profileName;                                // +0x213 the profile picked (unaligned in the original)
     int unknown218 = 0;                                 // +0x218
     S_ServerEntry *m_server = nullptr;                  // +0x21C the browser's server picked
+    std::unique_ptr<C_CampaignSetupSession> m_campaignSetup;
+    C_str m_campaignSetupStatus;
+    C_str m_campaignSetupError;
+    E_CampaignSetupState m_campaignSetupState = E_CampaignSetupState::Idle;
 };

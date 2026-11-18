@@ -78,6 +78,7 @@ bool C_MainMenu::OnStart(void *)
 
 void C_MainMenu::OnStop()
 {
+    m_campaignSetup.reset();
     DrainFoundServers();
     delete m_mpSettings;
     m_mpSettings = nullptr;
@@ -175,6 +176,11 @@ bool C_MainMenu::BuildScreens()
             continue;
         switch ((desc->id & SCREEN_KIND_MASK) >> SCREEN_INDEX_SHIFT) {
         case MAIN_SCREEN_PROFILE: DescribeProfileScreen(desc, model); break;
+        case MAIN_SCREEN_SINGLEPLAYER:
+            if (CampaignSetupMenuEnabled())
+                DescribeCampaignPicker(desc, model);
+            break;
+        case MAIN_SCREEN_CAMPAIGN_SETUP: DescribeCampaignSetup(desc, model); break;
         case MAIN_SCREEN_QUIT: model->SetPos(QUIT_MODEL_POS); break;
         case MAIN_SCREEN_MISSIONS: DescribeMissionsScreen(desc, model); break;
         case MAIN_SCREEN_OPTIONS: m_options->BuildScreen(desc, model); break;
@@ -352,6 +358,8 @@ S_MenuDesc *C_MainMenu::Describe()
     menu->AddScreen("Game info", "gameinfo");
     menu->AddScreen("MP Connect console", "confirm");
     menu->AddScreen("ADD SERVER", "password");
+    if (CampaignSetupMenuEnabled())
+        menu->AddScreen("CO-OP CAMPAIGN", "singleplayer");
     return menu;
 }
 
