@@ -40,22 +40,23 @@ temporary paths, engine libraries or game-data prerequisites. Expected: exit zer
 all steps `PASS`, executable reports nine suites and its check count. A compiler
 success alone does not pass: the executable must run successfully too.
 
-The workspace's existing COOP-001 portable toolchain was also used under Wine,
-with a private COOP-004 prefix, without changing the baseline prefix/tooling:
+The workspace's reprovisioned COOP-007 portable toolchain was also used under Wine,
+with a private COOP-004 prefix, without changing the borrowed prefix/tooling:
 
 ```bash
-env -u WAYLAND_DISPLAY DISPLAY=:99 WINEPREFIX="$PWD/build/wine-prefix" WINEDEBUG=-all wine64 cmd /c 'Z:\home\control\Documents\Projects\HD2SS\HD2_BaseCoop\.worktrees\COOP-001\build\tooling\run-python.bat' 'Z:\home\control\Documents\Projects\HD2SS\HD2_BaseCoop\.worktrees\COOP-004\_re\harness\campaign_ownership\run.py' --compiler msvc
+env -u WAYLAND_DISPLAY DISPLAY=:99 WINEPREFIX="$PWD/build/wine-prefix" WINEDEBUG=-all wine64 cmd /c 'Z:\home\control\Documents\Projects\HD2SS\HD2_BaseCoop\.worktrees\COOP-007\build\tooling\run-python.bat' 'Z:\home\control\Documents\Projects\HD2SS\HD2_BaseCoop\.worktrees\COOP-004\_re\harness\campaign_ownership\run.py' --compiler msvc
 ```
 
 That absolute wrapper/toolchain and a working X display are local prerequisites,
 not committed files. MSVC 19.44.35230 x86, toolset 14.44.35207, SDK 10.0.26100.0,
 Windows Python 3.13.9 and Wine 11.21 (Staging) were used. Native GCC was 16.2.1.
 No full game build, controller handoff, network dispatch or gameplay test is claimed.
-After these successful runs, the borrowed COOP-001 worktree/toolchain was removed
-externally. Its absolute wrapper command above is historical; for a fresh target run,
-reprovision MSVC/SDK/Windows Python using [the build guide](../../../docs/build_baseline.md)
-or use the Windows developer environment command. COOP-004 execution logs and its
-locally built fixture remain under its own ignored output directories.
+The first passing target run used COOP-001 tooling, which was later removed
+externally. The final corrected-head run used COOP-007's replacement tooling above.
+Both are local prerequisites, not distributed artifacts. A fresh installation may
+follow [the build guide](../../../docs/build_baseline.md) or use the Windows developer
+environment command. COOP-004 compile/execution logs and its local fixtures remain
+under its own ignored output directories.
 
 ## Model API and lifetime
 

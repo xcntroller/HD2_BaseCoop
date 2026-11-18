@@ -2,14 +2,14 @@
 
 ## Coordination
 
-- Status: active (review correction applied; final target rerun pending)
+- Status: review
 - Owner/session: Codex COOP-004 / thread `01a1ebf9-60c7-74d0-9d39-cd09295875b0`, 2026-11-18
 - Canonical branch: `feature/coop-004-ownership`
 - Base commit: `0f367ed62af337633941bca0d22d3ff1932129ba`
 - Dependencies: COOP-002, COOP-011 (merged shared declarations)
-- Last checkpoint: initial validated implementation `68bb0bc1`; integrated main `e86cc8c4`; phase-baseline correction is this checkpoint
+- Last checkpoint: corrected implementation `1e276554`; final target evidence in this subsequent commit
 - Checkpoint location: `.worktrees/COOP-004`; `origin/feature/coop-004-ownership`
-- Review/integration: COOP-005 full review found phase-baseline composition issue; correction applied and native regression passed; target rerun pending; not merged
+- Review/integration: COOP-005 full review found phase-baseline composition issue; correction applied; native and target regression passed; final review pending; not merged
 - Pull request: https://github.com/xcntroller/HD2_BaseCoop/pull/9 (draft pending independent review)
 
 ## Branch authority and completion PR
@@ -70,7 +70,8 @@ plus prerequisites and exact reproduction commands. The harness compiles the act
 session/ownership implementation, not a replacement fake. Its policy view is an explicitly
 permitted development fixture; selection/switching product policy remains unresolved.
 
-Checks actually run on 2026-11-18, final implementation and fixture in this checkpoint:
+Initial checks run on 2026-11-18 at implementation `68bb0bc1` (final corrected-head
+evidence is recorded under the review correction below):
 
 - `python3 _re/harness/campaign_ownership/run.py --compiler gcc`: exit **0**;
   GCC **16.2.1 20261029**, C++17, `-Wall -Wextra -Werror -pedantic`.
@@ -126,8 +127,8 @@ model behavior only, and do not imply the later adapters or campaign mode are pl
   Deployed flags identify the selected preparation squad, before actor construction.
 - Remaining: final review, address findings, ready PR and integration;
   record actual merge SHA after acceptance. No outstanding implementation/toolchain blocker.
-- Next action: use COOP-007 reprovisioned private toolchain for the corrected-head MSVC
-  x86 harness, then complete peer review and integration. Native corrected suites pass.
+- Next action: complete independent review of the corrected checkpoint and integrate PR #9;
+  record actual merge SHA afterward. Corrected native and target suites pass.
 - Decisions: no new product policy. Selection/switching fixture permissions are proposals;
   production policy, peer/world barriers, host-loss and live adapter composition stay explicit.
 - Uncommitted work: none at the implementation checkpoint. All build/runtime evidence
@@ -171,6 +172,17 @@ revisions as before. Both workers agreed this contract interpretation before com
 Focused regressions retain each frozen/loading cut and assert identical ownership and all
 control revisions after Freeze/StartSimulation. Corrected native run:
 `python3 _re/harness/campaign_ownership/run.py --compiler gcc`, exit **0**, nine suites,
-**10,654 checks**, output `build/campaign_ownership/gcc-3hftx_t9/`. Final intended-target
-rerun is pending toolchain reprovisioning; earlier 10,618-check target evidence above does
-not validate this subsequent source change. PR remains draft until that check and review pass.
+**10,654 checks**, output `build/campaign_ownership/gcc-3hftx_t9/`.
+
+Corrected checkpoint `1e276554`, intended MSVC **19.44.35230 x86**, same SDK/Python/Wine
+versions and `/W4 /WX /arch:IA32 /MT /O2` flags as above: compile/link and executable
+execution exit **0**, nine suites, **10,654 checks**, zero compiler warnings/errors.
+Logs/version/argv: `build/campaign_ownership/msvc-f4oonfu6/`. Exact final entry command:
+
+```bash
+env -u WAYLAND_DISPLAY DISPLAY=:99 WINEPREFIX="$PWD/build/wine-prefix" WINEDEBUG=-all wine64 cmd /c 'Z:\home\control\Documents\Projects\HD2SS\HD2_BaseCoop\.worktrees\COOP-007\build\tooling\run-python.bat' 'Z:\home\control\Documents\Projects\HD2SS\HD2_BaseCoop\.worktrees\COOP-004\_re\harness\campaign_ownership\run.py' --compiler msvc
+```
+
+COOP-007 explicitly authorized read-only use of the reprovisioned tooling; all outputs
+and Wine state stay private to COOP-004. The final source change is now validated on
+the intended target. No later C++/fixture change is included in this evidence update.
