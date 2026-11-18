@@ -6,11 +6,11 @@ creating or updating the operational branch. Do not merge its WIP ledger into `m
 
 ## Coordinator
 
-- Owner/session: handoff available. Codex COOP-009 / thread `01a1ec1f-ea8d-77f3-b0e9-7c683f367ec3` explicitly STOPS ledger writes after publishing this final completed-task checkpoint (2026-11-18).
-- Contact/shared channel: this published ledger and merged task/PR records. Next coordinator must explicitly accept this stopped-writer handoff before issuing claims or writing the ledger.
-- Integrator: transferable. COOP-008/009 and their independently reviewed completion metadata are merged; no COOP-010 runtime approval is implied.
-- Latest checkpoint: `HEAD`; ordinary push to `origin/coord/coop-work-queue`. Preserve operational history; never merge this branch wholesale into main.
-- Next action: next assigned coordinator accepts this stopped handoff and serializes the ready/unclaimed COOP-010 development integration task. Preserve root ignored shared tooling/evidence and all historical checkpoints.
+- Owner/session: Codex COOP-010, assigned by the user on 2026-11-18. Accepts the stopped-writer handoff at `3ff21e72`.
+- Contact/shared channel: this published ledger and the COOP-010 task branch/PR.
+- Integrator: Codex COOP-010 for this session, subject to the review and runtime acceptance gates.
+- Latest checkpoint: `HEAD` on `origin/coord/coop-work-queue`.
+- Next action: establish the original campaign test fixture and integrate live campaign admission, initial state, and controller/input dispatch.
 
 ## Accepted task claims
 
@@ -26,6 +26,8 @@ creating or updating the operational branch. Do not merge its WIP ledger into `m
 | COOP-008 | Codex COOP-008 / thread `01a1ec1f-4589-7051-9994-2a236a14b49b`, user assignment | `feature/coop-008-controller-adapters` | done | PR #17 merge `d34b6900`; completion PR #20 merge `934143aa`; canonical branch pushed to `934143aa` | Dormant controller/input/native consumers complete; reviewed by COOP-009, live dispatch/replication remain COOP-010. |
 | COOP-009 | Codex COOP-009 / thread `01a1ec1f-ea8d-77f3-b0e9-7c683f367ec3`, user assignment | `feature/coop-009-campaign-adapters` | done | PR #19 merge `ce306626`; completion PR #21 merge `6f1bdd96`; canonical branch pushed to `6f1bdd96` | Dormant lifecycle/world-barrier/native rules complete; COOP-010 owns live attachment and actual two-instance evidence. |
 | COOP-001 | Codex / 2026-11-18 user assignment | `feature/coop-001-build-baseline` | done | PR #2 merge `15b572ff`; completion metadata PR #11 merge `1b9b307f` | Build/solo/native host-guest baseline and isolation accepted; guide/evidence integrated. Firing/reload/completion remain unverified downstream gates. |
+
+| COOP-010 | Codex COOP-010 (2026-11-18), user assignment | `feature/coop-010-two-player-mission` | active; claim acknowledged | Base `6f1bdd96`; worktree `.worktrees/COOP-010` | Development launch, campaign session/net dispatch and initial-world reconstruction, and focused lifecycle/controller/replication changes needed by the two-instance acceptance route. |
 
 
 Only the coordinator adds or reassigns claims. A missing row is not sufficient evidence
@@ -181,3 +183,9 @@ missing fields. COOP-006 was notified explicitly before this stopped-writer hand
 - Prior 008 worker confirmed completion/canonical done and stopped implementation, remaining briefly for 009 final and metadata reviews. No active source writer or coordinator successor is designated. This agent explicitly STOPS ledger writes after this ordinary push; next coordinator must accept before claims/edits. Branches, worktrees, tooling and artifacts were not cleaned or deleted by this agent.
 
 - Final ledger-map correction: COOP-009 resumes only its own just-published stopped handoff after confirming origin still equals `b0e62402` and no successor writer/claim exists. The accepted-claims row is corrected from its stale active entry to the actual done state documented above; no assignment changes. This correction is the final ledger write, after which COOP-009 explicitly stops again.
+
+## COOP-010 coordinator acceptance
+
+- COOP-009 stopped ledger writes at `3ff21e72`. COOP-010 accepts the transfer and acknowledges the user's assignment. No other active writer or COOP-010 branch, worktree, or PR was found after refreshing origin.
+- Main and origin/main agree at `6f1bdd96`; COOP-008 `d34b6900` and COOP-009 `ce306626` are both ancestors. Shared build tooling and previous evidence are available for read-only use.
+- COOP-010 owns the development launch, live admission and initial-world reconstruction, and the scoped legacy adapter changes required by the playable gate. Record any scope expansion here before editing shared files.
