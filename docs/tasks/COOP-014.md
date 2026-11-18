@@ -7,7 +7,7 @@
 - Canonical branch: `feature/coop-014-arctic1-completion`
 - Base commit: `9ec7fe48bb21c38f9d95976b99198c6fb1576e74`
 - Dependencies: [COOP-010](COOP-010.md) two-player Arctic1 development path
-- Last checkpoint: original script audit, result capture and initial presentation implementation
+- Last checkpoint: `def38937` native squad message fix and paired cabin parity
 - Checkpoint location: `.worktrees/COOP-014` and the canonical branch on origin
 - Review/integration: COOP-012 coordinator accepted the claim in ledger `75131f7a`.
 - Pull request: [draft #25](https://github.com/xcntroller/HD2_BaseCoop/pull/25)
@@ -105,7 +105,39 @@ for progression.
   humans, and selected host-evaluated presentation events. The campaign result
   snapshots the original objective statuses and four native squad states before
   allowing the session to leave Running. No branch or profile advancement is
-  performed at mission teardown. Terminal and presentation runtime testing is pending.
+  performed at mission teardown. The result now retains the mission snapshot identity
+  and original script save values for COOP-015.
+- At `ed38a025`, a clean 287-unit x86 build passed, but the first paired intro
+  failed to publish a mission update at sequence 30. The original intro calls
+  the speech command with 1,000-meter near and far distances. Increasing the
+  protocol bound to admit this range resolved that failure. The next pair
+  rendered the aircraft exterior, rain and matching subtitles, with the
+  gameplay HUD hidden. Both peers processed 30 ambient humans. The actors
+  and subtitle screenshots are in `build/evidence/range-paired/`.
+- The full cutscene/door candidate built with 287 units and zero diagnostics.
+  GCC and MSVC x86 protocol conformance passed 12 suites and 567,504 checks.
+  Cases include the authored speech range, ambient identity, frame pose,
+  terminal outcome and door request validation. See
+  `build/evidence/parity-protocol-{gcc,msvc}.log`.
+- Synchronized the task branch with integrated COOP-012 at `fd5ad4c3`.
+  The merged build found a deleted native squad message copy constructor.
+  Corrected the ownership at `def38937`, after which incremental link passed
+  with zero diagnostics. `build/evidence/merged-paired/` contains the
+  subsequent two-process proof of matching aircraft cabin, actor and subtitle
+  presentation, plus native host squad signal pages. The previous paired route
+  attempted the ridge at matching mission state and lost both controlled
+  soldiers while the two squad AI survived. It did not produce a terminal result.
+- The clean base solo reference used a private 1.12 profile with best original
+  campaign progress set to 1 to reveal Arctic1 in Single Mission. In the
+  original menu select **Op. Snowball - First Strike**, use automatic squad
+  selection and recommended equipment, and deploy. In this trial the active
+  soldier bypassed the early patrol on a route along the southern ridge.
+  The original guide spoke at the blue rendezvous marker.
+  `build/evidence/original-solo/guide-contact.png` captures the dialogue.
+  Full solo success is pending.
+- Runtime captures so far verify visual subtitles and scene presentation.
+  The private prefixes had native sound output disabled. A repeat with sound
+  enabled is required to verify audible output.
 
 ## PR test instructions and delivery
 
@@ -120,8 +152,9 @@ for progression.
   the base, checked for duplicate work, and established the canonical worktree.
 - Remaining: original solo and paired completion, failure and terminal state evidence,
   guest interactions, full cutscene parity and the applicable legacy regressions.
-- Next action: launch the verified single-mission reference and repeat the updated
-  paired Running path on private displays after the current COOP-012 LAN window.
+- Next action: continue the original rendezvous on the solo reference and
+  repeat the southern approach with both peers. Exercise the host squad orders,
+  native door actions and the mission's success and failure boundaries.
 - Blockers: none. Serialize live LAN tests with COOP-012 if the fixed provider port
   is occupied.
 - Decisions: Use the existing development launch and game data. Base the interaction scope on what the original Arctic1 route exercises.
