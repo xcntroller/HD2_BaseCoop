@@ -119,6 +119,63 @@ void ReadinessAndFreeze() {
     CHECK(f.m_Model->SynchronizeOwnership() == R::InvalidPhase);
     CHECK(!f.m_Model->GetFrozenManifest()); CHECK(f.Snapshot()->m_Sync == E_CampaignSyncStatus::Resyncing);
 }
+void AuthorityIntegrationBoundaries() {
+    Fixture f;
+    // A full catalog contains unselected roster soldiers in addition to four loadouts.
+    S_CampaignOwnershipRecord extra;
+    extra.m_Soldier = SoldierId(90); extra.m_ControlRevision = ControlRevision(1); extra.m_Alive = true;
+    f.m_Ownership.m_State.m_Soldiers.push_back(extra);
+    f.m_Ownership.m_State.m_Revision = OwnershipRevision(2);
+    CHECK(f.m_Model->SynchronizeOwnership() == R::None);
+    CHECK(f.Snapshot()->m_Loadouts.size() == 4);
+    f.m_Ownership.Assign(0, std::nullopt);
+    CHECK(f.m_Model->SynchronizeOwnership() == R::None);
+    CHECK(f.Apply(f.Take(1, 30, 2, "belt")).m_Reason == R::None); // host without a soldier
+    auto &ai = f.m_Ownership.m_State.m_Soldiers[2];
+    ai.m_Scripted = true; ai.m_ControlRevision = ControlRevision(ai.m_ControlRevision.Value() + 1);
+    f.m_Ownership.m_State.m_Revision = OwnershipRevision(f.m_Ownership.m_State.m_Revision.Value() + 1);
+    CHECK(f.m_Model->SynchronizeOwnership() == R::None);
+    Reject(f, f.Take(1, 30, 2, "belt"), R::Scripted);
+    ai.m_Scripted = false; ai.m_Alive = false;
+    f.m_Ownership.m_State.m_Revision = OwnershipRevision(f.m_Ownership.m_State.m_Revision.Value() + 1);
+    CHECK(f.m_Model->SynchronizeOwnership() == R::None);
+    Reject(f, f.Take(1, 30, 2, "belt"), R::Dead);
+
+    Fixture epoch;
+    epoch.m_Ownership.m_State.m_Context.m_MissionGeneration = MissionGeneration(3);
+    auto initial = *epoch.Snapshot(); initial.m_Context.m_MissionGeneration = MissionGeneration(3);
+    epoch.m_Policy.m_Resolved = true;
+    // One queue: ownership publishes its phase-only freeze at the same baseline.
+    C_CampaignPreparation integrated(initial, epoch.m_Ownership, epoch.m_Rules, epoch.m_Policy,
+        epoch.m_Journal.Bind(), {}, [&]() {
+            epoch.m_Ownership.m_State.m_Context.m_Phase = E_CampaignPhase::Frozen;
+            return R::None;
+        });
+    for (unsigned player : {1u, 2u}) {
+        auto c = epoch.Context(player); c.m_ExpectedPreparationRevision = initial.m_PreparationRevision;
+        CHECK(integrated.SetReady(PlayerId(player), {c, true}).m_Reason == R::None);
+    }
+    auto context = epoch.Context(); context.m_ExpectedPreparationRevision = initial.m_PreparationRevision;
+    auto result = integrated.RequestDeploy(PlayerId(1), {context});
+    CHECK(result.m_Reason == R::None && result.m_MissionGeneration == MissionGeneration(3));
+    CHECK(integrated.SynchronizeOwnership() == R::None);
+    auto manifest = integrated.GetFrozenManifest();
+    CHECK(manifest && manifest->m_OwnershipRevision == initial.m_OwnershipRevision);
+    CHECK(integrated.RequestDeploy(PlayerId(1), {context}).m_Outcome == O::Duplicate);
+    CHECK(manifest->m_Loadouts[0].m_Items[0].m_State.m_Quantity == 1u);
+
+    Fixture broken;
+    broken.m_Policy.m_Resolved = true;
+    C_CampaignPreparation invalid(*broken.Snapshot(), broken.m_Ownership, broken.m_Rules, broken.m_Policy,
+        broken.m_Journal.Bind(), {}, [&]() {
+            broken.m_Ownership.Assign(1, std::nullopt); // a membership/rights mutation is not a phase-only freeze
+            broken.m_Ownership.m_State.m_Context.m_Phase = E_CampaignPhase::Frozen;
+            return R::None;
+        });
+    for (unsigned player : {1u, 2u}) CHECK(invalid.SetReady(PlayerId(player), {broken.Context(player), true}).m_Reason == R::None);
+    CHECK(invalid.RequestDeploy(PlayerId(1), {broken.Context()}).m_Reason == R::SnapshotUnavailable);
+    CHECK(!invalid.GetFrozenManifest()); CHECK(invalid.GetSnapshot(PlayerId(1))->m_Sync == E_CampaignSyncStatus::Resyncing);
+}
 void Counters() {
     Fixture f(PreparationRevision(UINT64_MAX));
     Reject(f, f.Take(1, 10, 2, "belt"), R::SnapshotUnavailable);
@@ -128,7 +185,7 @@ void Counters() {
 int main() {
     try {
         PermissionsAndAtomicity(); ScarcityAndJournal(); ValidationAndVariants();
-        OwnershipRacesAndDisconnect(); ReadinessAndFreeze(); Counters();
+        OwnershipRacesAndDisconnect(); ReadinessAndFreeze(); AuthorityIntegrationBoundaries(); Counters();
         std::cout << "campaign preparation: permissions, atomic stock, journal, validation, ownership races, readiness and freeze passed\n";
     } catch (const std::exception &e) { std::cerr << e.what() << '\n'; return EXIT_FAILURE; }
 }

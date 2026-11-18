@@ -208,6 +208,10 @@ void SupplyAndConcreteTransactions() {
     S_CampaignEquipmentRecipe recipe;
     recipe.m_AutoEquip = AutoEquipPolicyKey("campaign/fixture/ammo"); recipe.m_Items.push_back({ItemCatalogKey("item1"), Place("belt"), 1});
     data.m_Recipes.push_back(recipe);
+    auto preset = recipe; preset.m_AutoEquip.reset(); preset.m_Preset = PresetKey("campaign/fixture/ammo");
+    data.m_Recipes.push_back(preset);
+    auto scarce = recipe; scarce.m_AutoEquip = AutoEquipPolicyKey("campaign/fixture/scarce"); scarce.m_Items[0].m_Count = 4;
+    data.m_Recipes.push_back(scarce);
     C_CampaignEquipmentRules rules(data);
     auto supply = rules.NormalizeSupply({{ItemCatalogKey("item0"), 1, false}, {ItemCatalogKey("item0"), 6, true},
         {ItemCatalogKey("item2"), 1, false}, {ItemCatalogKey("item3"), 1, false}});
@@ -228,6 +232,11 @@ void SupplyAndConcreteTransactions() {
     CHECK(model.GetSnapshot(PlayerId(1))->m_Stock[1].m_State.m_Quantity == 6u);
     CHECK(apply(fixture.Edit(1, {10, 30, 40}, S_CampaignAutoEquip{*recipe.m_AutoEquip, {}})).m_Reason == R::None);
     CHECK(model.GetSnapshot(PlayerId(1))->m_Stock[1].m_State.m_Quantity == 3u);
+    CHECK(apply(fixture.Edit(1, {10}, S_CampaignApplyPreset{*preset.m_Preset})).m_Reason == R::None);
+    before = Digest(model.GetSnapshot(PlayerId(1)));
+    const auto totals = Totals(model.GetSnapshot(PlayerId(1)));
+    CHECK(apply(fixture.Edit(1, {10, 30, 40}, S_CampaignAutoEquip{*scarce.m_AutoEquip, {}})).m_Reason == R::StockUnavailable);
+    CHECK(Digest(model.GetSnapshot(PlayerId(1))) == before && Totals(model.GetSnapshot(PlayerId(1))) == totals);
     CHECK(apply(fixture.Edit(1, {10, 20}, S_CampaignAutoEquip{*recipe.m_AutoEquip, {}})).m_Reason == R::NotOwner);
     CHECK(apply(fixture.Edit(1, {10}, S_CampaignAutoEquip{*recipe.m_AutoEquip, {ItemCatalogKey("item0")}})).m_Reason == R::PolicyRequired);
     auto invalid = model.GetSnapshot(PlayerId(1))->m_Loadouts[0];

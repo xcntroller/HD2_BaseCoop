@@ -2,14 +2,14 @@
 
 ## Coordination
 
-- Status: active (implementation checkpoint; final target rerun/review pending)
+- Status: review (component checks passed; independent final review pending)
 - Owner/session: Codex COOP-005 / thread `01a1ebf9-90e7-7ca2-8a1d-987711a3d8fe`, user assignment 2026-11-18
 - Canonical branch: `feature/coop-005-preparation-model`
 - Base commit: `4d6f8cc1bb96c50aee09d5c3ac0992ce716a3d39` (integrated `origin/main`)
 - Dependencies: COOP-002, COOP-011 (merged shared declarations)
-- Last checkpoint: implementation checkpoint in this commit (parent claim/audit `278723cc`)
+- Last checkpoint: this validated freeze-baseline follow-up; prior implementation `8dc87b0a`
 - Checkpoint location: `.worktrees/COOP-005`; `origin/feature/coop-005-preparation-model`
-- Review/integration: independent COOP-004 consumer review requested after this checkpoint
+- Review/integration: COOP-004 independent review of `8dc87b0a` passed apart from addressed freeze composition; final follow-up review pending
 - Pull request: draft [#8](https://github.com/xcntroller/HD2_BaseCoop/pull/8)
 
 ## Branch authority and completion PR
@@ -95,7 +95,7 @@ and COOP-007 notification before editing shared equipment files.
 - Files: only `src/game/campaign_preparation.{h,cpp}`, own harness and this record.
   No shared header, legacy source, UI, index or generated-tier changes.
 - Behavioral evidence: GCC C++17 / warnings-as-errors passed, latest output
-  `build/campaign_preparation/gcc-deuf2wxd`. Harness checks permissions/bulk rejection,
+  `build/campaign_preparation/gcc-wheke2z_`. Harness checks permissions/bulk rejection,
   last-item/stale/replay/conflict/expiry, invalid equipment/capacity, variant preservation,
   per-variant conservation, rollback, ownership races/disconnect, ready/freeze and overflow.
 - Original-rule evidence: `legacy_source.py` extracts current original bodies into
@@ -103,27 +103,37 @@ and COOP-007 notification before editing shared equipment files.
   Axis-carrier cases compare concrete rules against those compiled source algorithms.
   Concrete transaction checks cover displaced-backpack rollback, backpack+contents
   return, ammunition supply conversion and bulk target permissions. See harness README.
-- Target evidence: MSVC 19.44.35230 x86 /W4 /WX with SDK 10.0.26100.0 under Wine 11.21
-  passed header, behavior and original-rule parity at
-  `build/campaign_preparation/msvc-47sttfxj`. Later changes (full-roster ownership input,
-  epoch normalization, extra bounds/identity checks and conservation assertions) need a
-  final target rerun; GCC passed after them. One earlier test assertion signedness
-  warning was corrected; the target run above passed afterward.
+- Target evidence: current implementation MSVC 19.44.35230 x86 /W4 /WX with SDK
+  10.0.26100.0 under Wine 11.21 passed standalone header, behavior and original-rule
+  parity: `build/campaign_preparation/msvc-t3_i3i0o`. Exact argv/environment/version
+  and execute logs retained there. COOP-007 replacement tooling was borrowed read-only;
+  all outputs and Wine prefix stayed private to COOP-005. Earlier historical runs
+  `msvc-47sttfxj`, `msvc-kbhg9u46` and `msvc-z6ac4646` also passed.
 - Commands: `python3 _re/harness/campaign_preparation/run.py --compiler gcc`;
   Windows `python _re\harness\campaign_preparation\run.py --compiler msvc`.
   Exact portable-Wine command, flags, prerequisites, expected output and queue/journal
   composition are in `_re/harness/campaign_preparation/README.md`.
-- Environment change: COOP-001 worktree/ignored compiler resources disappeared after
-  the passing target run; its owner confirms they did not delete/move them. Historical
-  logs remain in this task's ignored build directory. Coordinate reprovisioning with
-  COOP-007 before final target validation; no missing artifact is claimed available.
-- Remaining: final review/bounds tests, current-head MSVC rerun, complete PR description,
-  independent review and integration gates. Native catalog/transport/UI composition is
-  downstream; this is a source-only component, not a connected preparation screen.
-- Decisions: selected ownership records must be eligible/alive/deployed (selected for
-  preparation, not actor-spawned); COOP-004 confirmed setup semantics. Production
-  readiness/departure policies remain unresolved and return PolicyRequired. The fixture's
-  all-ready quorum and explicit recipe auto-equip policy are labeled development inputs.
-- Next action: preserve this checkpoint, obtain independent COOP-004 review and restore
-  target tooling for final verification. No implementation files remain uncommitted after
-  this checkpoint; local output/logs are ignored.
+- Environment change resolved: original borrowed COOP-001 tooling disappeared
+  externally; COOP-007 reprovisioned pinned private tools. Current README points to
+  `.worktrees/COOP-007/build/tooling/run-python.bat`; preserve those borrowed resources.
+- Freeze integration: independent review found COOP-004 phase-only transitions
+  advanced ownership/control revisions after manifest capture. COOP-004 corrected its
+  Freeze/StartSimulation baseline separately. This model's optional trusted freeze
+  callback verifies the exact unchanged ownership/control/participant cut before
+  publishing an immutable owning manifest. Callback mismatches fail closed/resync;
+  no stale manifest is exposed. Regression checks prior mission generation fields,
+  full-roster input, host without soldier, scripted/dead AI and both freeze models.
+- Independent review: COOP-004 read all initial implementation/header/differential
+  harness and independently reran GCC successfully (810+240 parity cases). No other
+  blocking finding; final callback/manifest changes are under final peer review.
+- Remaining: final independent follow-up review and integration gates. Native
+  catalog/transport/UI composition is downstream; this is a source-only component,
+  not a connected preparation screen. No full game build/runtime claim is made.
+- Decisions: selected records must be eligible/alive/deployed (selected for preparation,
+  not actor-spawned); COOP-004 confirmed setup semantics. Production readiness/departure
+  policies remain unresolved and return PolicyRequired. The fixture's all-ready quorum
+  and explicit recipe auto-equip policy are labeled development inputs. Both optional
+  result generation fields describe the complete current session epoch across families.
+- Next action: review this published follow-up, then mark PR ready and integrate only
+  when independent acceptance passes; record actual merge commit afterward.
+- Uncommitted work: none after this checkpoint; build outputs/logs remain ignored.

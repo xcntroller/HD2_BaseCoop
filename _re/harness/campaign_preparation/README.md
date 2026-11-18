@@ -27,10 +27,11 @@ Each invocation creates its own ignored `build/campaign_preparation/{gcc,msvc}-*
 directory, with environment, exact commands, generated legacy bodies and diagnostic
 logs. The legacy build's fixed temporary directories are never used.
 
-Local portable compiler setup from COOP-001, using a private Wine prefix:
+Local portable compiler setup from COOP-007 replacement tooling (the original COOP-001 worktree was removed),
+using a private Wine prefix:
 
 ```sh
-env -u WAYLAND_DISPLAY DISPLAY=:99 WINEPREFIX="$PWD/build/wine-prefix" WINEDEBUG=-all wine64 cmd /c 'Z:\home\control\Documents\Projects\HD2SS\HD2_BaseCoop\.worktrees\COOP-001\build\tooling\run-python.bat' 'Z:\home\control\Documents\Projects\HD2SS\HD2_BaseCoop\.worktrees\COOP-005\_re\harness\campaign_preparation\run.py' --compiler msvc
+env -u WAYLAND_DISPLAY DISPLAY=:99 WINEPREFIX="$PWD/build/wine-prefix" WINEDEBUG=-all wine64 cmd /c 'Z:\home\control\Documents\Projects\HD2SS\HD2_BaseCoop\.worktrees\COOP-007\build\tooling\run-python.bat' 'Z:\home\control\Documents\Projects\HD2SS\HD2_BaseCoop\.worktrees\COOP-005\_re\harness\campaign_preparation\run.py' --compiler msvc
 ```
 
 Both behavior executables must exit zero. `legacy-execute.log` must report 810
@@ -90,7 +91,13 @@ Deployment requires an explicit injected quorum/departure policy and no campaign
 blockers. The test policy requiring all admitted participants ready is a named
 DEVELOPMENT fixture, not a product decision. Ready toggles affect view revision;
 loadout/stock/rights/presence/rules changes invalidate ready at preparation revision.
-Freeze captures one immutable manifest and closes edits. The lifecycle adapter
+Freeze captures one immutable manifest and closes edits. When composing with
+ownership, bind the optional constructor `freezeOwnership` callback to the trusted
+ownership `Freeze` operation on the same queue. The callback must publish only the
+phase change, preserving exact ownership/control revisions and participant/rights
+values. The model verifies that baseline before publishing its frozen cut and
+returns an immutable owning manifest handle. A partial/mismatched cross-model
+freeze fails closed; lifecycle must abort into a new generation. The lifecycle adapter
 assigns the manifest SnapshotId, reconstructs the world and runs its peer barrier;
 this component never starts simulation. Membership changes after freeze invalidate
 the manifest and require a fresh preparation generation; an old generation never

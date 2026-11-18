@@ -72,9 +72,9 @@ bool SameParticipants(const std::vector<S_CampaignParticipant> &a, const std::ve
 C_CampaignPreparation::C_CampaignPreparation(S_CampaignPreparationSnapshot initial,
     const I_CampaignOwnershipView &ownership, const I_CampaignEquipmentRules &rules,
     const I_CampaignDeploymentPolicy &policy, S_CampaignPreparationJournal journal,
-    S_CampaignPreparationLimits limits)
+    S_CampaignPreparationLimits limits, std::function<E_CampaignReason()> freezeOwnership)
     : m_State(std::move(initial)), m_Ownership(ownership), m_Rules(rules), m_Policy(policy),
-      m_Journal(std::move(journal)), m_Limits(limits) {
+      m_Journal(std::move(journal)), m_Limits(limits), m_FreezeOwnership(std::move(freezeOwnership)) {
     if (!m_Journal.m_Begin || !m_Journal.m_Finish || !limits.m_MaxCount || !limits.m_MaxSteps ||
         !limits.m_MaxEntries || !limits.m_MaxKeyBytes || !limits.m_MaxCanonicalBytes ||
         limits.m_MaxCount > 32767 || limits.m_MaxCanonicalBytes > 4096 || !m_State.m_Context.m_Session.IsValid() ||
@@ -155,7 +155,6 @@ R C_CampaignPreparation::RefreshOwnership(bool initializing) {
         s.m_Ownership = *Find(current->m_Soldiers, [&](const auto &v) { return v.m_Soldier == s.m_Soldier; });
     if (!initializing) { Advance(candidate, true); Evaluate(candidate); }
     m_State = std::move(candidate);
-    m_OwnershipSnapshot = std::move(current);
     return R::None;
 }
 R C_CampaignPreparation::SynchronizeOwnership() {
@@ -386,6 +385,7 @@ S_CampaignRequestResult C_CampaignPreparation::ApplyEdit(PlayerId sender, const 
     if (reason != R::None) return Result(r.m_Context, F::Edit, reason);
     // Bounded shape validation precedes canonicalization/journal storage. The
     // codec/dispatcher must reject oversized frames before materializing DTOs.
+    if (r.m_Operation.valueless_by_exception()) return Result(r.m_Context, F::Edit, R::Malformed);
     bool oversized = r.m_Targets.size() > 4;
     std::visit([&](const auto &op) {
         using T = std::decay_t<decltype(op)>;
@@ -487,6 +487,32 @@ S_CampaignRequestResult C_CampaignPreparation::RequestDeploy(PlayerId sender, co
         reason = R::StaleRevision; m_Invalidated = true; m_FrozenManifest.reset();
     }
     if (reason == R::None && !CanAdvance(false)) reason = R::SnapshotUnavailable;
+    if (reason == R::None && m_FreezeOwnership) {
+        reason = m_FreezeOwnership();
+        auto frozen = m_Ownership.GetSnapshot();
+        bool valid = reason == R::None && frozen && frozen->m_Context.m_Phase == E_CampaignPhase::Frozen &&
+            frozen->m_Context.m_Session == candidate.m_Context.m_Session &&
+            frozen->m_Context.m_Campaign == candidate.m_Context.m_Campaign &&
+            frozen->m_Context.m_Mission == candidate.m_Context.m_Mission &&
+            frozen->m_Context.m_MissionGeneration == candidate.m_Context.m_MissionGeneration &&
+            frozen->m_Context.m_HostPlayer == candidate.m_Context.m_HostPlayer &&
+            candidate.m_OwnershipRevision == frozen->m_Revision && SameParticipants(frozen->m_Participants, candidate.m_Participants);
+        if (valid) for (auto &soldier : candidate.m_Soldiers) {
+            auto record = Find(frozen->m_Soldiers, [&](const auto &v) { return v.m_Soldier == soldier.m_Soldier; });
+            const auto &old = soldier.m_Ownership;
+            if (record == frozen->m_Soldiers.end() || record->m_Eligible != old.m_Eligible || record->m_Deployed != old.m_Deployed ||
+                record->m_Alive != old.m_Alive || record->m_Owner != old.m_Owner || record->m_Actor != old.m_Actor ||
+                record->m_Scripted != old.m_Scripted || old.m_ControlRevision != record->m_ControlRevision) { valid = false; break; }
+            soldier.m_Ownership = *record;
+        }
+        if (valid) candidate.m_OwnershipRevision = frozen->m_Revision;
+        else {
+            // An invalid/partial cross-model freeze is never deployable. Abort
+            // through lifecycle with a new generation rather than thawing it.
+            m_Invalidated = true; m_FrozenManifest.reset();
+            if (reason == R::None) reason = R::SnapshotUnavailable;
+        }
+    }
     if (reason == R::None) {
         Advance(candidate, false); candidate.m_Context.m_Phase = E_CampaignPhase::Frozen;
         candidate.m_CanDeploy = {false, R::Frozen};
@@ -496,11 +522,11 @@ S_CampaignRequestResult C_CampaignPreparation::RequestDeploy(PlayerId sender, co
         manifest.m_FrozenPreparationRevision = candidate.m_PreparationRevision; manifest.m_ViewRevision = candidate.m_ViewRevision;
         manifest.m_OwnershipRevision = candidate.m_OwnershipRevision; manifest.m_Soldiers = candidate.m_Soldiers;
         manifest.m_Loadouts = candidate.m_Loadouts; manifest.m_RequiredParticipants = std::move(policy.m_RequiredParticipants);
-        m_FrozenManifest = std::move(manifest); m_State = std::move(candidate);
+        m_FrozenManifest = std::make_shared<const S_CampaignMissionManifest>(std::move(manifest)); m_State = std::move(candidate);
     }
     return Finish(r.m_Context, F::Deploy, content, reason);
 }
-const std::optional<S_CampaignMissionManifest> &C_CampaignPreparation::GetFrozenManifest() const { return m_FrozenManifest; }
+std::shared_ptr<const S_CampaignMissionManifest> C_CampaignPreparation::GetFrozenManifest() const { return m_FrozenManifest; }
 
 namespace {
 bool IsContainer(E_CampaignEquipmentContainer c) {

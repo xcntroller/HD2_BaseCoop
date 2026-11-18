@@ -138,7 +138,8 @@ public:
     C_CampaignPreparation(S_CampaignPreparationSnapshot initial,
         const I_CampaignOwnershipView &ownership, const I_CampaignEquipmentRules &rules,
         const I_CampaignDeploymentPolicy &policy, S_CampaignPreparationJournal journal,
-        S_CampaignPreparationLimits limits = {});
+        S_CampaignPreparationLimits limits = {},
+        std::function<E_CampaignReason()> freezeOwnership = {});
     T_CampaignPreparationSnapshot GetSnapshot(PlayerId viewer) const;
     S_CampaignRequestResult ApplyEdit(PlayerId sender, const S_CampaignEditRequest &request);
     S_CampaignRequestResult SetReady(PlayerId sender, const S_CampaignReadyRequest &request);
@@ -151,7 +152,7 @@ public:
     // Notify trusted catalog/rule/policy changes in the same queue transaction.
     // Dependency objects otherwise stay immutable for the model lifetime.
     E_CampaignReason RevalidateRules();
-    const std::optional<S_CampaignMissionManifest> &GetFrozenManifest() const;
+    std::shared_ptr<const S_CampaignMissionManifest> GetFrozenManifest() const;
 private:
     E_CampaignReason RefreshOwnership(bool initializing = false);
     E_CampaignReason Gate(PlayerId sender, const S_CampaignPreparationRequestContext &context);
@@ -174,9 +175,11 @@ private:
     const I_CampaignDeploymentPolicy &m_Policy;
     S_CampaignPreparationJournal m_Journal;
     S_CampaignPreparationLimits m_Limits;
-    T_CampaignOwnershipSnapshot m_OwnershipSnapshot;
     std::uint64_t m_NextEntry = 1;
-    std::optional<S_CampaignMissionManifest> m_FrozenManifest;
+    std::shared_ptr<const S_CampaignMissionManifest> m_FrozenManifest;
+    // Production binds ownership.Freeze; unchanged semantic rights/presence are
+    // verified at the unchanged ownership/control baseline in the SAME manifest.
+    std::function<E_CampaignReason()> m_FreezeOwnership;
     bool m_Invalidated = false;
 };
 #endif
