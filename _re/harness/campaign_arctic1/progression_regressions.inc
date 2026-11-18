@@ -34,6 +34,20 @@ void TickPairedProgressionProbe(const char *scenario)
     if (std::strcmp(scenario, "campaign") != 0 && !leaveReport && !leaveLoading)
         return;
 
+    static std::optional<S_CampaignControlToken> previousInput;
+    static bool checkedPreviousInput = false;
+    if (!g_guest && g_ownership) {
+        const auto phase = g_ownership->GetSnapshot()->m_Context;
+        if (!previousInput && phase.m_MissionGeneration.Value() == 1 && phase.m_Phase == Phase::Running)
+            previousInput = g_ownership->GetControlToken(kHostPlayer);
+        if (previousInput && !checkedPreviousInput && previousInput->m_Generation < phase.m_MissionGeneration) {
+            checkedPreviousInput = true;
+            const auto reason = g_ownership->ValidateInput(kHostPlayer, *previousInput);
+            LogDevelopmentCampaign("progression fixture checked previous input token",
+                                   static_cast<unsigned>(reason), phase.m_MissionGeneration.Value());
+        }
+    }
+
     static std::optional<Wire::S_ReportKey> report;
     static Clock::time_point opened;
     static bool earlyAdvance = false;
@@ -130,6 +144,7 @@ void TickProgressionRegression(C_GameApp &app, const std::function<bool(C_Campai
             for (int objective = 1; objective <= 4; ++objective)
                 game->SetObjectiveStatus(objective, OBJECTIVE_COMPLETED);
             LogDevelopmentCampaign("solo regression seeded original mission objectives");
+            game->EndMission(100);
         }
         return;
     }
