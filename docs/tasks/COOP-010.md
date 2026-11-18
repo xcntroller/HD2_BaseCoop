@@ -393,3 +393,15 @@ GCC and MSVC x86 passed protocol (12 suites, 567,370 checks each), mission
 (409 lifecycle and 108 native-source checks each), ownership (10,721 each),
 and controller composition (1,272 controller, 237 native sink and 36 team
 checks each).
+
+The separate review added the original actor, navigation and sound data
+to the mission fingerprint at `5939f0fa`. The altered private guest
+navigation file reached negotiation and returned `ContentMismatch` (32)
+while the host was still waiting to load. After restoring the original
+file lookup, the same host accepted fresh PlayerId 3 on provider slot 1.
+Both processes reconstructed 37,646 bytes with CRC32 `2384946426` and
+started generation 1 / snapshot 1. The x86 incremental build linked with
+zero compiler diagnostics. Its tested executable SHA-256 was
+`592b499ca772a13b0f01502079db8359aa3b3ba228a29c9d7602db4f782d0dc4`.
+The build, rejection and restored-session logs are in
+`build/coop-010-evidence/initial-world/checkpoint-content-mismatch/`.
