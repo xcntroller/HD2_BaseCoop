@@ -16,6 +16,11 @@ VSWHERE = r"C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe
 
 def find_vcvars():
     """vcvars32.bat of the newest Visual Studio with the C++ tools (VS 2026 lives on T:)."""
+    override = os.environ.get("HD2_VCVARS32")
+    if override:
+        if not os.path.isfile(override):
+            sys.exit("HD2_VCVARS32 does not name an existing x86 environment batch file: " + override)
+        return os.path.abspath(override)
     if os.path.exists(VSWHERE):
         r = subprocess.run([VSWHERE, "-latest", "-products", "*", "-requires",
                             "Microsoft.VisualStudio.Component.VC.Tools.x86.x64", "-property",
