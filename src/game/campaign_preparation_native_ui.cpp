@@ -29,7 +29,7 @@ using Rect = S_CampaignPreparationRect;
 
 constexpr int kOriginalCampaign = 0;
 constexpr int kArcticMission = 1;
-constexpr float kFontHeight = 16, kLinePitch = 18;
+constexpr float kFontHeight = 16;
 
 int CatalogIndex(std::string_view key, std::string_view prefix)
 {
@@ -100,23 +100,25 @@ std::string OriginalBriefing()
 }
 
 constexpr std::pair<std::string_view, const char *> kLabels[] = {
-    {"COOP_PREP_TITLE", "CO-OP CAMPAIGN / PREPARATION"},
+    {"COOP_PREP_TITLE", "Campaign preparation"},
+    {"COOP_PREP_SOLDIER", "SELECTED SOLDIER"},
     {"COOP_PREP_RECEIVING", "Receiving preparation..."},
     {"COOP_PREP_DISCONNECTED", "Connection ended"},
     {"COOP_PREP_FROZEN", "Preparation complete / loading mission"},
     {"COOP_PREP_PENDING", "Waiting for host"},
     {"COOP_PREP_COMMITTED", "Equipment confirmed"},
     {"COOP_OWNER_AI", "AI"}, {"COOP_OWNER_SCRIPTED", "Script controlled"}, {"COOP_OWNER_HUMAN", "Human"},
-    {"COOP_OWNER_EDITABLE", "Equipment available"}, {"COOP_OWNER_READ_ONLY", "Read only"},
+    {"COOP_OWNER_EDITABLE", "Can equip"}, {"COOP_OWNER_READ_ONLY", "Read only"},
     {"COOP_OWNER_EDIT_OWN", "Editing your soldier"}, {"COOP_OWNER_EDIT_AI", "Editing AI soldier"},
     {"COOP_SLOT_UNAVAILABLE", "Unavailable"}, {"COOP_SLOT_CLAIM", "Claim"}, {"COOP_SLOT_RELEASE", "Release"},
     {"COOP_OWNER_NO_SOLDIER", "Claim a soldier to take part."},
-    {"COOP_BRIEFING_TITLE", "MISSION BRIEFING"}, {"COOP_BRIEFING_PAGE", "Open briefing"}, {"COOP_EQUIP_PAGE", "Equipment"},
-    {"COOP_PAGE_PREVIOUS", "Previous page"}, {"COOP_PAGE_NEXT", "Next page"},
-    {"COOP_SKILLS", "Skills / equipment"}, {"COOP_PAGE_KEYS", "Arrow keys: page"},
+    {"COOP_BRIEFING_TITLE", "MISSION BRIEFING"}, {"COOP_BRIEFING_PAGE", "Mission briefing"}, {"COOP_EQUIP_PAGE", "Equipment"},
+    {"COOP_PAGE_PREVIOUS", "< Previous"}, {"COOP_PAGE_NEXT", "Next >"},
+    {"COOP_SKILLS", "Soldier skills"}, {"COOP_PAGE_KEYS", "Arrow keys: page"},
     {"COOP_EQUIP_NO_DESTINATION", "No available placement"}, {"COOP_EQUIP_TAKE", "Equip"},
-    {"COOP_EQUIP_RETURN", "Return"}, {"COOP_EQUIP_WEIGHT", "Weight"}, {"COOP_EQUIP_BELT_PACK", "Belt / backpack"},
-    {"COOP_EQUIP_STOCK", "SHARED EQUIPMENT"}, {"COOP_EQUIP_AMMO", "Ammo"}, {"COOP_EQUIP_ROUNDS", "Rounds"},
+    {"COOP_EQUIP_RETURN", "Return to stock"}, {"COOP_EQUIP_WEIGHT", "Weight"}, {"COOP_EQUIP_BELT_PACK", "Belt / backpack"},
+    {"COOP_EQUIP_STOCK", "SHARED STOCK"}, {"COOP_EQUIP_KIT", "CARRIED EQUIPMENT"},
+    {"COOP_EQUIP_DESTINATION", "Move to"}, {"COOP_EQUIP_QUANTITY", "Quantity"}, {"COOP_EQUIP_AMMO", "Ammo"}, {"COOP_EQUIP_ROUNDS", "Rounds"},
     {"COOP_EQUIP_CHARGES", "Charges"}, {"COOP_EQUIP_CONDITION", "Condition"},
     {"COOP_ESSENTIAL_ELIGIBLE", "Eligible carriers:"}, {"COOP_ESSENTIAL_DETAILS", "Essentials / restrictions"},
     {"COOP_ESSENTIAL_TITLE", "MISSION ESSENTIALS:"}, {"COOP_READY_SET", "Ready"}, {"COOP_READY_UNSET", "Not ready"},
@@ -265,31 +267,44 @@ public:
         return pages;
     }
 
-    void Panel(const Rect &rect, bool selected) override
+    void Panel(const Rect &rect, bool recessed) override
     {
-        Quad(rect, selected ? 0xffb7a76c : rect.m_Width == 1024 ? 0xff41483a : 0xffd5cdb5);
+        if (rect.m_Width == 1024) {
+            Quad(rect, 0xff30392f);
+            Quad({0, 0, 1024, 88}, 0xff222b24);
+            Quad({32, 87, 960, 1}, 0xff7d896e);
+            return;
+        }
+        Quad(rect, recessed ? 0xffaaa88e : 0xffe3dcc6);
+    }
+
+    void Control(const Rect &rect, E_CampaignPreparationControlStyle style, bool selected, bool enabled) override
+    {
+        using Style = E_CampaignPreparationControlStyle;
+        std::uint32_t fill = 0xffeee6cf;
+        if (!enabled)
+            fill = 0xffc8c4ad;
+        else if (selected || style == Style::Primary)
+            fill = 0xffd7c28a;
+        else if (style == Style::Card)
+            fill = 0xffded8bd;
+        else if (style == Style::Button)
+            fill = 0xffc5c9a8;
+        Quad(rect, 0xff6e775e);
+        Quad({rect.m_X + 1, rect.m_Y + 1, rect.m_Width - 2, rect.m_Height - 2}, fill);
+        if (selected)
+            Quad({rect.m_X + 1, rect.m_Y + 1, 4, rect.m_Height - 2}, 0xff746033);
+    }
+
+    void Heading(const Rect &rect, const std::string &text, bool primary) override
+    {
+        const float size = primary ? 26.0f : kFontHeight;
+        DrawText(rect, text, size, primary ? 0xfffff1cd : 0xffccd1b5);
     }
 
     void Text(const Rect &rect, const std::string &text, bool muted) override
     {
-        const auto lines = Wrap(rect, text);
-        const float height = kFontHeight * m_Scale;
-        m_Font->ClearVertices();
-        m_Font->Select();
-        GetIGraph()->SetRenderState(0, 1);
-        for (std::size_t row = 0; row < lines.size() && row < LineCount(rect); ++row) {
-            float x = m_Left + (rect.m_X + 5) * m_Scale;
-            const float y = m_Top + (rect.m_Y + 3 + kFontHeight + row * kLinePitch) * m_Scale;
-            for (std::size_t i = 0; i < lines[row].size();) {
-                const auto glyph = Glyph(lines[row], i);
-                const float width = Width(glyph.first) * m_Scale;
-                m_Font->AddQuad(glyph.first, rect.m_Y < 110 ? 0xffe8dfc0 : muted ? 0xff70715f : 0xff20291e,
-                    static_cast<int>(width), static_cast<int>(height), static_cast<int>(x), static_cast<int>(y), .02f);
-                i += glyph.second;
-                x += width;
-            }
-        }
-        m_Font->Flush();
+        DrawText(rect, text, kFontHeight, muted ? 0xff565d4c : 0xff263026);
     }
 
     void Preview(const Rect &rect, AssetKey asset, const S_CampaignSoldierLoadout &loadout) override
@@ -346,8 +361,8 @@ public:
 
     void Focus(const Rect &rect) override
     {
-        Quad({rect.m_X, rect.m_Y, rect.m_Width, 2}, 0xfff5eac1);
-        Quad({rect.m_X, rect.m_Y + rect.m_Height - 2, rect.m_Width, 2}, 0xff20291e);
+        Quad({rect.m_X, rect.m_Y, rect.m_Width, 2}, 0xfffff1cd);
+        Quad({rect.m_X, rect.m_Y + rect.m_Height - 2, rect.m_Width, 2}, 0xff343c2d);
     }
 
     void Asset(const Rect &rect, AssetKey asset) override
@@ -409,14 +424,56 @@ private:
         return {code <= 0xffff ? code : '?', size};
     }
 
-    float Width(int glyph) { return (std::max)(0.4f, m_Font->GetGlyph(glyph)->aspect) * kFontHeight; }
-
-    static std::size_t LineCount(const Rect &rect)
+    float Width(int glyph, float height)
     {
-        return static_cast<std::size_t>((std::max)(1.0f, (rect.m_Height - 1) / kLinePitch));
+        return (std::max)(0.4f, m_Font->GetGlyph(glyph)->aspect) * height;
     }
 
-    std::vector<std::string> Wrap(const Rect &rect, const std::string &text)
+    void DrawText(const Rect &rect, const std::string &text, float size, std::uint32_t color)
+    {
+        auto lines = Wrap(rect, text, size);
+        const auto count = LineCount(rect, size);
+        if (lines.size() > count) {
+            lines.resize(count);
+            auto &last = lines.back();
+            const float limit = rect.m_Width - 10 - 3 * Width('.', size);
+            float width = 0;
+            std::size_t end = 0;
+            while (end < last.size()) {
+                const auto glyph = Glyph(last, end);
+                width += Width(glyph.first, size);
+                if (width > limit)
+                    break;
+                end += glyph.second;
+            }
+            last.resize(end);
+            last += "...";
+        }
+        const float height = size * m_Scale;
+        m_Font->ClearVertices();
+        m_Font->Select();
+        GetIGraph()->SetRenderState(0, 1);
+        for (std::size_t row = 0; row < lines.size(); ++row) {
+            float x = m_Left + (rect.m_X + 5) * m_Scale;
+            const float y = m_Top + (rect.m_Y + 3 + size + row * (size + 2)) * m_Scale;
+            for (std::size_t i = 0; i < lines[row].size();) {
+                const auto glyph = Glyph(lines[row], i);
+                const float width = Width(glyph.first, size) * m_Scale;
+                m_Font->AddQuad(glyph.first, color, static_cast<int>(width), static_cast<int>(height),
+                                static_cast<int>(x), static_cast<int>(y), .02f);
+                i += glyph.second;
+                x += width;
+            }
+        }
+        m_Font->Flush();
+    }
+
+    static std::size_t LineCount(const Rect &rect, float height = kFontHeight)
+    {
+        return static_cast<std::size_t>((std::max)(1.0f, (rect.m_Height - 1) / (height + 2)));
+    }
+
+    std::vector<std::string> Wrap(const Rect &rect, const std::string &text, float height = kFontHeight)
     {
         std::vector<std::string> lines;
         std::string line;
@@ -432,12 +489,12 @@ private:
             if (glyph.first == '\n')
                 lineBreak();
             else if (glyph.first != '\r') {
-                const float advance = Width(glyph.first);
+                const float advance = Width(glyph.first, height);
                 if (width > 0 && glyph.first != ' ' && i > 0 && text[i - 1] == ' ') {
                     float word = 0;
                     for (auto j = i; j < text.size() && text[j] != ' ' && text[j] != '\n';) {
                         const auto part = Glyph(text, j);
-                        word += Width(part.first);
+                        word += Width(part.first, height);
                         j += part.second;
                     }
                     if (width + word > limit)
@@ -527,7 +584,7 @@ void C_CampaignPreparationNativeUI::MouseInput(C_Cursor &cursor, int timeDelta)
         return candidate.m_Rect.Contains(point.first, point.second);
     });
     if (down) {
-        if (control != controls.end() && control->m_Enabled)
+        if (control != controls.end())
             m_View->m_PressedControl = std::make_pair(control->m_Action, control->m_Key);
     } else {
         if (control != controls.end() && m_View->m_PressedControl == std::make_pair(control->m_Action, control->m_Key))
