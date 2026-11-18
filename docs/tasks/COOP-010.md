@@ -2,15 +2,16 @@
 
 ## Coordination
 
-- Status: review
+- Status: done
 - Owner/session: Codex COOP-010, user assignment on 2026-11-18
 - Canonical branch: `feature/coop-010-two-player-mission`
 - Base commit: `6f1bdd96075b074a6a7b958257af5f56f8374fb5`
 - Dependencies: COOP-008, COOP-009 and their transitive merged dependencies
-- Last checkpoint: Arctic1 playable gate and native mode regressions
+- Last checkpoint: Arctic1 playable gate, native mode regressions, and navigation mismatch recovery
 - Checkpoint location: `.worktrees/COOP-010` and the canonical branch on origin
-- Review/integration: claim acknowledged by coordination ledger commit `69cb6361`
+- Review/integration: claim acknowledged in coordination ledger `69cb6361`. Separate exact-head review passed in `8455c6a6` against `main` at `6f1bdd96`.
 - Pull request: [#22](https://github.com/xcntroller/HD2_BaseCoop/pull/22)
+- Merged commit: `738b124d57a85901c167cebf9b07ca079aac2ac9` (reviewed head `fd1572a33c15445e7fdd66a0950d9ead305420e1`)
 
 ## Branch authority and completion PR
 
@@ -129,8 +130,8 @@ roster/loadouts/policies as fixtures, not approved production menu behavior.
   rendezvous and mission completion remain unverified. The guest intro
   differs in scripted props, audio and HUD. The live state covers the squad
   and objectives. Ambient patrol movement remains host-side.
-- Next action: review the exact completion PR head and integrate according to
-  the repository workflow.
+- Integration: the reviewed head merged on 2026-11-18. Its tree matches the
+  merge rehearsal and the feature tree.
 - Blockers: none. COOP-008 merged at `d34b6900` and COOP-009 at `ce306626`.
 - Local prerequisites: root-checkout ignored `build/coop-shared-tooling/run-python.bat`
   configures preserved MSVC 14.44.35207 / SDK 10.0.26100.0 / Windows Python 3.13.9.
