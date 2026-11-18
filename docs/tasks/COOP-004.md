@@ -129,8 +129,8 @@ model behavior only, and do not imply the later adapters or campaign mode are pl
   `59a480c8f612adac1c5967d2c47718defaad6278`; this reviewed documentation follow-up
   records actual done metadata. Live controller/mission/runtime gates remain downstream.
 - Next action: downstream COOP-008/009 consume the merged APIs and preserve handoff/
-  generation/world-barrier obligations. COOP-008 still waits for COOP-006; COOP-009
-  additionally waits for remaining preparation/protocol components.
+  generation/world-barrier obligations. COOP-008 and COOP-009 still wait for COOP-006;
+  COOP-005 preparation has also integrated at `06d999d7`.
 - Decisions: no new product policy. Selection/switching fixture permissions are proposals;
   production policy, peer/world barriers, host-loss and live adapter composition stay explicit.
 - Uncommitted work: none at the implementation checkpoint. All build/runtime evidence
