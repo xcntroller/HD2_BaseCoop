@@ -9,7 +9,7 @@
 - Dependencies: none
 - Last checkpoint: tooling `23079565`; runtime game/engine source `ca28d52c`; final evidence/handoff is this subsequent commit
 - Checkpoint location: `origin/feature/coop-001-build-baseline`; `.worktrees/COOP-001`
-- Review/integration: implementation and bounded runtime baseline recorded; separate final review requested; not merged
+- Review/integration: independent COOP-004 review passed at `747d0590`; implementation and bounded runtime baseline accepted; not merged
 - Pull request: https://github.com/xcntroller/HD2_BaseCoop/pull/2 (draft)
 
 ## Branch authority and completion PR
@@ -121,10 +121,9 @@ are excluded. This is wired into build guidance, not a new gameplay entry point.
   `configure_wine_msvc.py`, `build_check.py`; `ls3df/build.py` environment override only;
   root README, agent workflow, baseline guide and this record. No game/engine C++ edits,
   protocol/layout changes or generated tier1 edits. Scope acknowledged in coordinator ledger.
-- Remaining: final independent/separate review, publication as ready PR, integration and
-  actual done/merge metadata. No missing compiler/game-data blocker remains.
-- Next action: review published diff and evidence against integrated main, address findings,
-  mark PR #2 ready and integrate only after acceptance review; then record actual merge SHA.
+- Remaining: publication as ready PR, integration and actual done/merge metadata.
+  Independent final tooling/document review passed; no missing compiler/game-data blocker remains.
+- Next action: mark PR #2 ready and integrate the reviewed diff; then record actual merge SHA.
 - Known limits: partial runs and loopback only; unconfirmed firing/reload, mission completion,
   saves/healing/vehicles and future campaign gameplay retain their separate evidence gates.
 - Local state: own tree contains this final evidence update before checkpoint. Ignored
@@ -132,3 +131,16 @@ are excluded. This is wired into build guidance, not a new gameplay entry point.
   cache-probe remain accessible; installed game/prefix were read-only sources.
 - Checkpoint publication: `origin/feature/coop-001-build-baseline`, draft PR #2. No work on
   main; other task branches/worktrees preserved. Operational coordinator ledger is separate.
+
+## Independent final review
+
+COOP-004 worker (`01a1ebf9-60c7-74d0-9d39-cd09295875b0`) reviewed `747d0590`
+against integrated main: read all tooling diffs, task/guide, invocation and locking
+boundaries; reproduced `python3 _re/tools/test_build_isolated.py -v` (3/3 passed).
+No blocking findings. Confirmed child-only temporary environment, per-family exclusive
+locks, shared locks for engine variants/check-link, argv/path handling, explicit
+portable toolchain override and nine-file build/docs-only scope. Accepted the bounded
+build/Tutorial/native two-client baseline with unconfirmed firing/reload/completion
+and later runtime gates explicitly retained. Reviewer did not reproduce full MSVC
+build or gameplay; those actual local observations are recorded by COOP-001 above.
+No reviewer edits to this task tree. Final metadata-only update records this review.

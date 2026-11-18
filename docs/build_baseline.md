@@ -402,7 +402,7 @@ Local evidence is preserved under ignored `build/evidence/` and `build/tooling/`
 `rw-data-build.log`, `wine-isolation-tests.log`, `check-main.log`. Runtime stdout
 and game logs are in each runtime copy. These local files contain game imagery
 or machine paths, so they are not shipped as source. Re-run the steps to reproduce
-on another machine. No `.RPT` crash report was generated during these runs.
+on another machine. No `.RPT` crash report was generated during these runs. Both test clients were subsequently closed; host used Exit to Main Menu confirmation and normal End/Yes exit. The private X displays/toolchain remain available to other task workers; do not terminate them while another worker is using them.
 
 Initial failures are retained in the handoff rather than counted as passes:
 native Linux Python cannot execute the legacy `.bat`; GCC's `-m32` fallback lacks
