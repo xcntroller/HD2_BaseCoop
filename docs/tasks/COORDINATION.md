@@ -10,7 +10,7 @@ creating or updating the operational branch. Do not merge its WIP ledger into `m
 - Contact/shared channel: this published ledger and the COOP-010 task branch/PR.
 - Integrator: Codex COOP-010 for this session, subject to the review and runtime acceptance gates.
 - Latest checkpoint: `HEAD` on `origin/coord/coop-work-queue`.
-- Next action: complete guest initial-world reconstruction and ownership-tagged replication on COOP-010. The host fixture and transport are under Draft PR #22.
+- Next action: connect guarded input and authoritative squad and mission presentation on COOP-010. Draft PR #22 contains the verified two-instance Arctic1 entry.
 
 ## Accepted task claims
 
@@ -27,7 +27,7 @@ creating or updating the operational branch. Do not merge its WIP ledger into `m
 | COOP-009 | Codex COOP-009 / thread `01a1ec1f-ea8d-77f3-b0e9-7c683f367ec3`, user assignment | `feature/coop-009-campaign-adapters` | done | PR #19 merge `ce306626`; completion PR #21 merge `6f1bdd96`; canonical branch pushed to `6f1bdd96` | Dormant lifecycle/world-barrier/native rules complete; COOP-010 owns live attachment and actual two-instance evidence. |
 | COOP-001 | Codex / 2026-11-18 user assignment | `feature/coop-001-build-baseline` | done | PR #2 merge `15b572ff`; completion metadata PR #11 merge `1b9b307f` | Build/solo/native host-guest baseline and isolation accepted; guide/evidence integrated. Firing/reload/completion remain unverified downstream gates. |
 
-| COOP-010 | Codex COOP-010 (2026-11-18), user assignment | `feature/coop-010-two-player-mission` | active | Draft PR #22, source `33ad68fe`, handoff `b55b9fc6`, `.worktrees/COOP-010` | Implement and verify guest reconstruction of the host's original Arctic1 world, then guarded live replication/input and the two-client gameplay gate. |
+| COOP-010 | Codex COOP-010 (2026-11-18), user assignment | `feature/coop-010-two-player-mission` | active | Draft PR #22, source `055daf08`, handoff `28e0d6fd`, `.worktrees/COOP-010` | Wire live input and authoritative squad, script presentation and objectives. Verify gameplay and disconnect with both clients. |
 
 
 Only the coordinator adds or reassigns claims. A missing row is not sufficient evidence
@@ -201,3 +201,7 @@ missing fields. COOP-006 was notified explicitly before this stopped-writer hand
 - Initial world scope: COOP-010 owns Arctic1 time-zero reconstruction, including narrow Loading-phase startup changes in `game.cpp`, `spawn_point.cpp`, `campaign_mission_native.cpp`, `items_module.cpp`, `actors_module.cpp` and the script modules. The guest rebuilds from negotiated original content and the frozen manifest. A versioned native world comparison must pass before the guest sends its snapshot acknowledgment. Script execution and gameplay effects remain host-owned.
 
 - First-running-frame scope: COOP-010 owns the narrow original Arctic1 melee tracker replica startup and cleanup fix in `melee_tracker.cpp`. The first accepted world transfer exposed an uninitialized presentation movement controller on the guest. The native remote controller remains client-side and the host retains AI authority.
+
+
+- Two actual instances reconstructed original Arctic1 and acknowledged generation 1 / snapshot 1 before starting. The guest dog animation initialization fix held during the paired run. Source `055daf08`, handoff `28e0d6fd` and draft PR #22 carry this checkpoint.
+- Live gameplay scope covers the bounded campaign protocol format and conformance harness, the development launcher/session, ownership and native control adapters, and the necessary player/controller, mission/objective and camera presentation hooks. The guest receives host state and sends typed, ownership-tagged controls. The native multiplayer replication lane stays gated in campaign mode. COOP-010 is the only active writer in these files.
