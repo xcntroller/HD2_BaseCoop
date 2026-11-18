@@ -25,13 +25,88 @@ bool StartSoloRegressionPreparation(const std::function<bool(C_CampaignNode *)> 
     return false;
 }
 
+void TickPairedProgressionProbe(const char *scenario)
+{
+    if (!g_menuSession || !g_step)
+        return;
+    const bool leaveReport = std::strcmp(scenario, "report-departure") == 0;
+    const bool leaveLoading = std::strcmp(scenario, "loading-departure") == 0;
+    if (std::strcmp(scenario, "campaign") != 0 && !leaveReport && !leaveLoading)
+        return;
+
+    static std::optional<Wire::S_ReportKey> report;
+    static Clock::time_point opened;
+    static bool earlyAdvance = false;
+    if (const auto *view = GetLiveCampaignReport()) {
+        if (!report || !(view->m_Report == *report)) {
+            report = view->m_Report;
+            opened = Clock::now();
+            earlyAdvance = false;
+        }
+        const auto age = Clock::now() - opened;
+        if (leaveReport && g_guest && age >= std::chrono::seconds(2)) {
+            LogDevelopmentCampaign("progression fixture leaving the waiting report");
+            g_netGame.Close(true);
+            return;
+        }
+        if (age >= std::chrono::seconds(g_guest ? 4 : 1))
+            ReadyLiveCampaignReport();
+        if (!g_guest && !earlyAdvance && age >= std::chrono::seconds(2)) {
+            earlyAdvance = true;
+            LogDevelopmentCampaign("progression fixture attempted early advancement");
+            AdvanceLiveCampaignReport();
+        }
+        if (!g_guest && age >= std::chrono::seconds(6) && CanAdvanceLiveCampaignReport()) {
+            AdvanceLiveCampaignReport();
+            AdvanceLiveCampaignReport();
+        }
+        return;
+    }
+
+    if (leaveLoading && g_guest && g_guest->m_Manifest &&
+        g_guest->m_Manifest->m_Context.m_MissionGeneration.Value() > 1) {
+        LogDevelopmentCampaign("progression fixture leaving the loading barrier");
+        g_netGame.Close(true);
+        return;
+    }
+    if (!g_continuedPreparation)
+        return;
+    auto *model = g_menuSession->GetPreparation();
+    const auto state = model->GetSnapshot().m_Snapshot;
+    if (!state || state->m_Context.m_Phase != Phase::Preparation || !state->m_Context.m_LocalPlayer)
+        return;
+    const auto local = *state->m_Context.m_LocalPlayer;
+    const auto participant = std::find_if(state->m_Participants.begin(), state->m_Participants.end(),
+        [&](const auto &entry) { return entry.m_Player == local; });
+    if (participant == state->m_Participants.end())
+        return;
+    static PreparationGeneration readied;
+    static PreparationGeneration deployed;
+    if (participant->m_ReadyAt != state->m_PreparationRevision && readied != state->m_Generation) {
+        const S_CampaignPreparationRequestContext request{
+            {state->m_Context.m_Session, local, model->NextRequestId()}, state->m_Generation,
+            state->m_PreparationRevision};
+        model->SetReady({request, true});
+        readied = state->m_Generation;
+    }
+    if (!g_guest && state->m_CanDeploy.m_Allowed && deployed != state->m_Generation) {
+        const S_CampaignPreparationRequestContext request{
+            {state->m_Context.m_Session, local, model->NextRequestId()}, state->m_Generation,
+            state->m_PreparationRevision};
+        model->RequestDeploy({request});
+        deployed = state->m_Generation;
+    }
+}
+
 void TickProgressionRegression(C_GameApp &app, const std::function<bool(C_CampaignNode *)> &start)
 {
-    if (IsCampaignNet())
-        return;
     const char *scenario = std::getenv("HD2_PROGRESSION_DEBUG");
     if (!scenario)
         return;
+    if (IsCampaignNet()) {
+        TickPairedProgressionProbe(scenario);
+        return;
+    }
 
     const bool solo = (g_gameRole & GAME_ROLE_LOCAL) == GAME_ROLE_LOCAL;
     const bool server = (g_gameRole & GAME_ROLE_SERVER) != 0;
