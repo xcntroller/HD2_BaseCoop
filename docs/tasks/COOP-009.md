@@ -2,13 +2,13 @@
 
 ## Coordination
 
-- Status: ready
-- Owner/session: unassigned
+- Status: active
+- Owner/session: Codex COOP-009, user assignment 2026-11-18; coordinator COOP-007 acknowledged claim on coord/coop-work-queue, coordination transferred to COOP-008
 - Canonical branch: `feature/coop-009-campaign-adapters`
-- Base commit: not started
+- Base commit: `0fcea78f85d0fe9348c3b8e13d1a0f23f50a482a`
 - Dependencies: COOP-001, COOP-004, COOP-005, COOP-006
-- Last checkpoint: none
-- Checkpoint location: none
+- Last checkpoint: initial claim (this commit)
+- Checkpoint location: `.worktrees/COOP-009`, canonical branch on origin
 - Review/integration: none
 - Pull request: none
 
@@ -63,9 +63,10 @@ and repeats affected checks; do not merge an unfinished dependency branch.
 ## Handoff
 
 - Completed: legacy start/stop/spawn coupling mapped in the design.
-- Remaining: exact file split, campaign adapters, synchronization hooks, focused regressions.
-- Next action: obtain coordinator claim acknowledgment, review merged contracts/models,
-  and agree on overlapping edits with COOP-008.
+- Remaining: campaign adapters, synchronization hooks, focused regressions and final combined review after COOP-008 merge.
+- Next action: implement frozen-manifest/lifecycle barrier and original-point native spawning; agree exact disconnect/context helpers with COOP-008.
+- Scope confirmed: sole lifecycle writer in game.cpp/game_app.cpp/game_rounds.cpp/spawn_point.cpp; narrow profile/script/AI adapters, campaign_mission_adapter and lifecycle harness. COOP-008 owns controller/human/actor dispatch files. Native SpawnPoint may gain nonvirtual helpers without layout changes. No live transport attachment; COOP-010 owns activation.
+- Coordination: all dependency implementations and completion records are merged; COOP-007 acknowledged claim before substantial work. Its compiler/SDK/Python may be borrowed read-only with private COOP-009 Wine prefix and isolated outputs.
 - Blockers: none for the isolated adapter task. COOP-006 protocol merged at
   `59cb8944`; COOP-004 ownership merged at `59a480c8`,
   COOP-005 preparation merged at `06d999d7`, and COOP-001 build/runtime baseline
