@@ -2,15 +2,17 @@
 
 ## Coordination
 
-- Status: review
+- Status: done
 - Owner/session: Codex COOP-011 / thread `01a1ebe7-2361-7503-8dcb-6e0739646604`, 2026-11-18
 - Canonical branch: `feature/coop-011-shared-declarations`
 - Base commit: `9aec1d7e1f777de186801cb1b2c320ff851746c6`
 - Dependencies: COOP-002 (document-level contracts merged as `9f59ff4790f02ef73e3e02c850f79cfa9ba95130`)
-- Last checkpoint: implementation and validation `bfc60e41`; PR metadata/handoff is this subsequent commit
+- Last checkpoint: implementation/validation `bfc60e41`, review handoff `de5449b9`; merged `0f367ed6`
 - Checkpoint location: `.worktrees/COOP-011`; `origin/feature/coop-011-shared-declarations`; claim acknowledged at coordinator commit `72ced131`
-- Review/integration: consumer/API reviews passed; target and native conformance passed; pending final integration review
-- Pull request: https://github.com/xcntroller/HD2_BaseCoop/pull/6
+- Review/integration: final coordinator review passed; merged by PR #6 as `0f367ed62af337633941bca0d22d3ff1932129ba`
+- Pull request: https://github.com/xcntroller/HD2_BaseCoop/pull/6 (merged)
+- Completion metadata: `docs/coop-011-completion`, based on actual merged main `0f367ed6`;
+  https://github.com/xcntroller/HD2_BaseCoop/pull/7, checkpoint `0fb97f5d` plus URL handoff
 
 ## Branch authority and completion PR
 
@@ -127,6 +129,27 @@ no playable feature or target game artifact is claimed.
 - No new product decisions: unresolved selection/deployment/other policies remain explicit
   values and blockers. No legacy `IsLocalGame`, engine interfaces or serialized layouts changed.
 
+## Final integration review and merge
+
+- Coordinator/integrator thread `01a1ebd1-3990-7553-920e-7cfee0148527` reviewed the
+  complete header/fixture/API boundaries and source-only handoff against main.
+- Independently reproduced native GCC compile/execution/six negative cases:
+  `build/campaign_contracts/gcc-amf9djfu/` in the preserved COOP-011 worktree; pass.
+- Independently reproduced MSVC 19.44 x86 `/W4 /WX` compile/execution/six negative
+  cases: `build/campaign_contracts/msvc-vczj8k1p/`; pass. Coordinator diagnostic log:
+  `.worktrees/COOP-001/build/tooling/coop-011-review-msvc.log`.
+- PR #6 actually merged as `0f367ed62af337633941bca0d22d3ff1932129ba` on 2026-11-18.
+  The declaration-only acceptance criteria are met. No gameplay, UI rendering or
+  production model implementation is inferred from this completion.
+- Documentation follow-up checks: `git diff --check` passed; `git merge-base
+  --is-ancestor <merge> origin/main` passed for the COOP-002/003/011 merges above.
+  Inline Python verification passed: exactly five task records changed, done/ready
+  and unassigned states correct, acceptance sections unchanged, 11 local links valid.
+  Documentation-only follow-up; no additional build/runtime check needed.
+- Coordinator authorized the narrow documentation follow-up marking this task done
+  and COOP-004/005/006/007 ready, after verifying dependency merges. Task branches
+  and private worktrees remain preserved; no ledger/index edit is part of that follow-up.
+
 ## PR test instructions and delivery
 
 - Delivery: declaration component; **Source-only**. Fixture executables are local ignored
@@ -146,15 +169,16 @@ no playable feature or target game artifact is claimed.
   context/lifecycle/control and ownership DTOs, complete preparation request/snapshot/result/
   event declarations, seven-method interface, immutable injection boundaries, target/native
   fixtures and explicit consumer reviews. Root checkout preserved on main.
-- Remaining: final integrator review, PR merge and actual merge/done metadata. No known
-  implementation or target-validation blocker remains.
-- Next action: coordinator performs final review of PR #6, reproduces relevant checks,
-  then integrates and records the actual merged SHA/done metadata and downstream readiness.
+- Remaining: none for COOP-011; downstream components retain their own implementation
+  and acceptance gates.
+- Next action: coordinator updates its operational ledger/index as needed and accepts
+  separate ready-task claims. Shared-header edits require consumer notification.
 - Decisions: confirmed design and COOP-002 contracts only; the fixture chooses no product policy.
 - Publication: PR #6 created through authenticated `gh` after connector create returned
   403 (integration lacks repository PR write access). Branch pushes succeeded normally.
-- Local state: branch and all source/evidence checkpoints published to origin; private compiler
-  artifacts remain in this worktree's ignored build directory. No other worktree edited.
-- Review notes: COOP-004/005/006/007 can implement against the shared header only after
-  integration; COOP-007 also requires already-merged COOP-003. Notify consumers before
-  future shared-header edits. Coordinator owns dependency/index/ledger updates.
+- Local state: canonical feature branch/worktree and origin checkpoints preserved; private
+  compiler artifacts remain in that worktree's ignored build directory. Completion metadata
+  lives in its separate `.worktrees/coop-011-completion` worktree/branch.
+- Review notes: COOP-004/005/006/007 are now dependency-ready; COOP-007 also has
+  already-merged COOP-003. They remain unassigned until coordinator acknowledgment.
+  No downstream implementation or runtime acceptance has been completed by this task.

@@ -2,7 +2,7 @@
 
 ## Coordination
 
-- Status: planned
+- Status: ready
 - Owner/session: unassigned
 - Canonical branch: `feature/coop-006-protocol`
 - Base commit: not started
@@ -61,9 +61,11 @@ adapters merge. Tests must reject pre-admission mutation without claiming a live
 
 ## Handoff
 
-- Completed: task scope only; native transport available for investigation.
+- Completed: task scope and dependencies; COOP-002 merged `9f59ff47`, COOP-011 merged `0f367ed6`;
+  native transport available for investigation.
 - Remaining: extension audit, codecs, compatibility component, fixtures, adapter documentation.
-- Next action: read the merged COOP-002 protocol contract and trace dispatch/bitstream bounds.
-- Blockers: COOP-002 and COOP-011 have not merged.
+- Next action: obtain coordinator claim acknowledgment, create the canonical worktree,
+  then trace dispatch/bitstream bounds and implement against the merged contract/header.
+- Blockers: none for this isolated component; production integration remains downstream.
 - Decisions: reuse networking infrastructure; keep campaign semantics explicit.
 - Validation: none for this task.

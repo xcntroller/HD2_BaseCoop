@@ -2,7 +2,7 @@
 
 ## Coordination
 
-- Status: planned
+- Status: ready
 - Owner/session: unassigned
 - Canonical branch: `feature/coop-004-ownership`
 - Base commit: not started
@@ -59,9 +59,10 @@ No legacy controller/profile layout edits.
 
 ## Handoff
 
-- Completed: task scope only.
-- Remaining: implementation and tests after contract merge.
-- Next action: inspect the merged COOP-002 contract and agree on the exact implementation files.
-- Blockers: COOP-002 and COOP-011 have not merged.
+- Completed: task scope and dependencies; COOP-002 merged `9f59ff47`, COOP-011 merged `0f367ed6`.
+- Remaining: session/ownership implementation and behavioral tests against the merged shared header.
+- Next action: obtain coordinator claim acknowledgment, create the canonical worktree,
+  and implement the reserved session/ownership files against COOP-011 declarations.
+- Blockers: none for this isolated component; production integration remains downstream.
 - Decisions: model follows confirmed campaign behavior and the reviewed contracts.
 - Validation: none for this task.
