@@ -2,14 +2,14 @@
 
 ## Coordination
 
-- Status: review (component checks passed; independent final review pending)
+- Status: review (independent final review passed; integration pending)
 - Owner/session: Codex COOP-005 / thread `01a1ebf9-90e7-7ca2-8a1d-987711a3d8fe`, user assignment 2026-11-18
 - Canonical branch: `feature/coop-005-preparation-model`
 - Base commit: `4d6f8cc1bb96c50aee09d5c3ac0992ce716a3d39` (integrated `origin/main`)
 - Dependencies: COOP-002, COOP-011 (merged shared declarations)
-- Last checkpoint: this validated freeze-baseline follow-up; prior implementation `8dc87b0a`
+- Last checkpoint: validated implementation `eda10d0a`; this follow-up records final independent review
 - Checkpoint location: `.worktrees/COOP-005`; `origin/feature/coop-005-preparation-model`
-- Review/integration: COOP-004 independent review of `8dc87b0a` passed apart from addressed freeze composition; final follow-up review pending
+- Review/integration: COOP-004 independent full review and reproduction of `eda10d0a` passed; approved for component integration
 - Pull request: draft [#8](https://github.com/xcntroller/HD2_BaseCoop/pull/8)
 
 ## Branch authority and completion PR
@@ -79,9 +79,10 @@ and COOP-007 notification before editing shared equipment files.
   `SetupStore`/`TakeSquadItems`, preset remapping, `DistributeRequired` and
   `Replenish` mutate global stock/soldiers. Screen binding must never call these
   as model initialization or repeat normalization. Fractional stats remain floats.
-- Plan: isolated atomic authority core with explicit injected equipment rules and
-  deploy policy. A native validator/planner adapter requires a subsequent scoped
-  extraction and parity evidence; fake rules do not establish native parity.
+- Implementation: concrete detached campaign rules and original-source differential
+  checks now cover this boundary. The source component calls no mutable native panel
+  adapter; production catalog import and UI/transport/lifecycle composition remain
+  downstream. Fake rules are used only for isolated authority-boundary tests.
 
 ## Handoff
 
@@ -123,10 +124,15 @@ and COOP-007 notification before editing shared equipment files.
   publishing an immutable owning manifest. Callback mismatches fail closed/resync;
   no stale manifest is exposed. Regression checks prior mission generation fields,
   full-roster input, host without soldier, scripted/dead AI and both freeze models.
-- Independent review: COOP-004 read all initial implementation/header/differential
-  harness and independently reran GCC successfully (810+240 parity cases). No other
-  blocking finding; final callback/manifest changes are under final peer review.
-- Remaining: final independent follow-up review and integration gates. Native
+- Independent review: COOP-004 worker thread
+  `01a1ebf9-60c7-74d0-9d39-cd09295875b0` reviewed full implementation/header/harness
+  and final `eda10d0a` callback/manifest delta: **PASS**, no blocking findings. They
+  independently reran GCC (`build/campaign_preparation/gcc-udbjthdm`) with header,
+  behavior, 810 capacity + 240 essentials parity and concrete transactions all passed.
+  They inspected refreshed target logs `msvc-t3_i3i0o` (both executables passed);
+  no independent target recompile was claimed. Source-only scope and downstream
+  native integration limits accepted.
+- Remaining: reviewed PR integration and actual merge/done metadata. Native
   catalog/transport/UI composition is downstream; this is a source-only component,
   not a connected preparation screen. No full game build/runtime claim is made.
 - Decisions: selected records must be eligible/alive/deployed (selected for preparation,
@@ -134,6 +140,6 @@ and COOP-007 notification before editing shared equipment files.
   policies remain unresolved and return PolicyRequired. The fixture's all-ready quorum
   and explicit recipe auto-equip policy are labeled development inputs. Both optional
   result generation fields describe the complete current session epoch across families.
-- Next action: review this published follow-up, then mark PR ready and integrate only
-  when independent acceptance passes; record actual merge commit afterward.
+- Next action: mark PR ready and integrate after coordinator final diff check; record
+  the actual merge commit and done metadata afterward.
 - Uncommitted work: none after this checkpoint; build outputs/logs remain ignored.
