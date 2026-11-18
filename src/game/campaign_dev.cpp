@@ -1876,6 +1876,11 @@ void TickDevelopmentCampaign(C_GameApp &app)
             return;
         }
         if (g_guest && g_continuedPreparation) {
+            g_menuSession->Update();
+            if (g_menuSession->GetState() == E_CampaignSetupState::Idle) {
+                returnToMenu(g_menuSession->GetJoinFailure(), false);
+                return;
+            }
             if (!g_guest->m_World)
                 return;
             g_continuedPreparation = false;

@@ -237,6 +237,22 @@ R IssueRequiredEquipment(const C_CampaignEquipmentRules &rules, const S_Campaign
     return R::CapacityExceeded;
 }
 
+void PublishStockDestinations(S_CampaignPreparationSnapshot &snapshot,
+    const S_CampaignEquipmentRuleCatalog &catalog, std::uint64_t issuedAfter)
+{
+    for (auto &stock : snapshot.m_Stock) {
+        const auto definition = std::find_if(catalog.m_Items.begin(), catalog.m_Items.end(),
+            [&](const auto &rule) { return rule.m_Item == stock.m_State.m_Item; });
+        for (const auto &loadout : snapshot.m_Loadouts) {
+            for (const auto &item : loadout.m_Items) {
+                if (item.m_Entry.Value() > issuedAfter && item.m_State.m_Item == stock.m_State.m_Item)
+                    stock.m_State.m_Quantity -= (std::min)(stock.m_State.m_Quantity, item.m_State.m_Quantity);
+            }
+            stock.m_Destinations.push_back({loadout.m_Soldier, definition->m_AllowedPlacements, {true, R::None}});
+        }
+    }
+}
+
 R ImportFixture(const C_CampaignSession &session, int missionNumber, S_CampaignNativeCatalog &native,
     S_CampaignEquipmentRuleCatalog &catalog, S_CampaignPreparationSnapshot &snapshot, std::uint64_t &entry,
     bool includeAmmo = false)
@@ -337,18 +353,8 @@ R ImportInitialCampaignPreparation(const C_CampaignSession &session, int mission
         if (reason != R::None)
             return reason;
         snapshot.m_Stock = rules.NormalizeSupply(supply);
-        for (auto &stock : snapshot.m_Stock) {
-            const auto definition = std::find_if(catalog.m_Items.begin(), catalog.m_Items.end(),
-                [&](const auto &rule) { return rule.m_Item == stock.m_State.m_Item; });
-            // The original first issue draws from available stock and fills any
-            // shortfall for a fresh soldier. All later edits conserve supply.
-            for (const auto &loadout : snapshot.m_Loadouts) {
-                for (const auto &item : loadout.m_Items)
-                    if (item.m_State.m_Item == stock.m_State.m_Item)
-                        stock.m_State.m_Quantity -= (std::min)(stock.m_State.m_Quantity, item.m_State.m_Quantity);
-                stock.m_Destinations.push_back({loadout.m_Soldier, definition->m_AllowedPlacements, {true, R::None}});
-            }
-        }
+        // Fresh issue draws from original stock and fills any shortfall.
+        PublishStockDestinations(snapshot, catalog, 0);
     } catch (const std::invalid_argument &error) {
         LogDevelopmentCampaign(error.what());
         return R::InvalidItem;
@@ -451,7 +457,12 @@ R ImportContinuedCampaignPreparation(const C_CampaignSession &session, int missi
     try {
         C_CampaignEquipmentRules rules(catalog);
         snapshot.m_Stock = rules.NormalizeSupply(supply);
-        return IssueRequiredEquipment(rules, native, snapshot, nextEntry);
+        const auto carriedThrough = nextEntry;
+        const auto reason = IssueRequiredEquipment(rules, native, snapshot, nextEntry);
+        if (reason != R::None)
+            return reason;
+        PublishStockDestinations(snapshot, catalog, carriedThrough);
+        return R::None;
     } catch (const std::invalid_argument &) {
         return R::InvalidItem;
     }
