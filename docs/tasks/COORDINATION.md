@@ -214,3 +214,5 @@ missing fields. COOP-006 was notified explicitly before this stopped-writer hand
 - COOP-010 also owns the related `human_locomotion.cpp` branches for player collision and terrain contact. Paired movement showed that the native remote-actor ground path cannot stand in for the host's simulation of a guest-owned player.
 
 - COOP-010 owns the original campaign objective information screen in `interface_info.cpp`, the host campaign sight and hearing registration in `human.cpp`, and the guest exit after transport loss. A paired Arctic1 run exposed native deathmatch scoring on the guest, an unregistered host sight observer near the patrol, and an extra guest frame after replication objects had been freed. Native modes keep their original information and actor paths.
+
+- COOP-010 owns the native campaign map and small score overlay selection in `interface_map.cpp` and `interface_overlays.cpp`. The campaign map must remain usable after player ownership ends, and native multiplayer map, scoreboard, and respawn behavior stay under the original multiplayer path.
