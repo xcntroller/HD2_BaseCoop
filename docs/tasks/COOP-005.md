@@ -2,13 +2,13 @@
 
 ## Coordination
 
-- Status: ready
-- Owner/session: unassigned
+- Status: active (coordinator claim acknowledgment requested; no substantial implementation yet)
+- Owner/session: Codex COOP-005 / thread `01a1ebf9-90e7-7ca2-8a1d-987711a3d8fe`, user assignment 2026-11-18
 - Canonical branch: `feature/coop-005-preparation-model`
-- Base commit: not started
+- Base commit: `4d6f8cc1bb96c50aee09d5c3ac0992ce716a3d39` (integrated `origin/main`)
 - Dependencies: COOP-002, COOP-011 (merged shared declarations)
-- Last checkpoint: none
-- Checkpoint location: none
+- Last checkpoint: this initial claim/audit checkpoint; implementation has not started
+- Checkpoint location: `.worktrees/COOP-005`; `origin/feature/coop-005-preparation-model`
 - Review/integration: none
 - Pull request: none
 
@@ -61,13 +61,40 @@ and COOP-007 notification before editing shared equipment files.
 - Expose a UI/transport-independent API and tests. No claim of a connected preparation
   screen is made until its later live synchronization gate passes.
 
+## Validator audit (2026-11-18)
+
+- `profile_squad.cpp::PutItem`/`UpdateLoad` own soldier weight, belt volume
+  (12), backpack weight/volume and replacement checks. A replacement backpack must
+  accommodate existing contents; single slots displace equipment and container
+  additions may fit only partially. The transaction must commit only a fully
+  validated candidate, including all displacement/returns.
+- `equipment_panel.cpp::PutItemChecked` checks item/container compatibility and
+  occupied single slots; `DropItem` adds partial-count/forced placement behavior.
+  These methods mutate live squad/preview state and cannot be called on proposals.
+- `equipment_screen.cpp::HasRequiredItems`/`CountCarried` are Continue checks:
+  deployed carriers only, Axis items on one selected carrier, and required uniform/
+  diving-gear counts capped by squad size. `IsSquadWithinWeight` blocks Continue;
+  `IsSquadArmed` asks for confirmation rather than unconditionally rejecting edits.
+- Campaign supply normalizes ammunition through `GetAmmoItemId` in `OnStart`.
+  `SetupStore`/`TakeSquadItems`, preset remapping, `DistributeRequired` and
+  `Replenish` mutate global stock/soldiers. Screen binding must never call these
+  as model initialization or repeat normalization. Fractional stats remain floats.
+- Plan: isolated atomic authority core with explicit injected equipment rules and
+  deploy policy. A native validator/planner adapter requires a subsequent scoped
+  extraction and parity evidence; fake rules do not establish native parity.
+
 ## Handoff
 
-- Completed: design/contract foundation; COOP-002 merged `9f59ff47`, COOP-011 merged `0f367ed6`.
-- Remaining: transaction model/validators and behavioral tests against the merged declarations.
-- Next action: obtain coordinator claim acknowledgment, create the canonical worktree,
-  then inventory reusable validators and implement against the merged contract/header.
-- Blockers: none for isolated implementation/tests with explicit policy fixtures;
-  unresolved deploy/stock UX policies remain production gates, not silently chosen defaults.
-- Decisions: editing permissions are confirmed; shared-state implementation follows the contract.
-- Validation: none for this task.
+- Completed: fetched origin, checked no existing COOP-005 branch/worktree; created
+  canonical branch/worktree from merged COOP-002/011. Read design, workflow,
+  task index, preparation contract and shared declarations; audited validators above.
+- Remaining: coordinator acknowledgment, atomic model, injected rules and shared
+  request-journal boundary, behavioral harness, MSVC x86 validation, publication/PR.
+- Next action: obtain coordinator acknowledgment, agree cross-family journal boundary
+  with COOP-004, then implement isolated authority and immutable publications.
+- Blockers: no product decision blocks isolated tests. Native adapter/parity and
+  production deploy policies remain explicit gates; source-only draft until proven.
+- Decisions: exact ownership permissions and aggregate/view revision semantics follow
+  merged contract. No shared equipment/header/index/ledger edits are planned.
+- Validation: read-only source/branch/dependency audit; no compile/runtime checks yet.
+- Uncommitted work: none after this checkpoint.
