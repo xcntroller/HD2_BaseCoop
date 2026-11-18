@@ -1,3 +1,4 @@
+#include "game/campaign_control_runtime.h"
 // C_Car: the network side (original 0x004db360 OnMessage, 0x004db760 Unknown20, 0x004db310
 // SendFuel, 0x004d2ec0 ReadMessages, 0x004d3380 UpdateNetwork, 0x004de150 WriteStore, 0x004de1f0
 // ReadStore, 0x004ddf90 / 0x004de270 a joining client's WriteState / ReadState, 0x004d0610 /
@@ -442,7 +443,7 @@ void C_Car::UpdateNetwork(int time)                     // 0x004d3380
 {
     m_netObject->SetLive(7);
     const bool server = (g_gameRole & GAME_ROLE_SERVER) != 0;
-    if ((m_driver && m_driver->GetNetId() == g_localPlayerSlot) ||
+    if ((m_driver && IsCampaignOrLegacyLocalActor(m_driver->GetNetId(), g_localPlayerSlot)) ||
         (server && (!m_driver || m_driver->GetRole() != HUMAN_ROLE_PLAYER))) {
         // Driven here: the place, the rotation and the velocity to the others.
         m_netObject->SetSendMask(7);
@@ -470,7 +471,7 @@ void C_Car::UpdateNetwork(int time)                     // 0x004d3380
         if (!server)
             return;
     }
-    if (server && !(m_driver && m_driver->GetNetId() != g_localPlayerSlot && m_driver->GetRole() == HUMAN_ROLE_PLAYER))
+    if (server && !(m_driver && !IsCampaignOrLegacyLocalActor(m_driver->GetNetId(), g_localPlayerSlot) && m_driver->GetRole() == HUMAN_ROLE_PLAYER))
         return;
 
     // Driven elsewhere: the replicated place, rotation and velocity.

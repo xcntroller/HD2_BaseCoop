@@ -275,6 +275,7 @@ public:
     int GetCommandedIndex() const { return m_commanded; }
     // Makes `human` the active and the selected member.
     void SelectMember(C_Human *human);                  // 0x0045da60
+    void SelectCampaignMember(C_Human *human);
     // Makes member `index` (alive, HUMAN_ROLE_PLAYER) the active one ("You are switched to").
     bool SwitchTo(int index);                           // 0x0045dc20
     // Index of the next / previous living HUMAN_ROLE_PLAYER member after the active one;

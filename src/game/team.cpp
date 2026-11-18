@@ -1,3 +1,4 @@
+#include "game/campaign_control_runtime.h"
 // Teams, formations and the team manager (see team.h).
 #include "game/first_person_view.h"
 #include "game/interface.h"
@@ -496,11 +497,29 @@ void C_Team::SelectMember(C_Human *human)               // 0x0045da60
     }
 }
 
+void C_Team::SelectCampaignMember(C_Human *human)
+{
+    if (!CampaignControlsActive()) return;
+    ShowLeftMember(GetActivePlayer());
+    m_watchedHuman = nullptr;
+    m_active = m_selected = m_commanded = -1;
+    if (human && IsCampaignLocalActor(human->GetNetId())) SelectMember(human);
+}
+
 bool C_Team::SwitchTo(int index)                        // 0x0045dc20
 {
     if (index < 0 || index >= GetMemberCount())
         return false;
     C_Human *member = m_members[index];
+    if (CampaignControlsActive()) {
+        // Only committed ownership may change the local target. Selection of
+        // another soldier must submit an ownership request through the dispatcher.
+        if (!IsCampaignLocalActor(member->GetNetId())) return false;
+        SelectCampaignMember(member);
+        GetGame()->GetFirstPersonView()->Refresh();
+        UpdateCameraTarget();
+        return true;
+    }
     if (!member->IsAlive() || member->GetRole() != HUMAN_ROLE_PLAYER)
         return false;
     ShowLeftMember(m_members[m_active]);
@@ -651,13 +670,13 @@ void C_Team::OnMemberDied(C_Human *human)               // 0x0045e790 (DS 0x0047
         if (member->IsAlive() && member->GetRole() != HUMAN_ROLE_NPC_TEAM)
             return;
     }
-    if (IsLocalGame())
+    if (IsLocalGame() || (CampaignControlsActive() && IsServer()))
         GetGame()->FailMission(false);
 }
 
 void C_Team::CheckEnvironment()                         // 0x0045ef00 (DS 0x0047a3b0)
 {
-    if (!IsLocalGame())
+    if (!IsLocalGame() && !(CampaignControlsActive() && IsServer()))
         return;
     if (const C_MissionDef *mission = GetGame()->GetMission()) {
         if (mission->AreObjectivesDecided())
@@ -752,6 +771,13 @@ void C_Team::ReleaseHoldingMembers(const C_Human *human)   // 0x0045f110
 
 bool C_Team::HasMemberInPlayerSlots() const             // 0x0045d120
 {
+    if (CampaignControlsActive()) {
+        for (const auto *member : m_members) {
+            const auto record = FindCampaignActorControl(member->GetNetId());
+            if (record && record->m_Deployed) return true;
+        }
+        return false;
+    }
     for (int i = 0; i < GetMemberCount(); ++i) {
         if (m_members[i]->GetNetId() < C_ActorsModule::PLAYER_SLOTS)
             return true;

@@ -1,3 +1,4 @@
+#include "game/campaign_control_runtime.h"
 // C_Human: the seven item containers and everything done with the items in them - lookups,
 // the inventory requests the controller sends to the server and their execution, dropping,
 // supply boxes, uniforms and the equipment part of the soldier state (original source
@@ -876,7 +877,7 @@ void C_Human::GetEquipmentState(S_SoldierState &state) const
 
 void C_Human::GetSoldierState(S_SoldierState &state) const
 {
-    if (!IsLocalGame() && m_controller->GetType() == HUMAN_CONTROLLER_PLAYER) {
+    if (!IsLocalGame() && !CampaignControlsActive() && m_controller->GetType() == HUMAN_CONTROLLER_PLAYER) {
         state.vip = static_cast<C_PlayerController *>(m_controller)->IsVip();
         state.spectating = m_controller ? m_controller->IsSpectating() : false;
     }

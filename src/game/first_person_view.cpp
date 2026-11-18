@@ -1,3 +1,4 @@
+#include "game/campaign_control_runtime.h"
 // The first-person view (see first_person_view.h): the hands and the weapon in front of the camera.
 #include "game/first_person_view.h"
 
@@ -369,8 +370,14 @@ void C_FirstPersonView::Refresh()
     if (m_human && m_human->GetVehicle())
         m_human->GetVehicle()->ShowSeatView(m_human->GetVehicleSeat(), false);
     m_human = g_teamManager.GetPlayerTeam()->GetActivePlayer();
-    if (!m_human)
+    if (CampaignControlsActive() && m_human && !IsCampaignLocalActor(m_human->GetNetId())) m_human = nullptr;
+    if (!m_human) {
+        if (CampaignControlsActive()) {
+            StopAnims();
+            SetWeaponView(nullptr, nullptr, -1);
+        }
         return;
+    }
     if (C_Actor *vehicle = m_human->GetVehicle())
         vehicle->ShowSeatView(m_human->GetVehicleSeat(), m_on);
     ResetAimView();

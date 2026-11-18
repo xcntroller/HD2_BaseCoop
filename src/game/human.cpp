@@ -1,3 +1,4 @@
+#include "game/campaign_control_runtime.h"
 // C_Human: creation, mission start / stop / restart, saved games, mission properties, soldier
 // setup and the per-frame / per-tick updates (original source 0x0059be30..0x0059ffd0 and
 // 0x005a8790..0x005a9980). Damage is in human_combat.cpp, the inventory in human_items.cpp,
@@ -94,7 +95,7 @@ C_Human::~C_Human()
 {
     if (m_periodicLink != -1)
         PeriodicLinks_Remove(m_periodicLink);
-    if (!IsLocalGame() && m_netId < C_ActorsModule::PLAYER_SLOTS) {
+    if (!IsLocalGame() && !CampaignControlsActive() && m_netId >= 0 && m_netId < g_netGame.GetPlayerCount()) {
         S_NetPlayerState *players = g_netGame.LockPlayers();
         players[m_netId].human = nullptr;
         g_netGame.UnlockPlayers();
@@ -732,7 +733,7 @@ void C_Human::Setup(S_SoldierState &state, int role, int group, const int *stats
     m_profileIndex = state.profileIndex;
     if (m_profileIndex >= 0)
         m_profile = GetSoldierProfile(m_profileIndex);
-    if (!IsLocalGame()) {
+    if (!IsLocalGame() && !CampaignControlsActive()) {
         if (m_controller)
             m_controller->SetSpectating(state.spectating);
         g_netGame.SetPlayerTeam(playerSlot, state.team, false);
@@ -805,7 +806,7 @@ void C_Human::ApplyDifficulty()
 void C_Human::StartMission(bool server)
 {
     Activate(server);
-    if (!IsLocalGame() && !server && IsClient() && g_localPlayerSlot == m_netId &&
+    if (!IsLocalGame() && !CampaignControlsActive() && !server && IsClient() && g_localPlayerSlot == m_netId &&
         g_mpSettings->spawnProtection > 0)
         GetGame()->GetInterface()->ShowTimer(TEXT_SPAWN_PROTECTION, g_mpSettings->spawnProtection * 1000);
 
@@ -1113,7 +1114,7 @@ void C_Human::Tick(int timeDelta)
             (volumes.front()->type & COLLISION_TYPE_MINE) != 0 && volumes.front()->actor)
             static_cast<C_Mine *>(volumes.front()->actor)->OnSteppedOn(this, -1);
     }
-    if (IsLocalGame() && m_role == HUMAN_ROLE_PLAYER)
+    if ((IsLocalGame() || (CampaignControlsActive() && IsServer())) && m_role == HUMAN_ROLE_PLAYER)
         TrainSkills(timeDelta);
     if (m_formation)
         m_formation->Tick(timeDelta);
@@ -1144,7 +1145,7 @@ void C_Human::TrainSkills(int timeDelta)
 // Single player experience: the gains are capped and printed on the debug console.
 void C_Human::AddEndurance(float amount)
 {
-    if (!IsLocalGame())
+    if (!IsLocalGame() && !(CampaignControlsActive() && IsServer()))
         return;
     m_progress.endurance += amount;
     if (m_progress.endurance > 5.0f)
@@ -1154,7 +1155,7 @@ void C_Human::AddEndurance(float amount)
 
 void C_Human::AddUnknownProgress(float amount)
 {
-    if (!IsLocalGame())
+    if (!IsLocalGame() && !(CampaignControlsActive() && IsServer()))
         return;
     m_progress.unknown00 += amount;
     if (m_progress.unknown00 > 30.0f)
@@ -1163,7 +1164,7 @@ void C_Human::AddUnknownProgress(float amount)
 
 void C_Human::AddMorale(float amount)
 {
-    if (!IsLocalGame())
+    if (!IsLocalGame() && !(CampaignControlsActive() && IsServer()))
         return;
     m_progress.morale += amount;
     if (m_progress.morale > 1.0f)
@@ -1173,7 +1174,7 @@ void C_Human::AddMorale(float amount)
 
 void C_Human::AddShooting(float amount)
 {
-    if (!IsLocalGame())
+    if (!IsLocalGame() && !(CampaignControlsActive() && IsServer()))
         return;
     m_progress.shooting += amount;
     if (m_progress.shooting > 2.0f)
@@ -1183,7 +1184,7 @@ void C_Human::AddShooting(float amount)
 
 void C_Human::AddStealth(float amount)
 {
-    if (!IsLocalGame())
+    if (!IsLocalGame() && !(CampaignControlsActive() && IsServer()))
         return;
     m_progress.stealth += amount;
     if (m_progress.stealth > 2.0f)
@@ -1193,7 +1194,7 @@ void C_Human::AddStealth(float amount)
 
 void C_Human::AddFirstAid(float amount)
 {
-    if (!IsLocalGame())
+    if (!IsLocalGame() && !(CampaignControlsActive() && IsServer()))
         return;
     m_progress.firstAid += amount;
     if (m_progress.firstAid > 5.0f)
@@ -1203,7 +1204,7 @@ void C_Human::AddFirstAid(float amount)
 
 void C_Human::AddLockpick(float amount)
 {
-    if (!IsLocalGame())
+    if (!IsLocalGame() && !(CampaignControlsActive() && IsServer()))
         return;
     m_progress.lockpick += amount;
     if (m_progress.lockpick > 5.0f)
@@ -1213,7 +1214,7 @@ void C_Human::AddLockpick(float amount)
 
 void C_Human::AddExperience(int amount)
 {
-    if (!IsLocalGame())
+    if (!IsLocalGame() && !(CampaignControlsActive() && IsServer()))
         return;
     m_progress.experience += amount;
     GetGame()->Print("%s Update Experience by %d to %d", GetShortName(), amount, m_progress.experience);

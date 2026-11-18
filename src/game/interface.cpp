@@ -1,3 +1,4 @@
+#include "game/campaign_control_runtime.h"
 // The game interface's core (see interface.h; the original's 0x0049a420..0x0049fc10): its scene,
 // the panels' life, drawing and updates, the keys, the actor under the crosshair, the lower
 // panel's position and the saved state.
@@ -1333,7 +1334,11 @@ void C_Interface::ShowInventory(bool show, C_Actor *container)
     C_Team *team = PlayerTeam();
     C_Human *human;
     int mode = 1;
-    if (IsLocalGame()) {
+    if (CampaignControlsActive()) {
+        human = team->GetActivePlayer();
+        if (!human || !IsCampaignLocalActor(human->GetNetId())) return;
+        if (container) mode = 3;
+    } else if (IsLocalGame()) {
         human = team->GetActivePlayer();
         if (container)
             mode = 3;

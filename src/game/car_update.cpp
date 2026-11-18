@@ -1,3 +1,4 @@
+#include "game/campaign_control_runtime.h"
 // C_Car: the controls and the updates (original 0x004d9050 ApplyControls, 0x004d9280 SetInput;
 // 0x004d3110 Update, 0x004d2790 Tick and their helpers 0x004d38f0 UpdateVehicle, 0x004d3970
 // UpdateDetail, 0x004d2c50 CheckWater, 0x004d2dc0 GetEngineNoise; 0x004d5430 IsDrivable,
@@ -115,7 +116,7 @@ bool C_Car::SetInput(float throttle, float steering)    // 0x004d9280
     if (!m_driver || m_driver->IsDead())
         return false;
     Restrict(m_restrictions, throttle, steering);
-    if (IsLocalGame() || m_driver->GetNetId() == g_localPlayerSlot) {
+    if (IsLocalGame() || IsCampaignOrLegacyLocalActor(m_driver->GetNetId(), g_localPlayerSlot)) {
         m_vehicle.SetThrottle(throttle, true);
         m_vehicle.SetSteering(steering);
     }

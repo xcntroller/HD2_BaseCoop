@@ -1,3 +1,4 @@
+#include "game/campaign_control_runtime.h"
 // C_Human: damage and death, the multiplayer hit / kill messages, sides and hostility,
 // disguise, visibility and the bones shots aim at (original source 0x005a0220..0x005a2740,
 // 0x005a3ab0..0x005a3dd0 and smaller functions between 0x005a4600 and 0x005a8820).
@@ -268,7 +269,7 @@ void C_Human::Hit(E_HitType hitType, float amount, const S_vector &pos, const S_
     }
     const S_vector hitDir = dir.Normalized();
     int reflectPercent = 0;
-    if (!IsLocalGame()) {
+    if (!IsLocalGame() && !CampaignControlsActive()) {
         if (m_stats[STAT_HEALTH] > 0 && this != attacker && g_mpSettings->gameType != MP_GAME_DEATHMATCH && attacker &&
             attacker->GetTeam(false) == GetTeam(false)) {
             // Team damage: either the shooter takes a share of it or there is none (run
@@ -398,7 +399,7 @@ void C_Human::Hit(E_HitType hitType, float amount, const S_vector &pos, const S_
         if (data && data->script)
             data->script->OnDeath();
         OnDeath();
-        if (!IsLocalGame())
+        if (!IsLocalGame() && !CampaignControlsActive())
             g_netGame.OnPlayerKilled(m_netId, attacker ? attacker->m_netId : -1);
     }
     if (!IsClient() && attacker)
@@ -481,7 +482,7 @@ void C_Human::ApplyRemoteHit(int type, int zone, int health, int killerId, const
         m_body.ApplyHit(flags, pos, dir.Normalized() * damage);
     }
     if (m_stats[STAT_HEALTH] <= 0) {
-        if (m_role == HUMAN_ROLE_PLAYER && !IsLocalGame())
+        if (m_role == HUMAN_ROLE_PLAYER && !IsLocalGame() && !CampaignControlsActive())
             g_netGame.OnPlayerKilled(m_netId, killerId);
         ShowDeath();
     }
@@ -505,6 +506,7 @@ void C_Human::ApplyRemoteHit(int type, int zone, int health, int killerId, const
 
 void C_Human::OnDeath()
 {
+    if (CampaignControlsActive() && IsServer()) NotifyCampaignDeath(m_netId);
     m_bleeding = 0.0f;
     m_deadTime = 0;
     m_controller->OnDeath();
@@ -527,10 +529,10 @@ void C_Human::OnDeath()
         }
     }
     if (m_role == HUMAN_ROLE_PLAYER || m_role == HUMAN_ROLE_NPC_TEAM) {
-        if (IsLocalGame()) {
+        if (IsLocalGame() || CampaignControlsActive()) {
             if (g_teamManager.GetPlayerTeam()->IsMember(this)) {
                 g_teamManager.GetPlayerTeam()->OnMemberDied(this);
-                GetSoundModule()->PlayMusic(MUSIC_SOLDIER_DIED);
+                if (!CampaignControlsActive() || IsClient()) GetSoundModule()->PlayMusic(MUSIC_SOLDIER_DIED);
             }
         } else if (g_gameProfile.IsCooperativeGame()) {
             g_teamManager.GetCoopTeam()->OnMemberDied(this);
@@ -563,7 +565,7 @@ void C_Human::ShowDeath()
 
 void C_Human::OnKilledHuman(C_Human *victim, int type)
 {
-    if (!IsLocalGame())
+    if (!IsLocalGame() && !CampaignControlsActive())
         return;
     if (m_role == HUMAN_ROLE_PLAYER) {
         int experience;
@@ -713,6 +715,8 @@ void C_Human::NotifyShotAt(C_Actor *shooter, const S_vector &velocity)
 
 bool C_Human::IsLocalPlayer() const
 {
+    if (CampaignControlsActive())
+        return m_controller && IsCampaignLocalActor(m_netId);
     if (!m_controller)
         return false;
     if (IsLocalGame())
@@ -722,6 +726,10 @@ bool C_Human::IsLocalPlayer() const
 
 bool C_Human::IsServerSimulated() const
 {
+    if (CampaignControlsActive()) {
+        const auto record = FindCampaignActorControl(m_netId);
+        return IsServer() && (!record || !record->m_Owner || record->m_Scripted);
+    }
     return IsServer() && m_role != HUMAN_ROLE_PLAYER;
 }
 
@@ -744,7 +752,7 @@ bool C_Human::IsFriendOfInNetGame(const C_Human *other) const
 
 bool C_Human::IsFriendOf(const C_Actor *otherActor) const
 {
-    if (!IsLocalGame()) {
+    if (!IsLocalGame() && !CampaignControlsActive()) {
         // (Network games only meet humans here.)
         return IsFriendOfInNetGame(static_cast<const C_Human *>(otherActor));
     }
@@ -811,7 +819,7 @@ int C_Human::GetSide() const
 int C_Human::GetTeam(bool pending) const
 {
     E_HumanRole role;
-    if (IsLocalGame()) {
+    if (IsLocalGame() || CampaignControlsActive()) {
         role = m_role;
         if (role == HUMAN_ROLE_ENEMY)
             return TEAM_AXIS;
@@ -829,6 +837,7 @@ int C_Human::GetTeam(bool pending) const
 
 void C_Human::SetPlayerTeam(int team, bool pending)
 {
+    if (CampaignControlsActive()) return; // campaign sides come from soldier roles, never MP slots
     g_netGame.SetPlayerTeam(m_netId, team, pending);
 }
 
