@@ -10,7 +10,7 @@ creating or updating the operational branch. Do not merge its WIP ledger into `m
 - Contact/shared channel: this published ledger and the COOP-010 task branch/PR.
 - Integrator: Codex COOP-010 for this session, subject to the review and runtime acceptance gates.
 - Latest checkpoint: `HEAD` on `origin/coord/coop-work-queue`.
-- Next action: connect guarded input and authoritative squad and mission presentation on COOP-010. Draft PR #22 contains the verified two-instance Arctic1 entry.
+- Next action: integrate COOP-010 PR #22 at the reviewed head `fd1572a3`.
 
 ## Accepted task claims
 
@@ -27,7 +27,7 @@ creating or updating the operational branch. Do not merge its WIP ledger into `m
 | COOP-009 | Codex COOP-009 / thread `01a1ec1f-ea8d-77f3-b0e9-7c683f367ec3`, user assignment | `feature/coop-009-campaign-adapters` | done | PR #19 merge `ce306626`; completion PR #21 merge `6f1bdd96`; canonical branch pushed to `6f1bdd96` | Dormant lifecycle/world-barrier/native rules complete; COOP-010 owns live attachment and actual two-instance evidence. |
 | COOP-001 | Codex / 2026-11-18 user assignment | `feature/coop-001-build-baseline` | done | PR #2 merge `15b572ff`; completion metadata PR #11 merge `1b9b307f` | Build/solo/native host-guest baseline and isolation accepted; guide/evidence integrated. Firing/reload/completion remain unverified downstream gates. |
 
-| COOP-010 | Codex COOP-010 (2026-11-18), user assignment | `feature/coop-010-two-player-mission` | active | Draft PR #22, source `2cb0509e`, handoff `b316a31c`, `.worktrees/COOP-010` | Verify tagged gameplay input and implement inventory and weapon state replication. Document the objective route and disconnect handoff. |
+| COOP-010 | Codex COOP-010 (2026-11-18), user assignment | `feature/coop-010-two-player-mission` | review | PR #22, reviewed head `fd1572a3`, `.worktrees/COOP-010` | Merge the reviewed head and publish the completion record. |
 
 
 Only the coordinator adds or reassigns claims. A missing row is not sufficient evidence
@@ -216,3 +216,5 @@ missing fields. COOP-006 was notified explicitly before this stopped-writer hand
 - COOP-010 owns the original campaign objective information screen in `interface_info.cpp`, the host campaign sight and hearing registration in `human.cpp`, and the guest exit after transport loss. A paired Arctic1 run exposed native deathmatch scoring on the guest, an unregistered host sight observer near the patrol, and an extra guest frame after replication objects had been freed. Native modes keep their original information and actor paths.
 
 - COOP-010 owns the native campaign map and small score overlay selection in `interface_map.cpp` and `interface_overlays.cpp`. The campaign map must remain usable after player ownership ends, and native multiplayer map, scoreboard, and respawn behavior stay under the original multiplayer path.
+
+- Separate integration review: PR #22 head `fd1572a33c15445e7fdd66a0950d9ead305420e1` was reviewed against `main` at `6f1bdd96`. Verified the transport and authority fences, the two-instance start barrier, paired controls, original objectives and forest patrol route, exact changed-kit takeover, ordinary Tutorial and Sicily2 regressions, matching runtime logs, x86 build, and controller/lifecycle/protocol/ownership harnesses. The review added the actor/navigation/sound fingerprint inputs and verified rejection of different navigation data and successful admission after restoration. The merge rehearsal produced the exact feature tree.
