@@ -142,16 +142,18 @@ void RecordItems(C_InitialWorldRecord &record, const C_Actor *filter = nullptr)
     }
 }
 
-void RecordScripts(C_InitialWorldRecord &record)
+void RecordScripts(C_InitialWorldRecord &record, bool includeExecutionState)
 {
     const auto &scripts = g_scriptModule.GetScripts();
     record.Word(static_cast<std::uint32_t>(scripts.size()));
     for (const auto *script : scripts) {
         record.Text(script->GetFrame()->GetName());
         record.Text(script->GetFileName());
-        record.Word(script->GetInstructionPointer());
-        record.Word(script->IsRunning());
-        record.Word(script->IsFinished());
+        if (includeExecutionState) {
+            record.Word(script->GetInstructionPointer());
+            record.Word(script->IsRunning());
+            record.Word(script->IsFinished());
+        }
     }
     const int *values = g_scriptModule.GetSaveGameValues();
     for (int index = 0; index < 256; ++index)
@@ -292,7 +294,12 @@ E_CampaignReason RecordWorldState(C_InitialWorldRecord &record)
     record.Section("initial world temporary actors");
     RecordItems(record);
     record.Section("initial world item instances");
-    RecordScripts(record);
+    // A subsequent world can run startup handlers using the campaign's carryover
+    // values. The host owns those handlers' instruction pointers and flags.
+    // Verify the authored script assignments and shared values on both peers.
+    const bool includeExecutionState = !IsLiveCampaignProgression() ||
+        state->m_Context.m_MissionGeneration.Value() == 1;
+    RecordScripts(record, includeExecutionState);
     record.Section("initial world script cut");
     return E_CampaignReason::None;
 }

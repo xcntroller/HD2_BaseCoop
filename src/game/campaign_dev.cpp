@@ -1608,6 +1608,8 @@ R StartProgressionStep(C_GameApp &app, C_CampaignNode *node,
         }
     }
     if (node->GetType() == CAMPAIGN_NODE_PLAY) {
+        const auto &values = g_report->m_ScriptValues;
+        std::copy(values.begin(), values.end(), g_scriptModule.GetSaveGameValues());
         g_continuedPreparation = false;
         if (g_guest) {
             ResetGuestMission();
