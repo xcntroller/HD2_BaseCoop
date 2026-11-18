@@ -47,7 +47,11 @@ clearing these native queues is deliberately not a playable networking path.
 `run.py` also compiles the actual `campaign_control_native.cpp` against small
 instrumented engine interfaces in `stub/`. It verifies held-input draining,
 shared-message reference lifetime, stale physical actor rejection, presentation
-refresh and preservation of soldier health/equipment/skills. It does not substitute
+refresh and preservation of soldier health/equipment/skills. It composes the actual
+sink with the real ownership model to regress unbind-then-drain and verifies that
+retained scripts regain their handler contexts. A third executable extracts and
+compiles the actual team death/environment methods to check solo, native multiplayer,
+campaign host and campaign guest authority, including living AI squad members. It does not substitute
 for the real host/guest campaign runtime gate.
 
 The existing human differential suites can be built/run with isolated outputs:
@@ -79,8 +83,11 @@ The tested reference setup reports one unresolved original import; the selected
 suites do not call it and complete all comparisons with zero failures. This is
 reference-harness evidence, not a claim that the original game was launched.
 Optional `run.py --compiler gcc --sanitize` needs working ASan/UBSan runtime libraries.
-The attempted sanitizer run on this machine could not link its missing system
-`libasan.so.8.0.0`; no sanitizer pass is claimed.
+The initial sanitizer attempt could not link missing system `libasan.so.8.0.0`.
+After COOP-009 restored private matching runtime libraries, the complete final
+three-executable suite passed ASan/UBSan. Point both `LIBRARY_PATH` and
+`LD_LIBRARY_PATH` at the private library directory before invoking the runner;
+no system package installation or global environment changes are needed.
 
 Live campaign admission, negotiated payload codecs/dispatch, tagged authoritative
 replication, two-instance demonstration and full vehicle/interaction behavior remain

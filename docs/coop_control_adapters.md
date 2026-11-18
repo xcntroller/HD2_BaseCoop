@@ -21,7 +21,12 @@ presentation, then acknowledges exact committed control revisions. A failed port
 leaves input unavailable and can be retried. It does not recreate unchanged
 controllers on presence/phase publications, nor restart an active script on a
 scripted soldier's disconnect. Script/death callbacks commit invalidation first;
-reconciliation must run after the executing controller's stack returns.
+reconciliation must run after the executing controller's stack returns. Before
+advancing a mission generation or destroying/replacing the physical world, call
+`RetireBeforeReconstruction()` on the host and guest adapters. It drains old
+handlers while their world generation still matches, clears local presentation
+and disables input. COOP-009's pre-generation retirement hook binds this operation;
+guest world reconstruction must retire before installing its new catalog.
 
 On guests, `C_CampaignReplicaControlAdapter(session, localPlayer, sink)` implements
 the same ownership-view interface. `InstallCommitted(snapshot)` validates complete
@@ -55,8 +60,12 @@ those actor numbers are independent of connection slots. Dynamic compacted actor
 IDs lack a native incarnation counter and fail closed at this sink. The logical
 model/queue supports independent larger actor IDs, without widening legacy fields.
 The sink clears held control arrays, input pointers, reliable queues and net-object
-messages. Shared incoming/forwarded messages release exactly one queue reference
-at a time. Replacement handlers attach after the old controller detaches.
+messages. Same-generation retired actors resolve through the sink's remembered
+applied binding even after catalog unbinding; physical slot-use still must match.
+Old-generation drains never touch a later world's occupant. Shared
+incoming/forwarded messages release exactly one queue reference
+at a time. Replacement handlers attach after the old controller detaches. A retained scripted
+controller has its handlers rebound explicitly without restarting its script.
 
 The native sink's dispatcher is supplied by COOP-010: it must decode a negotiated,
 bounded payload and validate gameplay targets separately from controller authority.
@@ -76,7 +85,7 @@ needs a generation-tagged replication path at live integration.
 | `player_net.cpp`, `remote_controller.cpp` | Connection activity uses the explicit transport mapping; AI has no fake player. Both class-message paths bypass MP skills/ranks. Raw bit/action/reliable queues fail closed. |
 | `human_combat.cpp`, `net_players.cpp`, `player_controller.cpp` | Damage/killer identities stay actor IDs; campaign damage never enters MP slot scoring, ranks or lives. Medic scoring and native class changes are disabled. Original campaign friendship and host progression remain distinct from transport role. |
 | `human.cpp`, `human_items.cpp` | Setup skips MP team/VIP/spawn-protection paths; campaign names, seed skills/progress and equipment survive control changes. Campaign progression mutates on the authority host. Equipment snapshots avoid MP class state. |
-| `team.cpp`, `interface.cpp`, `first_person_view.cpp` | Full squad membership is retained. Selection follows committed local ownership, with no direct claim from a UI click. Handoff closes inventory and refreshes camera/weapon targets; losing ownership clears the old weapon view. Inventory opens only for the local controlled source. |
+| `team.cpp`, `interface.cpp`, `first_person_view.cpp` | Full squad membership is retained. Original all-squad-dead/deadly-area rules execute on the host; living AI keeps the mission alive. Selection follows committed local ownership, with no direct claim from a UI click. Handoff closes inventory and refreshes camera/weapon targets; losing ownership clears the old weapon view. Inventory opens only for the local controlled source. |
 | `actors_module.cpp` | Untagged dispatch is rejected before actor/player-range dispatch. Removal never indexes the MP player array using a campaign actor. COOP-009 alone owns departure/spawn/lifecycle call sites. |
 | `car_seats.cpp`, `car_hits.cpp`, `car_callbacks.cpp`, `car_update.cpp`, `car_net.cpp` | Local-driver checks use ownership under the explicit boundary and exactly the original slot comparisons outside it. Vehicle action envelopes use the same token/sequence fences; full driving/interaction remains a later runtime gate. |
 
