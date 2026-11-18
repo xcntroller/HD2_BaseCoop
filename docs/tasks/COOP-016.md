@@ -2,7 +2,7 @@
 
 ## Coordination
 
-- Status: planned
+- Status: ready
 - Owner/session: unassigned
 - Canonical branch: `feature/coop-016-current-world`
 - Base commit: not started
@@ -66,7 +66,7 @@ runtime evidence and legacy regression requirements.
 - Completed: task definition.
 - Remaining: implementation or verification and the acceptance evidence above.
 - Next action: Inventory the state missing from the time-zero cut and reproduce a representative live capture across native serialization seams.
-- Blockers: Required results listed above must merge before implementation.
+- Blockers: none. COOP-015 merged at `09b498a3`. Its initial-world loading barrier and generation handoff are the starting point.
 - Decisions: Use a common reconstruction boundary for the later tasks. Scope the first native round trip to a recorded mission and state coverage.
 - Local state: no task worktree or artifacts.
 - Review notes: none.
