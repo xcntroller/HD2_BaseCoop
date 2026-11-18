@@ -2,14 +2,14 @@
 
 ## Coordination
 
-- Status: review
+- Status: done
 - Owner/session: Codex COOP-015, user assignment, thread `01a1eead-4d91-7b52-a8d5-cd1a32cce6d3`
 - Canonical branch: `feature/coop-015-campaign-progression`
 - Base commit: `ca5ae2f897524cc1905e343b5b7ad3910e56f4c3`
 - Dependencies: [COOP-013](COOP-013.md) menu preparation/deployment, [COOP-014](COOP-014.md) authoritative mission outcome
 - Last source checkpoint: `b1a92949`
 - Checkpoint location: canonical branch, `.worktrees/COOP-015`; claim acknowledged by coordinator at `16963b69`
-- Review/integration: separate source and evidence review passed for PR #31
+- Review/integration: PR #31 merged at `09b498a3895f2bd9675b346e82cbec91914bd2b7`. The integrated tree matches reviewed head `c0b22379`.
 - Pull request: [#31](https://github.com/xcntroller/HD2_BaseCoop/pull/31)
 
 ## Branch authority and completion PR
@@ -143,9 +143,9 @@ executable. Checked fixtures are installed into a detached test checkout.
 - Completed: published the claim and implemented mission-scoped report readiness,
   host writeback, synchronized original step dispatch and continued live preparation.
   The x86 builds, protocol and model harnesses, and scoped success and legacy runs pass.
-- Remaining: integration review and the owner playtest.
-- Next action: review the final candidate against `main`, then integrate
-  through PR #31 and record the actual merge commit.
+- Remaining: the full owner playtest.
+- Next action: run the pending owner playtest. COOP-016 can begin against the
+  integrated mission-generation and loading boundary.
 - Blockers: none. COOP-013 merged at `73d518a5` and COOP-014 merged at
   `619d6aec`. The host result is available through `GetCampaignMissionResult()`
   while the session is in Ending.

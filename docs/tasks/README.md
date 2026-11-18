@@ -61,11 +61,10 @@ for the full milestone sequence.
 | [COOP-019](COOP-019.md) | First-time join during a running mission | COOP-018 | `feature/coop-019-running-join` |
 | [COOP-020](COOP-020.md) | Base campaign verification | COOP-017, COOP-019 | `docs/coop-020-campaign-verification` |
 
-COOP-012, COOP-013 and COOP-014 are integrated. The ordinary menu opens live
-preparation and deployment. Arctic1 now supplies a host-owned terminal result
-and a synchronized outcome. COOP-015 is ready to connect that result to the
-original debrief and campaign sequence. The full original paired Arctic1
-route remains an owner playtest.
+COOP-012 through COOP-015 are integrated. The menu session now continues
+through the original Arctic1 debrief and Arctic2 preparation into the next
+mission, using a new loading barrier. COOP-016 is ready. The full original
+paired Arctic1 route through Arctic2 remains an owner playtest.
 
 COOP-016 establishes a shared current-world boundary for saves and reconnect.
 COOP-017 and COOP-018 can proceed after that boundary merges, with coordination
