@@ -103,7 +103,8 @@ is copied onto the wire. The encodings are:
   remain model validation; the codec does not guess item physics.
 - All enums: u16 LE, zero-based in the merged declarations' explicit enumerator
   order; values outside the declared range reject. `E_InputKind` is 0 ControlBits,
-  1 ActorAction, 2 VehicleAction. Reject has only the nine contract refusal reasons.
+  1 ActorAction, 2 VehicleAction, 3 DoorAction, 4 WireCut. Reject has only the nine
+  contract refusal reasons.
   Changing any enumerator order requires a new reviewed wire version.
 - Bool and optional presence: u8 **exactly 0 or 1**. Present optionals immediately
   contain their value. Absent fields have no value bytes.

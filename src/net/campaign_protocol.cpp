@@ -606,7 +606,10 @@ bool Valid(const S_Reject &x) {
     }
 }
 bool Valid(const S_PreparationDelta &x) { return Id(x.m_Base) && x.m_Replacement.m_ViewRevision.Value() > x.m_Base.Value(); }
-bool Valid(const S_Input &x) { return x.m_Sequence && !x.m_Payload.empty() && x.m_Payload.size() <= kMaxInputBytes; }
+bool Valid(const S_Input &x) {
+    return x.m_Sequence && !x.m_Payload.empty() && x.m_Payload.size() <= kMaxInputBytes &&
+        static_cast<unsigned>(x.m_Kind) <= static_cast<unsigned>(S_EnumMax<E_InputKind>::value);
+}
 bool Valid(const S_WorldChunk &x) {
     if (!x.m_TotalBytes || x.m_TotalBytes > kMaxWorldBytes || !x.m_Count || x.m_Count > kMaxChunks ||
         x.m_Index >= x.m_Count || x.m_Count != (x.m_TotalBytes + kMaxChunkBytes - 1) / kMaxChunkBytes) return false;
@@ -1129,8 +1132,7 @@ E_CampaignReason C_InputGate::Validate(const S_Input &input, PlayerId sender,
     if (!admitted) return E_CampaignReason::NotAdmitted;
     if (context.m_Kind != E_CampaignSessionKind::CampaignCoop || !context.m_IsTransportServer ||
         context.m_Phase != E_CampaignPhase::Running || !reconstructionComplete) return E_CampaignReason::InvalidPhase;
-    if (!Valid(input) || !Valid(input.m_Control) || !Valid(soldier) ||
-        static_cast<unsigned>(input.m_Kind) > static_cast<unsigned>(E_InputKind::VehicleAction)) return E_CampaignReason::Malformed;
+    if (!Valid(input) || !Valid(input.m_Control) || !Valid(soldier)) return E_CampaignReason::Malformed;
     const auto &token = input.m_Control;
     if (context.m_Session != token.m_Session) return E_CampaignReason::WrongSession;
     if (context.m_MissionGeneration != token.m_Generation) return E_CampaignReason::WrongGeneration;

@@ -538,6 +538,20 @@ void Inputs() {
     soldier.m_Scripted = false; soldier.m_Actor->m_SlotUse = ActorSlotUse(1); CHECK(gate.Validate(input, PlayerId(5), context, soldier, true, true) == R::ActorUnavailable);
     soldier = Soldier(); soldier.m_Alive = false; CHECK(gate.Validate(Input(), PlayerId(5), context, soldier, true, true) == R::Dead);
     soldier = Soldier(); soldier.m_Owner.reset(); CHECK(gate.Validate(Input(), PlayerId(5), context, soldier, true, true) == R::NotOwner);
+    soldier = Soldier();
+    gate.Reset();
+    input = Input();
+    input.m_Kind = E_InputKind::DoorAction;
+    CHECK(EncodeDoorAction({32, E_DoorAction::Open}, input.m_Payload) == R::None);
+    CHECK(gate.Validate(input, PlayerId(5), context, soldier, true, true) == R::None);
+    input.m_Sequence++;
+    input.m_Kind = E_InputKind::WireCut;
+    CHECK(EncodeWireCut("fence_panel", input.m_Payload) == R::None);
+    CHECK(gate.Validate(input, PlayerId(5), context, soldier, true, true) == R::None);
+    CHECK(gate.Validate(input, PlayerId(5), context, soldier, true, true) == R::StaleRevision);
+    input.m_Sequence++;
+    input.m_Kind = static_cast<E_InputKind>(255);
+    CHECK(gate.Validate(input, PlayerId(5), context, soldier, true, true) == R::Malformed);
     context.m_MissionGeneration = MissionGeneration(4); CHECK(gate.Validate(Input(), PlayerId(5), context, Soldier(), true, true) == R::WrongGeneration);
 }
 void Replicas() {
