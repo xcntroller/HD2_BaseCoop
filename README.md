@@ -78,15 +78,15 @@ Needs Visual Studio with the C++ x86 tools, and Python; the engine DLLs also nee
 first, then the executable:
 
 ```bash
-python ls3df/build.py
+python _re/tools/build_isolated.py ls3df
 ```
 
 ```bash
-python _re/tools/build_rw_data.py
+python _re/tools/build_isolated.py rw-data
 ```
 
 ```bash
-python _re/tools/build_game.py
+python _re/tools/build_isolated.py game
 ```
 
 `ls3df/build.py` makes `ls3df\build\msvc\LS3DF.dll` and `build_rw_data.py` makes `rw_data\build\msvc\rw_data.dll`,
@@ -94,20 +94,24 @@ each with its import library; `build_game.py` links against those, or against si
 repositories (`..\LS3DF`, `..\RW_DATA`) when they are not built here. `python ls3drf/build.py` makes
 `LS3DRF.dll`, the dedicated server's engine (not needed by the game).
 
-The executable and its symbols land in `%TEMP%\hd2_game`; add `--copy DIR` to copy them to the game's
+The wrapper isolates temporary files and locks builds within each worktree. The executable and symbols
+land in `build/isolated/game/default/temp/hd2_game`; add `--copy DIR` to copy them to the game's
 folder. Only changed sources are compiled, so use `--all` after a header change. A full build takes about a
 minute.
 
 - The default build, `/O2 /MT` with x87 floats (`/arch:IA32`), is the one to play: the game's math depends
   on the x87 floats.
-- `--checked` builds `/Od /MTd /RTC1` in `%TEMP%\hd2_game_checked`. It stops at wrong call conventions and
+- `--checked` builds `/Od /MTd /RTC1` in `build/isolated/game/default/temp/hd2_game_checked`. It stops at wrong call conventions and
   stack overruns, and is the first thing to try when something goes wrong.
 - The window title and the icon are added at link time, the icon read from an installed copy of the game
   (`ICON_SOURCE` in `build_game.py`, a path on the author's machine). Without it the executable builds with
   neither, and works.
 
-`python _re/tools/build_check.py` and `python _re/tools/link_check.py` are the quick checks: every source
-compiled with diagnostics, then the link.
+`python _re/tools/build_isolated.py check` compiles with diagnostics; without MSVC it attempts a
+32-bit g++ syntax check. The runnable game build performs the actual executable link. Legacy direct
+build scripts retain their fixed system-temp paths; `link_check.py` also retains sibling-clone library
+assumptions. See [the COOP-001 build and baseline guide](docs/build_baseline.md) for exact Windows and
+Fedora MSVC/Wine setup, output isolation, tested solo/native co-op steps and their limitations.
 
 ## Approach
 
