@@ -7,7 +7,7 @@
 - Canonical branch: `feature/coop-014-arctic1-completion`
 - Base commit: `9ec7fe48bb21c38f9d95976b99198c6fb1576e74`
 - Dependencies: [COOP-010](COOP-010.md) two-player Arctic1 development path
-- Last checkpoint: `d859ded8` paired squad movement, host-directed intro and terminal evidence logging
+- Last checkpoint: `7cf9650b` native wire cutting and paired terminal outcome
 - Checkpoint location: `.worktrees/COOP-014` and the canonical branch on origin
 - Review/integration: COOP-012 coordinator accepted the claim in ledger `75131f7a`.
 - Pull request: [draft #25](https://github.com/xcntroller/HD2_BaseCoop/pull/25)
@@ -174,6 +174,35 @@ for progression.
 - Campaign co-op suppresses the legacy multiplayer hit and kill messages
   within the original HUD. The isolated x86 relink for that change compiled
   one unit and reported zero diagnostics.
+- The base solo reference used the authored walking points across the swamp
+  and showed objective 1 as Success. The original HUD then instructed the
+  player to use wire cutters at the fence. Captures include
+  `after-swamp-objectives.png` and `cut-option.png` in `build/evidence/original-solo/`.
+- Original Arctic1 fence panels can be addressed by stable authored
+  frame name. The Running protocol now carries a bounded wire-cut request and
+  its committed presentation. MSVC x86 compiled the full candidate and exposed
+  a const-qualified frame bound call. The corrected source compiled and linked,
+  with no diagnostics in the retry. GCC and MSVC x86 protocol conformance each
+  passed 12 suites and 567,510 checks. Live cut validation remains pending.
+- On the wire candidate, the host moved a Sten magazine to the backpack and the
+  wire cutters to a belt pouch. The guest applied both inventory events. The guest
+  lost his soldier at the hut, then remained connected while the host and
+  both AI soldiers crossed the swamp. Both peers recorded objective 1 as Success.
+  The surviving squad died under fire at the factory fence. Both peers recorded
+  Failure and objective states 1 / 2 / 2. The terminal snapshot records all four
+  casualties, four Sten magazines in each container, and item 59 (cutters) in the
+  host’s belt pouch. Logs are in `build/evidence/wire-candidate-paired/`.
+- Repeated the COOP-010 handoff on the same x86 artifact, SHA-256
+  `b6fc83cc647e649fa54add94e6d2f4566157d6fdfeaee2099c3f587da7150a5f`.
+  After the living guest moved and closed his window, the host preserved native
+  actor 1, switched it to the squad controller, matched the native transfer
+  state CRC32 `912428408`, and rejected the retired token with `NotAdmitted`.
+  Evidence is in `build/evidence/handoff-repeat/result.log`.
+- Original Tutorial loaded from the base campaign menu, played the training
+  scene, and the selected soldier walked under native WASD input. The original
+  Sicily2 LAN host and guest both reached the native Player Setup screen and
+  listed both peers preparing. The private prefixes followed the build guide’s
+  DirectPlay IPv4 setting. Captures are in `build/evidence/legacy/`.
 
 ## PR test instructions and delivery
 
@@ -187,11 +216,11 @@ for progression.
 - Completed: refreshed origin, verified COOP-010 merge `738b124d` is an ancestor of
   the base, checked for duplicate work, and established the canonical worktree.
 - Remaining: original solo and paired success,
-  guest door interaction, changed equipment at the terminal boundary and the
-  applicable legacy regressions.
-- Next action: continue the southern approach with both peers and repeat the swamp
-  escort on the solo reference from the private native quicksave. Exercise the
-  native door and the mission’s success and failure boundaries.
+  guest door interaction and the live fence cut.
+- Next action: continue the southern approach with both peers and repeat the
+  factory approach on the solo reference from the private native quicksave.
+  Verify the native door and cut, enter the complex, clear the original
+  garrison, and gather the surviving squad at the underground entrance.
 - Blockers: none. Serialize live LAN tests with COOP-013 when the fixed provider port is occupied.
 - Decisions: Use the existing development launch and game data. Base the interaction scope on what the original Arctic1 route exercises.
 - Local state: private build outputs and runtime copies under ignored worktree `build/`.
