@@ -111,6 +111,7 @@ public:
     I3D_frame *GetFrame() const { return m_frame; }
     const char *GetFileName() const { return m_fileName; }
     bool IsFinished() const { return m_finished; }
+    bool IsRunning() const { return m_running; }
     bool IsInCutsceneHandler() const { return m_inCutsceneHandler; }
     // Clears and returns the "HUD hidden by this script's camera" flags (EndCutscene).
     bool TakeHudHidden() { const bool v = m_hudHiddenByScript; m_hudHiddenByScript = false; return v; }

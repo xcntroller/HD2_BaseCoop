@@ -2,6 +2,7 @@
 // C_ActorsModule ("Actors", 0x004755d0..0x00476a50) and C_TemporaryActorsList
 // ("Temp. Actors", 0x00476ec0..0x00479600).
 #include "game/actors_module.h"
+#include "game/campaign_mission_adapter.h"
 
 #include <cmath>
 #include <cstdio>
@@ -647,9 +648,11 @@ void C_TemporaryActorsList::StartMission(bool server)
         CreateBreakables();
     else
         CreateBreakablesOnClient();
-    if (!IsServer() || !server)
+    if (!(IsServer() && server) && !IsCampaignInitialReplica())
         return;
 
+    // Recreate the original time-zero item actors on each campaign instance.
+    // Outside campaign loading the server owns placement creation.
     // The server turns the mission's items into item actors; armed mines are laid
     // on the ground below their placement.
     for (int i = 0; i < g_itemsModule.GetPlacementCount(); ++i) {

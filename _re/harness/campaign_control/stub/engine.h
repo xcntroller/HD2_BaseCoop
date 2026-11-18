@@ -24,7 +24,8 @@ struct C_PlayerController : C_HumanController {
 struct C_RemoteController : C_HumanController {
     std::array<float, 64> m_controlAxes{}, m_controlButtons{};
 };
-struct C_Human {
+class C_Human {
+public:
     int m_Id = 0, m_Health = 711, m_Equipment = 42, m_Skills = 83, m_Rebinds = 0;
     bool m_Forced = false;
     struct C_Body { bool m_Local = false; void SetPlayerControlled(bool local) { m_Local = local; } } m_body;

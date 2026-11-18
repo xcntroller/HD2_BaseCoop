@@ -265,6 +265,8 @@ struct S_NetQueued {
     void *data;                                     // +0x14 (the pool's)
 };
 
+struct S_CampaignNetConfig;
+
 class C_NetGame {
 public:
     C_NetGame();                                    // 0x0072e1d0 (__fastcall)
@@ -434,10 +436,10 @@ public:
     int GetConnectionState();                       // 0x00731ac0
     // The server made (the session closed first; the name, the service provider and the password of `desc`;
     // `firewall`: Windows XP's firewall opened for its port): < 0 failed (m_lastError / m_lastErrorText).
-    int Host(const S_NetSessionDesc &desc, bool firewall);   // 0x00722b60 (DS 0x00779880)
+    int Host(const S_NetSessionDesc &desc, bool firewall, const S_CampaignNetConfig *campaign = nullptr);   // 0x00722b60 (DS 0x00779880)
     // A client connecting to `server` (S_MultiplayerSettings +0x17C; its port 31567 without GameSpy's listing;
     // the CD key checked first with it): < 0 failed.
-    int Connect(S_ServerEntry *server);             // 0x007240f0
+    int Connect(S_ServerEntry *server, const S_CampaignNetConfig *campaign = nullptr);             // 0x007240f0
     // A dedicated server started (its description written, hd2ds_sabresquadron.exe run; the main menu's connect
     // screen): false failed.
     bool HostDedicated(bool firewall);              // 0x00722a80 (DS 0x00779760)

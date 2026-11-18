@@ -16,6 +16,7 @@
 #include "game/actor.h"
 #include "game/actors_module.h"
 #include "game/ai_parts.h"
+#include "game/campaign_control_runtime.h"
 #include "game/checkpoints.h"
 #include "game/controller_internal.h"
 #include "game/game.h"
@@ -170,6 +171,8 @@ C_SquadController::~C_SquadController()
 void C_SquadController::Attach(C_Human *human, C_HumanController *previous)
 {
     C_AIController::Attach(human, previous);
+    // Capture a player-to-AI transition without rearranging the player's kit.
+    const bool preserveEquipment = previous && previous->GetType() == HUMAN_CONTROLLER_PLAYER && CampaignControlsActive();
     const bool alive = m_human->m_stats[STAT_HEALTH] > 0;
     m_ordersChangedTime = 0;
     m_orderStance = 0;
@@ -186,7 +189,7 @@ void C_SquadController::Attach(C_Human *human, C_HumanController *previous)
     m_silentMode = false;
     m_alertTime = 200;
     if (alive)
-        SetCombatOrder(SQUAD_ORDER_MODE0);
+        SetCombatOrder(SQUAD_ORDER_MODE0, !preserveEquipment);
     m_boundHops = 0;
     m_followDelay = 0;
     m_lyingToFire = false;
@@ -213,7 +216,7 @@ void C_SquadController::Attach(C_Human *human, C_HumanController *previous)
         case HUMAN_CONTROLLER_PLAYER: {
             const C_PlayerController *player = static_cast<const C_PlayerController *>(previous);
             if (alive)
-                SetCombatOrder(player->GetSquadCombatOrder());
+                SetCombatOrder(player->GetSquadCombatOrder(), !preserveEquipment);
             m_flags = player->GetSquadFlags();
             SetFollow(false, false);
             if (m_flags & FLAG_HOLDING)
@@ -247,7 +250,7 @@ void C_SquadController::Attach(C_Human *human, C_HumanController *previous)
         }
     }
     m_selfHealTime = 0;
-    if (!m_handsItem && alive)
+    if (!m_handsItem && alive && !preserveEquipment)
         m_human->DrawLongGun();
     SetIdleTask(nullptr);
     m_alertTime = 0;

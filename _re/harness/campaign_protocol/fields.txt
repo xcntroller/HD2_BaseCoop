@@ -52,3 +52,11 @@ S_Reject Reason
 S_PreparationDelta Base Replacement
 S_Input Control Sequence Kind Payload
 S_WorldChunk Baseline TotalBytes Index Count Crc32 Bytes
+S_SquadActorState Actor Position[3] Facing[3] ViewDirection[3] Velocity[3] Health Stance
+S_MissionCamera Position[3] Direction[3] Up[3] Fov
+S_MissionUpdate Session Generation Snapshot OwnershipRevision Sequence MissionTime PlayerInputEnabled CutsceneCamera Squad Objectives
+S_WeaponEvent Actor Snapshot OwnershipRevision Sequence Action ItemUid Rounds ReloadTime ConsumedAmmo
+S_PlayerControls (ControlBits payload) Version Held Pressed ViewDirection[3]
+S_ItemMove ItemUid From To Slot
+S_InventoryEvent Actor Snapshot OwnershipRevision Sequence Move
+ActorAction payload Version S_ItemMove

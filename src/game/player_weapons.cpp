@@ -3,6 +3,7 @@
 // the knife (from behind: a backstab), grenades thrown with a charge (from the hands or the
 // belt), mines and car charges, the sights, the scopes and the binoculars, raising and lowering
 // the weapon.
+#include "game/campaign_control_runtime.h"
 #include "game/first_person_view.h"
 #include "game/human_controller.h"
 
@@ -131,8 +132,9 @@ void C_PlayerController::WeaponControls(int timeDelta)
     m_quietTime += timeDelta;
     if (!m_buttons || !m_axes)
         return;
+    const bool campaignRemote = CampaignControlsActive() && !IsCampaignLocalActor(m_human->GetNetId());
     // Network games: the spawn protection keeps the weapons quiet.
-    if (!IsLocalGame() && m_human->m_aliveTime < g_mpSettings->spawnProtection * 1000)
+    if (!IsLocalGame() && !CampaignControlsActive() && m_human->m_aliveTime < g_mpSettings->spawnProtection * 1000)
         return;
     if (m_viewMode == VIEW_BINOCULARS)
         return;
@@ -143,7 +145,7 @@ void C_PlayerController::WeaponControls(int timeDelta)
         if (vehicle->HasSeatWeapon(m_human->m_seat))
             return;
     }
-    if (!GetGame()->GetFirstPersonView()->CanUseWeapon())
+    if (!campaignRemote && !GetGame()->GetFirstPersonView()->CanUseWeapon())
         return;
     if (m_human->m_body.GetEquipmentFlag1())
         return;
@@ -290,7 +292,8 @@ void C_PlayerController::WeaponControls(int timeDelta)
         }
         weapon->PlayEmptySound(m_human);
         weapon->SetAttackTime(GetGame()->GetMissionTime());
-        GetGame()->GetFirstPersonView()->OnInventoryEvent(FPV_EVENT_JAMMED, 0);
+        if (!campaignRemote)
+            GetGame()->GetFirstPersonView()->OnInventoryEvent(FPV_EVENT_JAMMED, 0);
         RequestAction(CONTROLLER_ACTION_EMPTY, &ZERO, &ZERO, 0.0f, -1, -1);
         return;
     }
@@ -301,7 +304,10 @@ void C_PlayerController::WeaponControls(int timeDelta)
     S_vector4 origin;
     S_vector4 dir = ZERO;
     C_game *game = GetGame();
-    if (game->IsFirstPersonView()) {
+    if (campaignRemote) {
+        origin = WorldPos4Of(ShotFrameOf(weapon));
+        dir = m_viewDir;
+    } else if (game->IsFirstPersonView()) {
         origin = game->GetFirstPersonView()->GetAimOrigin();
         dir = game->GetFirstPersonView()->GetAimDir();
     } else {
@@ -331,7 +337,8 @@ void C_PlayerController::WeaponControls(int timeDelta)
         return;
     ApplyRecoil(m_viewDir);
     m_human->ExecuteBodyCommand(MakeBodyCommand(BODY_COMMAND_ACTION, BODY_ACTION_FIRE));
-    GetGame()->GetFirstPersonView()->OnInventoryEvent(m_handsItem->GetAmount() == 0.0f ? FPV_EVENT_FIRE_LAST : FPV_EVENT_FIRE, 0);
+    if (!campaignRemote)
+        GetGame()->GetFirstPersonView()->OnInventoryEvent(m_handsItem->GetAmount() == 0.0f ? FPV_EVENT_FIRE_LAST : FPV_EVENT_FIRE, 0);
     static_cast<C_WeaponItem *>(m_handsItem)->SetAttackTime(GetGame()->GetMissionTime() + AttackDelayOf(m_handsItem));
     RequestAction(CONTROLLER_ACTION_FIRE, &origin, &dir, 0.0f, -1, -1);
     m_quietTime = 0;
@@ -586,7 +593,8 @@ void C_PlayerController::UpdateZoom()
 
 void C_PlayerController::UpdateWeaponReady(int timeDelta)
 {
-    if (!GetGame()->GetFirstPersonView()->CanUseWeapon()) {
+    const bool campaignRemote = CampaignControlsActive() && !IsCampaignLocalActor(m_human->GetNetId());
+    if (!campaignRemote && !GetGame()->GetFirstPersonView()->CanUseWeapon()) {
         if (!m_charging)
             UpdateZoom();
         return;
@@ -598,7 +606,8 @@ void C_PlayerController::UpdateWeaponReady(int timeDelta)
         if (vehicle->HasSeatWeapon(m_human->m_seat))
             return;
     }
-    UpdateZoom();
+    if (!campaignRemote)
+        UpdateZoom();
     if (!m_handsItem) {
         if (m_weaponRaised)
             LowerWeapon();

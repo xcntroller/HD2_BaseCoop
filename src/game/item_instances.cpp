@@ -493,6 +493,15 @@ void C_WeaponItem::SetRounds(C_Actor *owner, int ammoUid, int rounds)
 #endif
 }
 
+void C_WeaponItem::ApplyReplicaRounds(C_Actor *owner, std::uint16_t rounds, std::uint16_t reloadMs, bool reloading)
+{
+    m_rounds = static_cast<float>(rounds);
+    m_readyTime = Now() + reloadMs;
+    ClearReloadPending();
+    if (reloading && IsClient())
+        PlayReloadSound(owner, false);
+}
+
 void C_WeaponItem::PlayEmptySound(C_Actor *owner)
 {
     if (!IsClient())

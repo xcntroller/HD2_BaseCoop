@@ -1,5 +1,6 @@
 #include "campaign_control_native.h"
 #include "campaign_control_runtime.h"
+
 #include "game/actors_module.h"
 #include "game/human.h"
 #include "game/human_controller.h"
@@ -24,11 +25,13 @@ C_Human *ResolvePhysical(const ActorRef &actor) {
         static_cast<std::uint8_t>(g_actorsModule.GetPlayerSlotUse(id)) != actor.m_SlotUse.Value()) return nullptr;
     return static_cast<C_Human *>(g_actorsModule.GetHuman(id));
 }
-C_Human *Resolve(const ActorRef &actor) {
+}
+
+C_Human *C_CampaignNativeControlSink::Resolve(const ActorRef &actor) const {
     const auto record = FindCampaignActorControl(static_cast<int>(actor.m_Actor.Value()));
     return record && record->m_Actor == actor ? ResolvePhysical(actor) : nullptr;
 }
-}
+
 bool C_CampaignNativeControlSink::Drain(const ActorRef &actor) {
     // A retired generation must never resolve a new occupant of the same slot.
     C_Human *human = Resolve(actor);
@@ -93,7 +96,7 @@ bool C_CampaignNativeControlSink::Apply(const S_CampaignControllerPlan &plan) {
             object->SetStateHandlers(NetReadControlBits, NetWriteControlBits, human->m_controller);
         }
     }
-    human->m_body.SetPlayerControlled(plan.m_LocalView);
+    human->m_body.SetPlayerControlled(plan.m_LocalView || plan.m_Controller == E_CampaignController::RemotePlayer);
     m_AppliedBindings[plan.m_Record.m_Soldier] = *plan.m_Record.m_Actor;
     return true;
 }

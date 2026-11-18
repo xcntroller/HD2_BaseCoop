@@ -223,21 +223,25 @@ S_CampaignRequestResult C_CampaignOwnership::ApplyRequest(PlayerId authenticated
 }
 
 E_CampaignReason C_CampaignOwnership::Admit(const std::string &displayName, PlayerId &admitted) {
+    const auto next = CampaignNextCounter(m_LastPlayer).value_or(PlayerId{});
+    const auto reason = AdmitTransportPlayer(next, displayName);
+    if (reason == E_CampaignReason::None) admitted = next;
+    return reason;
+}
+E_CampaignReason C_CampaignOwnership::AdmitTransportPlayer(PlayerId player, const std::string &displayName) {
     const auto phase = m_State.m_Context.m_Phase;
     if (phase == E_CampaignPhase::Running) return E_CampaignReason::JoinNotSupported;
     if (phase != E_CampaignPhase::Setup && phase != E_CampaignPhase::Preparation) return E_CampaignReason::InvalidPhase;
     if (m_State.m_Participants.size() == 4) return E_CampaignReason::SessionFull;
     if (displayName.size() > 128) return E_CampaignReason::Malformed;
-    auto next = CampaignNextCounter(m_LastPlayer);
-    if (!next) return E_CampaignReason::WrongGeneration;
+    if (!(m_LastPlayer < player)) return E_CampaignReason::WrongGeneration;
     auto candidate = m_State;
-    candidate.m_Participants.push_back({*next, displayName, true, true, std::nullopt});
-    auto reason = m_Journal.Admit(*next);
+    candidate.m_Participants.push_back({player, displayName, true, true, std::nullopt});
+    auto reason = m_Journal.Admit(player);
     if (reason != E_CampaignReason::None) return reason;
     reason = Commit(m_Session, std::move(candidate));
-    if (reason != E_CampaignReason::None) { m_Journal.Forget(*next); return reason; }
-    m_LastPlayer = *next;
-    admitted = *next;
+    if (reason != E_CampaignReason::None) { m_Journal.Forget(player); return reason; }
+    m_LastPlayer = player;
     return E_CampaignReason::None;
 }
 E_CampaignReason C_CampaignOwnership::OnDisconnected(PlayerId player) {

@@ -126,7 +126,7 @@ S_LoadoutPreset *C_LoadoutPresets::AddUserPreset()
     return m_userPresets.back();
 }
 
-bool C_LoadoutPresets::Load()
+bool C_LoadoutPresets::LoadDefaults()
 {
     const int file = dtaOpen(PRESETS_FILE, false);
     if (file < 0)
@@ -138,6 +138,13 @@ bool C_LoadoutPresets::Load()
     for (int i = 0; i < count; ++i)
         dtaRead(file, AddPreset(), PresetSize(version));
     dtaClose(file);
+    return true;
+}
+
+bool C_LoadoutPresets::Load()
+{
+    if (!LoadDefaults())
+        return false;
 
     // The user's: up to 24, the rows of the file's count / 4 into rows of six.
     const C_str path = UserPresetsPath();
@@ -146,6 +153,7 @@ bool C_LoadoutPresets::Load()
         SaveUser();
         return false;
     }
+    int version = 0, count = 0;
     dtaRead(user, &version, 4);
     dtaRead(user, &count, 4);
     count = std::min(count, USER_PRESET_COUNT);

@@ -583,6 +583,8 @@ private:
     void UpdateRemote(int frameTime);                   // 0x0053f520
     // The local human: the controls applied, the state replicated.
     void TickLocal(int timeDelta);                      // 0x0053f9b0
+    void TickCampaignRemote(int timeDelta);
+    void UpdatePace(const float *pressed);
     // The net object's messages: the actions (the server carries them out and passes them
     // on), the dive, the binoculars.
     void ProcessNetMessages();                          // 0x005404f0
@@ -999,7 +1001,7 @@ public:
     virtual int GetCombatOrder();                       // 0x148 0x005385f0
 
     // --- the command module's squad commands (squad_actions.cpp) -------------------------
-    void SetCombatOrder(int order);                     // 0x005380c0
+    void SetCombatOrder(int order, bool selectEquipment = true); // 0x005380c0
     // Follows the leader (`follow`), else stays; `quiet`: sneaking and whispering.
     void SetFollow(bool follow, bool quiet);            // 0x005377f0
     // Stays where it is in cover (`notify`: tells the module when idle).

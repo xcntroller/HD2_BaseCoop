@@ -1,4 +1,6 @@
 #include "game/campaign_control_runtime.h"
+#include "game/campaign_dev.h"
+#include "net/campaign_protocol.h"
 // C_PlayerController, the controller of the local player's soldier and the server's copy of a
 // network player (original source 0x0053b9a0..0x0053d870, 0x00540090..0x00540240,
 // 0x00542060..0x00542b10, 0x005449b0, 0x00545dd0..0x00546dc0): its life cycle, the keys and
@@ -69,6 +71,22 @@ enum : int {
 // The view: the mouse's sensitivity (normal, the sights, the scopes and the binoculars), the
 // pitch limits (80 degrees, then the original's second clamp at 89.8), the turn a car seat that
 // keeps the hands item or climbing allows from the human's frame (60 degrees).
+struct S_ControlMapping {
+    CampaignProtocol::E_PlayerControl flag;
+    int native;
+};
+constexpr S_ControlMapping kCampaignHeld[] = {
+    {CampaignProtocol::kMoveForward, AXIS_FORWARD}, {CampaignProtocol::kMoveBack, AXIS_BACK},
+    {CampaignProtocol::kMoveLeft, AXIS_LEFT}, {CampaignProtocol::kMoveRight, AXIS_RIGHT},
+    {CampaignProtocol::kLeanLeft, AXIS_LEAN_LEFT}, {CampaignProtocol::kLeanRight, AXIS_LEAN_RIGHT},
+    {CampaignProtocol::kFire, AXIS_FIRE}
+};
+constexpr S_ControlMapping kCampaignPressed[] = {
+    {CampaignProtocol::kFire, BUTTON_FIRE}, {CampaignProtocol::kCrouch, BUTTON_CROUCH},
+    {CampaignProtocol::kProne, BUTTON_LIE}, {CampaignProtocol::kReload, BUTTON_RELOAD},
+    {CampaignProtocol::kPaceUp, BUTTON_PACE_UP}, {CampaignProtocol::kPaceDown, BUTTON_PACE_DOWN}
+};
+
 constexpr float MOUSE_SENSITIVITY = 0.3f;
 constexpr float MOUSE_SENSITIVITY_SIGHTS = 0.1f;
 constexpr float MOUSE_SENSITIVITY_ZOOM = 0.05f;
@@ -463,6 +481,13 @@ void C_PlayerController::Tick(int timeDelta)
     if (m_moveFlags & MOVE_DEAD)
         return;
     UpdateInteraction(timeDelta);
+    if (CampaignControlsActive() && !IsCampaignLocalActor(m_human->GetNetId())) {
+        if (IsServer())
+            TickCampaignRemote(timeDelta);
+        return;
+    }
+    if (CampaignControlsActive() && !IsServer())
+        return;
     // The weapon keys pressed since the last tick count for it.
     if (m_buttons) {
         if (m_latchThrow != 0)
@@ -495,6 +520,34 @@ void C_PlayerController::Tick(int timeDelta)
     NormalizeBy(facing, (facing.y * facing.y + facing.x * facing.x) + facing.z * facing.z);
     m_facingDir = ToVector4(facing, m.m[2][3]);
     FlushMessages(true);
+}
+
+void C_PlayerController::TickCampaignRemote(int timeDelta)
+{
+    ApplyDevelopmentCampaignControls(m_human->GetNetId(), [&](const auto *controls) {
+        for (auto &axis : m_controlAxes)
+            axis = 0.0f;
+        for (auto &button : m_controlButtons)
+            button = 0.0f;
+        m_axes = m_controlAxes;
+        m_buttons = m_controlButtons;
+        if (controls) {
+            for (const auto &held : kCampaignHeld)
+                m_axes[held.native] = (controls->m_Held & held.flag) ? 1.0f : 0.0f;
+            for (const auto &pressed : kCampaignPressed)
+                m_buttons[pressed.native] = (controls->m_Pressed & pressed.flag) ? 1.0f : 0.0f;
+            const auto &dir = controls->m_ViewDirection;
+            m_viewDir = {dir[0], dir[1], dir[2], 0.0f};
+            m_facingDir = m_viewDir;
+            UpdatePace(m_buttons);
+        }
+        ApplyMoveControls();
+        UpdateStamina(static_cast<std::uint32_t>(timeDelta));
+        if (controls) {
+            UpdateWeaponReady(timeDelta);
+            WeaponControls(timeDelta);
+        }
+    });
 }
 
 // ------------------------------------------------------------------------- the keys and the mouse
@@ -617,6 +670,20 @@ void C_PlayerController::HandleInput(float *held, float *pressed)
     game->GetCameraModule()->SetViewDir(m_viewDir);
     if ((m_moveFlags & MOVE_DEAD) || m_spectating)
         return;
+    if (CampaignControlsActive() && !IsServer()) {
+        CampaignProtocol::S_PlayerControls controls;
+        controls.m_ViewDirection = {m_viewDir.x, m_viewDir.y, m_viewDir.z};
+        for (const auto &axis : kCampaignHeld) {
+            if (held[axis.native] != 0.0f)
+                controls.m_Held |= axis.flag;
+        }
+        for (const auto &button : kCampaignPressed) {
+            if (pressed[button.native] != 0.0f)
+                controls.m_Pressed |= button.flag;
+        }
+        SendDevelopmentCampaignControls(m_human->GetNetId(), controls);
+        return;
+    }
 
     // --- the keys
     if (m_buttons[BUTTON_DROP_WEAPON] != 0.0f && game->GetFirstPersonView()->CanUseWeapon() && !m_charging) {
@@ -638,6 +705,11 @@ void C_PlayerController::HandleInput(float *held, float *pressed)
         HoldBreath(true);
     if (m_holdingBreath && m_axes[BUTTON_HOLD_BREATH] == 0.0f)
         HoldBreath(false);
+    UpdatePace(pressed);
+}
+
+void C_PlayerController::UpdatePace(const float *pressed)
+{
     // The pace: down to the slowest, up to marching (standing, with the stamina for it).
     if (pressed[BUTTON_PACE_DOWN] > 0.0f) {
         if (m_stateFlags == MOVE_PACE_MARCH)

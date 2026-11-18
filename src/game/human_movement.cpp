@@ -9,6 +9,7 @@
 
 #include "common/chunk.h"
 #include "game/actor.h"
+#include "game/campaign_control_runtime.h"
 #include "game/collision.h"
 #include "game/game.h"
 #include "game/human.h"
@@ -681,7 +682,14 @@ void C_HumanMovement::UpdateAnimation(int time)
     if (m_detached)
         return;
     m_owner->GetFrame()->GetWorldPos();   // (refreshes the world matrix)
-    const bool localPlayer = m_owner->IsLocalPlayer();
+    const bool localPlayer = m_owner->UsesPlayerLocomotion();
+    const bool authoritativePlayer = localPlayer && IsServer() && CampaignControlsActive();
+    if (authoritativePlayer && m_unknown1AC == 1) {
+        // Keep the player's native model and collision volumes bound to the
+        // host-integrated body instead of the legacy client interpolation lane.
+        m_unknown18C = true;
+        m_visual.SetNetworkDriven(true);
+    }
     m_animProfileTime = 0;
     m_unknown760 = false;
     m_inUpdate = true;
@@ -807,9 +815,10 @@ void C_HumanMovement::UpdateAnimation(int time)
         m_timer600 -= 600;
 
     const bool remotePhysics =
-        (m_flags & MOVE_FLAG_NOT_DRAWN) && !m_owner->IsLocalPlayer() && m_unknown1AC == 1 && !m_onDynamicGround;
+        (m_flags & MOVE_FLAG_NOT_DRAWN) && !localPlayer && m_unknown1AC == 1 && !m_onDynamicGround;
     if (!remotePhysics) {
-        if (m_unknown18C && (static_cast<float>(m_stillTime) <= 280.0f / MOVE_TIME_SCALE || m_onDynamicGround))
+        if (m_unknown18C && (authoritativePlayer || static_cast<float>(m_stillTime) <= 280.0f / MOVE_TIME_SCALE ||
+            m_onDynamicGround))
             m_visual.SetNetworkPosition(m_owner->GetPosition4());
         m_animProfileTime += ProfileClock();
     } else {
@@ -874,7 +883,8 @@ void C_HumanMovement::UpdatePhysics(int time)
     m_timer300 += time;
     m_timer400 += time;
     m_timer600 += time;
-    if ((m_flags & MOVE_FLAG_NOT_DRAWN) && !m_owner->IsLocalPlayer() && m_unknown1AC == 1)
+    if ((m_flags & MOVE_FLAG_NOT_DRAWN) && !m_owner->UsesPlayerLocomotion() &&
+        m_unknown1AC == 1)
         return;
     m_physicsProfileTime = -ProfileClock();
     if (m_unknown1AC != 1) {
@@ -912,7 +922,7 @@ void C_HumanMovement::UpdatePhysicsRest(int time)
 {
     // (Shared by UpdatePhysics and UpdatePhysicsParts, inline in both.)
     // (The original calls an empty locomotion member here when m_unknown1AC is 1.)
-    if (!m_owner->IsLocalPlayer()) {
+    if (!m_owner->UsesPlayerLocomotion()) {
         m_locomotion.SetTurnTarget(m_owner->GetWork()->GetFacingDir(), time);
         const int state = m_animState.anim.anim;
         if ((state < 8 || state > 0x0E || state == 8) && state != 0x12 &&

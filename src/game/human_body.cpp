@@ -135,7 +135,7 @@ bool S_HumanBody::LoadGame(C_chunk &chunk)
 
 void S_HumanBody::Update(int frameTime)
 {
-    if ((owner->IsLocalPlayer() && IsClient()) || !IsServer())
+    if ((IsClient() && owner->UsesPlayerLocomotion()) || !IsServer())
         movement->UpdateAnimation(frameTime);
     movement->UpdatePhysics(frameTime);
     equipment->Update(frameTime);
@@ -153,7 +153,7 @@ void S_HumanBody::Tick(int timeDelta)
         return;
     }
 #ifndef HD2_DEDICATED   // the server has only the server's side
-    if (!owner->IsLocalPlayer())
+    if (!owner->UsesPlayerLocomotion())
         movement->UpdateAnimation(timeDelta);
 #endif
 }

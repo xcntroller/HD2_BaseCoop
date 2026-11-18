@@ -96,6 +96,19 @@ S_CampaignMissionManifest Manifest() {
         s.m_Soldiers, s.m_Loadouts, {{SoldierId(101), *Soldier().m_Actor, ControlRevision(7)}}, {PlayerId(5)}};
 }
 S_WorldChunk Chunk() { return {Baseline(), 3, 0, 1, Crc32({1,2,3}), {1,2,3}}; }
+S_MissionUpdate MissionUpdate() {
+    S_MissionUpdate state{Context().m_Session, MissionGeneration(3), SnapshotId(13), OwnershipRevision(6),
+        25, 7500, false, S_MissionCamera{{10, 20, -30}, {0, 0, 1}, {0, 1, 0}, 1.3f},
+        {{*Soldier().m_Actor, {1, 2, -3}, {0, 0, 1}, {1, 0, 0}, {2, 0, 0}, 740, 2}}, {0, 1, 4}};
+    return state;
+}
+
+S_WeaponEvent WeaponEvent() {
+    return {*Soldier().m_Actor, SnapshotId(13), OwnershipRevision(6), 1, E_WeaponEvent::Reload, 21, 5, 650, 90};
+}
+S_InventoryEvent InventoryEvent() {
+    return {*Soldier().m_Actor, SnapshotId(13), OwnershipRevision(6), 2, {21, 2, 3, 0, 8}};
+}
 T_Bytes Frame(const T_Message &m) { T_Bytes bytes; CHECK(Encode(m, bytes) == R::None); return bytes; }
 std::string Hex(const T_Bytes &bytes) {
     constexpr char digits[] = "0123456789abcdef";
@@ -132,6 +145,9 @@ std::vector<T_Message> Messages() {
     all.push_back(maxAck);
     auto noActor = Ownership(); noActor.m_Soldiers[0].m_Actor.reset(); noActor.m_Soldiers[0].m_Owner.reset();
     noActor.m_Participants[0].m_ReadyAt.reset(); all.push_back(noActor);
+    all.push_back(MissionUpdate());
+    all.push_back(WeaponEvent());
+    all.push_back(InventoryEvent());
     return all;
 }
 void RoundTrips(const std::string &dir, bool write) {
@@ -304,7 +320,138 @@ void Negotiation() {
         CHECK(client.Receive(Frame(accept), 0).m_Reason == expected);
     }
 }
+void MissionUpdates() {
+    auto local = Hello();
+    local.m_Offered |= kMissionUpdates;
+    local.m_Required |= kMissionUpdates;
+    auto server = C_Admission(E_CampaignSessionKind::CampaignCoop, true, local, Context().m_Session, PlayerId(5), 0);
+    auto client = C_Admission(E_CampaignSessionKind::CampaignCoop, false, local, {}, {}, 0);
+    auto unmapped = Client();
+    CHECK(server.Receive(Frame(Hello()), 1).m_Reason == R::MissingFeature);
+    server = C_Admission(E_CampaignSessionKind::CampaignCoop, true, local, Context().m_Session, PlayerId(5), 0);
+    Admit(server, client);
+    auto state = MissionUpdate();
+    auto got = client.Receive(Frame(state), 5);
+    CHECK(got.m_Payload && std::get_if<S_MissionUpdate>(&*got.m_Payload));
+    CHECK(server.Receive(Frame(state), 5).m_Reason == R::Malformed);
+    auto oldServer = Server();
+    Admit(oldServer, unmapped);
+    CHECK(unmapped.Receive(Frame(state), 5).m_Reason == R::Malformed);
+    state.m_Session = SessionId(55);
+    state.m_Squad[0].m_Actor.m_Session = state.m_Session;
+    CHECK(client.Receive(Frame(state), 5).m_Reason == R::Malformed);
+
+    T_Bytes encoded;
+    state = MissionUpdate();
+    state.m_Squad.push_back(state.m_Squad.front());
+    CHECK(Encode(state, encoded) == R::Malformed);
+    state = MissionUpdate();
+    state.m_Squad.front().m_Actor.m_Generation = MissionGeneration(4);
+    CHECK(Encode(state, encoded) == R::Malformed);
+    state = MissionUpdate();
+    state.m_Squad.front().m_ViewDirection = {};
+    CHECK(Encode(state, encoded) == R::Malformed);
+    state = MissionUpdate();
+    state.m_Squad.front().m_Position[0] = std::numeric_limits<float>::infinity();
+    CHECK(Encode(state, encoded) == R::Malformed);
+    state = MissionUpdate();
+    state.m_PlayerInputEnabled = true;
+    CHECK(Encode(state, encoded) == R::Malformed);
+    state = MissionUpdate();
+    state.m_Objectives[0] = 5;
+    CHECK(Encode(state, encoded) == R::Malformed);
+}
+void WeaponEvents() {
+    auto local = Hello();
+    local.m_Offered |= kWeaponEvents;
+    local.m_Required |= kWeaponEvents;
+    auto server = C_Admission(E_CampaignSessionKind::CampaignCoop, true, local, Context().m_Session, PlayerId(5), 0);
+    auto client = C_Admission(E_CampaignSessionKind::CampaignCoop, false, local, {}, {}, 0);
+    Admit(server, client);
+    const auto event = WeaponEvent();
+    const auto got = client.Receive(Frame(event), 5);
+    CHECK(got.m_Payload && std::get_if<S_WeaponEvent>(&*got.m_Payload));
+    CHECK(server.Receive(Frame(event), 5).m_Reason == R::Malformed);
+    auto oldServer = Server();
+    auto oldClient = Client();
+    Admit(oldServer, oldClient);
+    CHECK(oldClient.Receive(Frame(event), 5).m_Reason == R::Malformed);
+    auto invalid = event;
+    T_Bytes output;
+    invalid.m_Action = E_WeaponEvent::Fire;
+    CHECK(Encode(invalid, output) == R::Malformed);
+    invalid.m_ReloadTime = 0;
+    CHECK(Encode(invalid, output) == R::Malformed);
+    invalid.m_ConsumedAmmo.reset();
+    CHECK(Encode(invalid, output) == R::None);
+    invalid.m_ItemUid = UINT32_MAX;
+    CHECK(Encode(invalid, output) == R::Malformed);
+    invalid = event;
+    invalid.m_ConsumedAmmo = invalid.m_ItemUid;
+    CHECK(Encode(invalid, output) == R::Malformed);
+}
+void InventoryEvents() {
+    auto local = Hello();
+    local.m_Offered |= kInventoryMoves;
+    local.m_Required |= kInventoryMoves;
+    auto server = C_Admission(E_CampaignSessionKind::CampaignCoop, true, local, Context().m_Session, PlayerId(5), 0);
+    auto client = C_Admission(E_CampaignSessionKind::CampaignCoop, false, local, {}, {}, 0);
+    Admit(server, client);
+    const auto event = InventoryEvent();
+    const auto got = client.Receive(Frame(event), 5);
+    CHECK(got.m_Payload && std::get_if<S_InventoryEvent>(&*got.m_Payload));
+    CHECK(server.Receive(Frame(event), 5).m_Reason == R::Malformed);
+
+    T_Bytes bytes;
+    auto invalid = event;
+    invalid.m_Move.m_To = 7;
+    CHECK(EncodeItemMove(invalid.m_Move, bytes) == R::Malformed); // swap must name the hands
+    invalid.m_Move.m_ReplacedUid.reset();
+    CHECK(Encode(invalid, bytes) == R::Malformed);
+    CHECK(EncodeItemMove(invalid.m_Move, bytes) == R::None); // automatic destination is a request only
+    CHECK(bytes == T_Bytes({1, 21, 0, 0, 0, 2, 7, 0, 0, 0}));
+    S_ItemMove decoded;
+    for (std::size_t i = 0; i < bytes.size(); ++i)
+        CHECK(DecodeItemMove(T_Bytes(bytes.begin(), bytes.begin() + i), decoded) == R::Malformed);
+    CHECK(DecodeItemMove(bytes, decoded) == R::None);
+    CHECK(decoded.m_ItemUid == 21 && decoded.m_From == 2 && decoded.m_To == 7 && decoded.m_Slot == 0);
+    bytes[0] = 0;
+    CHECK(DecodeItemMove(bytes, decoded) == R::Malformed && decoded.m_ItemUid == 21);
+    bytes[0] = 1;
+    bytes[5] = 7;
+    CHECK(DecodeItemMove(bytes, decoded) == R::Malformed && decoded.m_From == 2);
+    invalid = event;
+    invalid.m_Move.m_Slot = 256;
+    CHECK(EncodeItemMove(invalid.m_Move, bytes) == R::Malformed);
+    invalid.m_Move.m_Slot = 0;
+    invalid.m_Move.m_ItemUid = UINT32_MAX;
+    CHECK(EncodeItemMove(invalid.m_Move, bytes) == R::Malformed);
+}
 void Inputs() {
+    const S_PlayerControls controls{kMoveForward | kLeanRight, kFire | kReload, {1, 0, 0}};
+    T_Bytes payload;
+    CHECK(EncodePlayerControls(controls, payload) == R::None);
+    CHECK(payload == T_Bytes({1, 0x21, 0, 0x40, 2, 0, 0, 0x80, 0x3f, 0, 0, 0, 0, 0, 0, 0, 0}));
+    S_PlayerControls native;
+    CHECK(DecodePlayerControls(payload, native) == R::None);
+    CHECK(native.m_Held == controls.m_Held && native.m_Pressed == controls.m_Pressed &&
+          native.m_ViewDirection == controls.m_ViewDirection);
+    for (std::size_t i = 0; i < payload.size(); ++i) {
+        CHECK(DecodePlayerControls(T_Bytes(payload.begin(), payload.begin() + i), native) == R::Malformed);
+        CHECK(native.m_Held == controls.m_Held && native.m_Pressed == controls.m_Pressed);
+    }
+    auto bad = payload;
+    bad.push_back(0);
+    CHECK(DecodePlayerControls(bad, native) == R::Malformed);
+    bad = payload;
+    bad[0] = 2;
+    CHECK(DecodePlayerControls(bad, native) == R::Malformed);
+    bad = payload;
+    bad[1] = 0x80;
+    CHECK(DecodePlayerControls(bad, native) == R::Malformed);
+    bad = payload;
+    bad[3] = 1;
+    CHECK(DecodePlayerControls(bad, native) == R::Malformed);
     C_InputGate gate; auto context = Context(); context.m_Phase = E_CampaignPhase::Running;
     auto soldier = Soldier(); auto input = Input();
     CHECK(gate.Validate(input, PlayerId(5), context, soldier, false, true) == R::NotAdmitted);
@@ -378,6 +525,49 @@ void Chunks() {
     // Standard independent CRC check vector.
     CHECK(Crc32({'1','2','3','4','5','6','7','8','9'}) == 0xcbf43926);
 }
+void WorldSendSchedule()
+{
+    C_WorldSender sender;
+    const auto baseline = Baseline();
+    auto invalid = baseline;
+    invalid.m_PlayerEcho = PlayerId{};
+    CHECK(sender.Begin(invalid, T_Bytes{42}, 0) == R::Malformed);
+    CHECK(sender.Begin(baseline, {}, 0) == R::Malformed);
+    const T_Bytes world(kMaxWorldBytes, 0xa7);
+    CHECK(sender.Begin(baseline, world, 100) == R::None);
+    CHECK(sender.Begin(baseline, T_Bytes{42}, 100) == R::PendingTransaction);
+
+    C_WorldAssembler assembler;
+    std::uint32_t received = 0;
+    for (std::uint64_t now = 100; now < 9000 && !sender.IsComplete(); now += 17) {
+        std::uint32_t sentThisTick = 0;
+        CHECK(sender.Pump(now, [&](const S_WorldChunk &chunk) {
+            CHECK(chunk.m_Index == received++);
+            ++sentThisTick;
+            CHECK(assembler.Add(chunk, baseline, now) == R::None);
+            return true;
+        }) == R::None);
+        CHECK(sentThisTick <= 4);
+    }
+    CHECK(sender.IsComplete() && received == kMaxChunks);
+    CHECK(assembler.Take() == world);
+    sender.Reset();
+
+    CHECK(sender.Begin(baseline, world, 100) == R::None);
+    received = 0;
+    for (int i = 0; i < 100; ++i)
+        CHECK(sender.Pump(9100, [&](const S_WorldChunk &) { ++received; return true; }) == R::None);
+    CHECK(received == 96); // Absorb a delayed game frame while retaining the rate cap.
+    CHECK(sender.Pump(10100, [](const auto &) { return true; }) == R::Timeout);
+    CHECK(!sender.IsComplete());
+    CHECK(sender.Pump(10100, [](const auto &) { return true; }) == R::InvalidPhase);
+
+    CHECK(sender.Begin(baseline, T_Bytes{42}, 100) == R::None);
+    CHECK(sender.Pump(100, [](const auto &) { return false; }) == R::Disconnected);
+    CHECK(!sender.IsComplete());
+    CHECK(sender.Begin(baseline, T_Bytes{42}, 100) == R::None);
+    CHECK(sender.Pump(99, [](const auto &) { return true; }) == R::Timeout);
+}
 void TransportBits() {
     const auto frame = Frame(Hello());
     for (std::size_t offset = 0; offset < 64; ++offset) {
@@ -397,6 +587,44 @@ void TransportBits() {
             CHECK(extracted == T_Bytes{0x42} && readPosition == offset);
         }
     }
+
+    for (const auto &message : Messages()) {
+        T_Bytes packet;
+        CHECK(EncodeCommandPacket(message, packet) == R::None);
+        const auto expected = Frame(message);
+        CHECK(packet.size() == expected.size() + kCommandPacketOverhead);
+        // The first 37 bits are native type 0x14 and command 0x434f4f50, LSB first.
+        CHECK(packet[0] == 0x14 && packet[1] == 0xea && packet[2] == 0xe9 &&
+              packet[3] == 0x69 && (packet[4] & 0x1f) == 0x08);
+
+        T_Bytes extracted;
+        CHECK(ExtractCommandFrame(packet.data(), packet.size(), extracted) == R::None);
+        CHECK(extracted == expected);
+        extracted = {0x42};
+        for (std::size_t length = 0; length < packet.size(); ++length) {
+            CHECK(ExtractCommandFrame(packet.data(), length, extracted) == R::Malformed);
+            CHECK(extracted == T_Bytes{0x42});
+        }
+        for (const auto index : {std::size_t{0}, std::size_t{1}, packet.size() - 2, packet.size() - 1}) {
+            auto invalid = packet;
+            invalid[index] ^= 0x80; // wrong type/command (one of their shared bytes), END or padding
+            CHECK(ExtractCommandFrame(invalid.data(), invalid.size(), extracted) == R::Malformed);
+            CHECK(extracted == T_Bytes{0x42});
+        }
+        packet.insert(packet.end() - 2, 0);
+        CHECK(ExtractCommandFrame(packet.data(), packet.size(), extracted) == R::Malformed);
+        CHECK(extracted == T_Bytes{0x42});
+    }
+    T_Bytes large;
+    const auto baseline = Baseline();
+    const S_WorldChunk chunk{baseline, static_cast<std::uint32_t>(kMaxChunkBytes),
+                             0, 1, 0, T_Bytes(kMaxChunkBytes, 0xa5)};
+    CHECK(EncodeCommandPacket(chunk, large) == R::None);
+    T_Bytes extracted;
+    CHECK(ExtractCommandFrame(large.data(), large.size(), extracted) == R::None);
+    CHECK(extracted == Frame(chunk));
+    CHECK(ExtractCommandFrame(nullptr, large.size(), extracted) == R::Malformed);
+
 }
 void Hostile() {
     std::uint32_t state = 0x6d2b79f5;
@@ -416,6 +644,6 @@ void Hostile() {
 int main(int argc, char **argv) {
     CHECK(argc >= 2);
     RoundTrips(argv[1], argc == 3 && std::string(argv[2]) == "--write-fixtures");
-    Malformed(); Negotiation(); Inputs(); Replicas(); Chunks(); TransportBits(); Hostile();
-    std::cout << "campaign protocol: 8 suites, " << g_Checks << " checks passed\n";
+    Malformed(); Negotiation(); MissionUpdates(); WeaponEvents(); InventoryEvents(); Inputs(); Replicas(); Chunks(); WorldSendSchedule(); TransportBits(); Hostile();
+    std::cout << "campaign protocol: 12 suites, " << g_Checks << " checks passed\n";
 }

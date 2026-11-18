@@ -472,7 +472,7 @@ void C_HumanLocomotion::Update(int time)
     movement->UpdateStanceVolumes(stance);
 
     // The turn of the local player (the others turn in C_HumanMovement::UpdatePhysicsRest).
-    if (m_owner->IsLocalPlayer()) {
+    if (m_owner->UsesPlayerLocomotion()) {
         const int anim = movement->m_animState.anim.anim;
         if ((InRange(anim, 9, 0x0E)) || anim == ANIM_JUMP_12 || m_turnTarget.x <= MOVE_NO_VALUE) {
             m_turning = false;
@@ -483,8 +483,8 @@ void C_HumanLocomotion::Update(int time)
                 if (movement->m_unknown998 < 1)
                     movement->m_unknown998 = MOVE_NO_TIME;
             }
-            m_turnSpeed = m_owner->IsLocalPlayer() ? TURN_SPEED_PLAYER : TURN_SPEED_OTHERS;
-            const bool steady = !(m_owner->IsLocalPlayer() && movement->m_unknown998 == MOVE_NO_TIME);
+            m_turnSpeed = m_owner->UsesPlayerLocomotion() ? TURN_SPEED_PLAYER : TURN_SPEED_OTHERS;
+            const bool steady = !(m_owner->UsesPlayerLocomotion() && movement->m_unknown998 == MOVE_NO_TIME);
             if (UpdateTurn(time, steady))
                 m_turnTarget.x = MOVE_NO_VALUE;
             UpdateVelocity(true);
@@ -600,7 +600,7 @@ void C_HumanLocomotion::UpdateCollisionVolumes(bool remote)
         relink = full = true;
         step = SET_FRAME;
     } else if (prone || movement->m_unknown1AC != 1 || (IsLocalGame() && m_owner->GetRole() == HUMAN_ROLE_PLAYER) ||
-               m_owner->IsServerSimulated() || m_owner->IsLocalPlayer()) {
+               m_owner->IsServerSimulated() || m_owner->UsesPlayerLocomotion()) {
         relink = full = true;
         step = SET_FRAME;
     } else if (remote) {
@@ -614,7 +614,7 @@ void C_HumanLocomotion::UpdateCollisionVolumes(bool remote)
         // Did the frame drift from the position? (The local player's x is not compared, as
         // in the original.)
         bool moved;
-        if (m_owner->IsLocalPlayer())
+        if (m_owner->UsesPlayerLocomotion())
             moved = std::fabs(delta.y) > 0.001f || std::fabs(delta.z) > 0.001f;
         else
             moved = std::fabs(delta.x) > 0.001f || std::fabs(delta.y) > 0.001f || std::fabs(delta.z) > 0.001f;
@@ -1017,7 +1017,7 @@ void C_HumanLocomotion::SweepBody(S_MoveContacts &contacts, S_CollisionVolume **
         count = 1;
     const bool lying = work->m_request.stance == HUMAN_STANCE_PRONE ||
                        (movement->m_nextStance == HUMAN_STANCE_PRONE && movement->m_unknown9A0 > 0);
-    const bool localPlayer = m_owner->IsLocalPlayer();
+    const bool localPlayer = m_owner->UsesPlayerLocomotion();
     if (localPlayer || ((!(movement->m_flags & MOVE_FLAG_GROUND_RAY) || m_unknown0EC > 0 || lying || swimming) &&
                         (IsLocalGame() || m_owner->IsServerSimulated()))) {
         // The stance spheres swept.
@@ -1054,7 +1054,7 @@ void C_HumanLocomotion::SweepBody(S_MoveContacts &contacts, S_CollisionVolume **
                 g_moveIterations = 3.0f;
             else
                 g_moveIterations = 4.0f;
-            if (m_owner->IsLocalPlayer())
+            if (localPlayer)
                 g_moveIterations += 1.0f;
         } else {
             g_moveIterations = 6.0f;
@@ -1064,10 +1064,10 @@ void C_HumanLocomotion::SweepBody(S_MoveContacts &contacts, S_CollisionVolume **
             *hit = g_collisionWorld.MoveSpheresStepping(contacts);
         else
             *hit = g_collisionWorld.MoveSpheresLow(contacts);
-        if ((m_owner->IsLocalPlayer() || (!IsLocalGame() && !m_owner->IsServerSimulated())) && m_groundTestTime < 0) {
+        if ((localPlayer || (!IsLocalGame() && !m_owner->IsServerSimulated())) && m_groundTestTime < 0) {
             // The ground right below (every 50 ms; 150 ms for the replicas).
             const uint32_t flags = m_owner->GetRole() != HUMAN_ROLE_PLAYER ? TEST_FLAGS_OTHERS : TEST_FLAGS;
-            if (!m_owner->IsLocalPlayer())
+            if (!localPlayer)
                 contacts.excludeFlags |= 0x800000;      // (into the contacts, not the ray's filter)
             const S_vector4 &lowest = movement->m_stanceSpheres[0];
             S_vector rayPos, rayNormal;
@@ -1076,7 +1076,7 @@ void C_HumanLocomotion::SweepBody(S_MoveContacts &contacts, S_CollisionVolume **
             *groundBelow = below != nullptr;
             if (below) {
                 g_groundNormal = ToVector4(rayNormal, g_groundNormal.w);
-                if (!IsLocalGame() && !m_owner->IsLocalPlayer() && !m_owner->IsServerSimulated()) {
+                if (!IsLocalGame() && !localPlayer && !m_owner->IsServerSimulated()) {
                     m_groundTestTime = 150;
                     movement->RestoreCollision(false);
                     return;
@@ -1269,7 +1269,7 @@ void C_HumanLocomotion::UpdateFall(S_CollisionVolume *ground, bool standing, int
             m_fallStepTime = 0.0f;
         }
     };
-    const bool replica = !IsLocalGame() && !m_owner->IsLocalPlayer() && !m_owner->IsServerSimulated() && movement->m_unknown1AC == 1;
+    const bool replica = !IsLocalGame() && !m_owner->UsesPlayerLocomotion() && !m_owner->IsServerSimulated() && movement->m_unknown1AC == 1;
     bool slid = false;
     if ((!ground || !standing) && m_fallSpeed != 0.0f) {
         accelerate(ground && !onWall);
@@ -2377,7 +2377,7 @@ void C_HumanLocomotion::UpdateVelocity(bool replace)
     bool done = false;
     // The squad of a single player game, controlled by the AI, a little faster.
     if (IsLocalGame()) {
-        if (!m_owner->IsLocalPlayer() && m_owner->GetRole() == HUMAN_ROLE_PLAYER)
+        if (!m_owner->UsesPlayerLocomotion() && m_owner->GetRole() == HUMAN_ROLE_PLAYER)
             scale = 1.1f;
     } else {
         scale = 1.0f;
@@ -2449,7 +2449,7 @@ void C_HumanLocomotion::UpdateVelocity(bool replace)
     case ANIM_SWIM:
     case ANIM_DIVE: {
         const int table = anim.anim != ANIM_SWIM ? 12 : 11;
-        if (m_owner->IsLocalPlayer()) {
+        if (m_owner->UsesPlayerLocomotion()) {
             // Along the facing, at the pitch of the swimming direction.
             const S_vector4 &swim = movement->m_unknown940;
             const float level = S_vector(swim.x, 0.0f, swim.z).Magnitude();
@@ -2597,7 +2597,7 @@ void C_HumanLocomotion::UpdateVelocity(bool replace)
         maxSpeed = length;
     } else {
         const int coming = movement->m_nextAnimState.anim.anim;
-        if (!IsInPlace(coming) || (replace && m_owner->IsLocalPlayer()) || climbing) {
+        if (!IsInPlace(coming) || (replace && m_owner->UsesPlayerLocomotion()) || climbing) {
             S_vector v;
             if (LengthSquared(ToVector4(dir, 0.0f)) >= 1e-16f) {
                 v = dir;
@@ -2645,7 +2645,7 @@ int C_HumanLocomotion::GetTurnTime(const S_vector &dir)
     const float a[2] = {dir.x, dir.z};
     const float b[2] = {facing.x, facing.z};
     const float angle = AngleBetween2D(a, b);
-    if (m_owner->IsLocalPlayer())
+    if (m_owner->UsesPlayerLocomotion())
         return static_cast<int>(std::fabs(angle / TURN_SPEED_PLAYER));
     return static_cast<int>(std::fabs(angle / m_turnSpeed) * 2.5);
 }
@@ -2692,7 +2692,7 @@ void C_HumanLocomotion::SetTurnTarget(const S_vector4 &dir, int time)
     const int turnTime = static_cast<int>(static_cast<float>(static_cast<int>(limit / 3.0f * 1000.0f)) * 1.5f);
     const bool small = absAngle < 0.0012f * static_cast<float>(time);
     const bool inPlace = IsInPlace(movement->m_animState.anim.anim);
-    m_turning = !inPlace && m_owner->IsLocalPlayer();
+    m_turning = !inPlace && m_owner->UsesPlayerLocomotion();
     const auto keepTarget = [&]() { m_turnTarget = {dir.x, 0.0f, dir.z, dir.w}; };
     const int carryMode = work->m_request.carryMode;
     const int carry = movement->m_animState.carryAnim;
@@ -2703,7 +2703,7 @@ void C_HumanLocomotion::SetTurnTarget(const S_vector4 &dir, int time)
         if (!inPlace)
             return;
     } else if (absAngle <= limit) {
-        if (movement->m_unknown950 < 1 && m_owner->IsLocalPlayer()) {
+        if (movement->m_unknown950 < 1 && m_owner->UsesPlayerLocomotion()) {
             m_turnTarget.x = MOVE_NO_VALUE;
             endTurnAnim();
             return;
@@ -2786,7 +2786,7 @@ bool C_HumanLocomotion::UpdateTurn(int time, bool steady)
     };
     if (absAngle <= std::fabs(step)) {
         // The last step: facing the target.
-        if (!m_specialMoves->CanTurn(angle) && (IsLocalGame() || m_owner->IsLocalPlayer())) {
+        if (!m_specialMoves->CanTurn(angle) && (IsLocalGame() || m_owner->UsesPlayerLocomotion())) {
             blocked();
             return true;
         }
@@ -2818,6 +2818,14 @@ void C_HumanLocomotion::UpdateDetail()
 #else
     if (!IsClient()) {
         movement->m_flags |= MOVE_FLAG_FULL_DETAIL;
+        return;
+    }
+    if (m_owner->UsesPlayerLocomotion() && !m_owner->IsLocalPlayer()) {
+        // A guest-owned player on the listen host needs full terrain contacts
+        // even while outside the host's view.
+        constexpr auto visibility = MOVE_FLAG_HIDDEN | MOVE_FLAG_NOT_DRAWN | MOVE_FLAG_SMALL | MOVE_FLAG_TINY |
+            MOVE_FLAG_LARGE | MOVE_FLAG_OUT_OF_RANGE;
+        movement->m_flags = (movement->m_flags & ~visibility) | MOVE_FLAG_FULL_DETAIL | MOVE_FLAG_IN_RANGE;
         return;
     }
     I3D_scene *scene = GetGame()->GetScene();

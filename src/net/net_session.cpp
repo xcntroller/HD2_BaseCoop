@@ -5,6 +5,7 @@
 #include <winsock2.h>
 #include <windows.h>
 
+#include "net/campaign_net.h"
 #include "net/dplay8.h"
 #include "net/net_autorestart.h"
 #include "net/net_game.h"
@@ -176,9 +177,11 @@ uint32_t GetHostAddress(IDirectPlay8Address *address)
 
 // ---- hosting -------------------------------------------------------------------------------------------------------
 
-int C_NetGame::Host(const S_NetSessionDesc &desc, bool firewall)
+int C_NetGame::Host(const S_NetSessionDesc &desc, bool firewall, const S_CampaignNetConfig *campaign)
 {
     Close(true);
+    if (campaign && g_gameProfile.m_mpSettings->dedicated)
+        return -1;
 #ifdef HD2_DEDICATED
     GetSoundModule()->SetBackgroundMusic(-1, 0);   // (the server's is empty)
     // (DS 0x007798a4) The session's settings in a file, for a server started again; `autorestart`: the watchdog told.
@@ -192,7 +195,7 @@ int C_NetGame::Host(const S_NetSessionDesc &desc, bool firewall)
     }
 #endif
     int port = kDefaultPort;
-    if (g_gameProfile.m_mpSettings->unknown174 == 1)
+    if (!campaign && g_gameProfile.m_mpSettings->unknown174 == 1)
         port = g_gameProfile.m_mpSettings->port;
     S_ServerEntry &entry = Entry(m_serverEntry);
     std::strcpy(entry.name, desc.name);
@@ -273,6 +276,15 @@ int C_NetGame::Host(const S_NetSessionDesc &desc, bool firewall)
     char line[1000];
     std::sprintf(line, "Creating H&D2 Server v%d.%02d", g_versionMajor, g_versionMinor);
     GetGameApp()->PrintMessage(line);
+    if (campaign) {
+        if (!BeginCampaignNet(*campaign, true)) {
+            address->Release();
+            m_server->Release();
+            m_server = nullptr;
+            return -1;
+        }
+        m_players.resize(CampaignProtocol::kMaxParticipants);
+    }
     g_gameRole = g_gameProfile.m_mpSettings->dedicated ? GAME_ROLE_SERVER : GAME_ROLE_SERVER | GAME_ROLE_CLIENT;
     hr = m_server->Host(&application, reinterpret_cast<void **>(&address), 1, nullptr, nullptr, nullptr, 0);
     if (hr < 0) {
@@ -281,6 +293,7 @@ int C_NetGame::Host(const S_NetSessionDesc &desc, bool firewall)
         m_server->Release();
         m_server = nullptr;
         g_gameRole = GAME_ROLE_LOCAL;
+        EndCampaignNet();
         return Fail(*this, hr, "Server::Host failed");
     }
     if (firewall)
@@ -302,15 +315,16 @@ int C_NetGame::Host(const S_NetSessionDesc &desc, bool firewall)
     if (address)
         address->Release();
     m_joinStatus = NET_JOIN_CONNECTED;
-    if (g_gameProfile.m_mpSettings->unknown178) {
+    if (!campaign && g_gameProfile.m_mpSettings->unknown178) {
         StartVoiceServer();
         if ((g_gameRole & GAME_ROLE_CLIENT) && g_gameProfile.GetDetailSettings()->voiceChat)
             StartVoiceClient(true);
     }
-    if (g_gameProfile.m_mpSettings->unknown174 == 1)
+    if (!campaign && g_gameProfile.m_mpSettings->unknown174 == 1)
         StartReporting();
     MakeReplication();
-    m_transport->Start(port + 1);
+    if (!campaign)
+        m_transport->Start(port + 1);
     return hr;
 }
 
@@ -430,13 +444,13 @@ int C_NetGame::QueryServerStatus(void(__fastcall *callback)(S_ServerStatus *stat
     return EnumHosts(server, 1);
 }
 
-int C_NetGame::Connect(S_ServerEntry *server)
+int C_NetGame::Connect(S_ServerEntry *server, const S_CampaignNetConfig *campaign)
 {
     if (DirectPlayMissing())
         return -1;
     GetIGraph()->SetFlags(g_graphFlags & ~0x20u);
     std::memcpy(m_serverEntry, server, sizeof(S_ServerEntry));
-    if (g_gameProfile.m_mpSettings->unknown174 == 1) {
+    if (!campaign && g_gameProfile.m_mpSettings->unknown174 == 1) {
         // GameSpy's listing: the CD key checked with the server first.
         m_joinStatus = 0;
         StartKeyQuery(server);
@@ -444,17 +458,19 @@ int C_NetGame::Connect(S_ServerEntry *server)
         if (m_joinStatus == NET_JOIN_TIMED_OUT || m_joinStatus == NET_JOIN_BAD_CD_KEY)
             return 0;
     }
-    if (g_gameProfile.m_mpSettings->unknown174 != 1)
+    if (campaign || g_gameProfile.m_mpSettings->unknown174 != 1)
         server->port = kDefaultPort;
     ConfigureFirewall(static_cast<int16_t>(server->port), true);
-    const int port = server->port;
-    m_transport->Start(-1);
     m_unknown338 = static_cast<int>(server->address);
-    m_serverLink = new C_NetConnection(0, static_cast<uint32_t>(m_unknown338), &m_transport->m_socket);
-    m_serverLink->m_port = port + 1;
-    m_transport->Add(m_serverLink);
-    m_transport->FlushAll(true);
-    CreateClient();
+    if (!campaign) {
+        m_transport->Start(-1);
+        m_serverLink = new C_NetConnection(0, static_cast<uint32_t>(m_unknown338), &m_transport->m_socket);
+        m_serverLink->m_port = server->port + 1;
+        m_transport->Add(m_serverLink);
+        m_transport->FlushAll(true);
+    }
+    if (const auto result = CreateClient(); result < 0)
+        return static_cast<int>(result);
     m_client->CancelAsyncOperation(0, DPNCANCEL_ALL_OPERATIONS);
     m_unknown448 = 0;
     m_unknown8 = false;
@@ -485,9 +501,15 @@ int C_NetGame::Connect(S_ServerEntry *server)
     request.name[sizeof request.name - 1] = 0;
     DPN_CAPS caps = SessionCaps();
     m_client->SetCaps(&caps, 0);
+    if (campaign && !BeginCampaignNet(*campaign, false)) {
+        device->Release();
+        host->Release();
+        g_gameRole = GAME_ROLE_LOCAL;
+        return -1;
+    }
     DPNHANDLE handle = 0;
-    hr = m_client->Connect(&application, host, device, nullptr, nullptr, &request, sizeof request, nullptr, &handle, 0);
     m_joinStatus = NET_JOIN_JOINING;
+    hr = m_client->Connect(&application, host, device, nullptr, nullptr, &request, sizeof request, nullptr, &handle, 0);
     if (device) {
         device->Release();
         device = nullptr;
@@ -496,6 +518,7 @@ int C_NetGame::Connect(S_ServerEntry *server)
         host->Release();
     if (hr != E_PENDING_ && hr < 0) {
         g_gameRole = GAME_ROLE_LOCAL;
+        EndCampaignNet();
         Fail(*this, hr, "Connect failed");
     }
     return hr;
@@ -539,9 +562,12 @@ long __stdcall C_NetGame::HandleClientMessage(C_NetGame *net, void *, uint32_t t
     case DPN_MSGID_CONNECT_COMPLETE: {
         // Accepted: the slot the server gave in the reply; refused: the reason (its join status).
         const auto *complete = static_cast<const DPNMSG_CONNECT_COMPLETE *>(message);
-        if (complete->result == 0) {
+        if (complete->result == 0 && complete->replySize != 0 && complete->replyData) {
             g_localPlayerSlot = complete->replyData[0] & 0x7F;
-            net->m_serverLink->m_id = g_localPlayerSlot;
+            if (IsCampaignNet())
+                QueueCampaignPeer(0, g_localPlayerSlot);
+            else if (net->m_serverLink)
+                net->m_serverLink->m_id = g_localPlayerSlot;
         } else if (complete->replySize != 0) {
             net->m_joinStatus = complete->replyData[0];
         }
@@ -611,7 +637,9 @@ long __stdcall C_NetGame::HandleClientMessage(C_NetGame *net, void *, uint32_t t
     }
     case DPN_MSGID_RECEIVE: {
         const auto *receive = static_cast<const DPNMSG_RECEIVE *>(message);
-        if (receive->dataSize != 0)
+        if (IsCampaignNet())
+            QueueCampaignPacket(0, g_localPlayerSlot, receive->data, receive->dataSize);
+        else if (receive->dataSize != 0)
             net->QueueOutgoing(receive->data, static_cast<int>(receive->dataSize), 0x80);
         break;
     }
@@ -619,6 +647,10 @@ long __stdcall C_NetGame::HandleClientMessage(C_NetGame *net, void *, uint32_t t
         operator delete(static_cast<const DPNMSG_RETURN_BUFFER *>(message)->buffer);
         break;
     case DPN_MSGID_TERMINATE_SESSION:
+        if (IsCampaignNet()) {
+            QueueCampaignDeparture(0);
+            break;
+        }
         // The session ended: the server's link gone, back to the menus.
         if (net->m_serverLink) {
             net->m_transport->Remove(net->m_serverLink);

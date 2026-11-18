@@ -904,7 +904,7 @@ void C_Human::StartMission(bool server)
     } else {
         S_HumanBody::StartMission(true);
         m_disguise = 0.0f;
-        if (IsLocalGame() || g_gameProfile.IsCooperativeGame()) {
+        if (IsLocalGame() || g_gameProfile.IsCooperativeGame() || CampaignControlsActive()) {
             m_sightId = g_sightModule.AddObserver(m_frame, SIGHT_ALL);
             m_sightTargetId = g_sightModule.AddTarget(m_frame, SIGHT_ALL);
             g_sightModule.SetTargetState(m_sightTargetId, SIGHT_TARGET_ALIVE);
@@ -952,7 +952,7 @@ void C_Human::StopMission(bool server)
         S_HumanBody::StopMission(false);
     } else {
         S_HumanBody::StopMission(true);
-        if (IsLocalGame() || g_gameProfile.IsCooperativeGame()) {
+        if (IsLocalGame() || g_gameProfile.IsCooperativeGame() || CampaignControlsActive()) {
             if (m_sightId != -1) {
                 g_sightModule.RemoveObserver(m_sightId);
                 m_sightId = -1;

@@ -290,6 +290,13 @@ bool IsCampaignSimulationAuthority() {
     const auto state = GetCampaignMissionSnapshot();
     return IsCampaignMission() && state->m_Context.m_IsTransportServer;
 }
+bool IsCampaignInitialReplica()
+{
+    const auto state = GetCampaignMissionSnapshot();
+    return state && state->m_Context.m_Kind == E_CampaignSessionKind::CampaignCoop &&
+        state->m_Context.m_UsesCampaignRules && !state->m_Context.m_IsTransportServer &&
+        state->m_Context.m_IsTransportClient && state->m_Context.m_Phase == P::Loading;
+}
 bool CanCampaignSimulate() {
     const auto state = GetCampaignMissionSnapshot();
     if (!IsCampaignMission()) return true;

@@ -151,6 +151,7 @@ public:
     void SetFakeCutscene(bool on) { m_fakeCutscene = on; }         // 0x0041d5c0
     bool IsFakeCutscene() const { return m_fakeCutscene; }         // (inlined: the decorators' update)
     int *GetSaveGameValues() { return m_saveGameValues; }
+    const std::vector<C_Script *> &GetScripts() const { return m_scripts; }
     // The 256 values in a saved game (C_GameProfile's chunk 0x3EF; 0x400 bytes, no header).
     bool WriteSaveGameValues(C_chunk &chunk);                      // 0x00427010
     bool ReadSaveGameValues(C_chunk &chunk);                       // 0x00427050

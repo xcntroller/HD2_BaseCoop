@@ -70,6 +70,16 @@ int main() {
     view.m_State.m_Soldiers[0].m_ControlRevision = ControlRevision(10);
     sink.Execute(input); CHECK(executed == 1);
     CHECK(!sink.Apply(plan)); // old control revision cannot reinstall old handlers
+    view.m_State.m_Soldiers[0].m_Owner = PlayerId(5);
+    plan = C_CampaignControlAdapter::Plan(view.m_State.m_Context, view.m_State.m_Soldiers[0]);
+    CHECK(sink.Apply(plan));
+    CHECK(human.m_controller->GetType() == HUMAN_CONTROLLER_PLAYER && human.m_body.m_Local);
+    CHECK(!sink.Present(actor)); // the host simulates this body without selecting it
+    view.m_State.m_Context.m_IsTransportServer = false;
+    plan = C_CampaignControlAdapter::Plan(view.m_State.m_Context, view.m_State.m_Soldiers[0]);
+    CHECK(sink.Apply(plan));
+    CHECK(human.m_controller->GetType() == HUMAN_CONTROLLER_REMOTE && !human.m_body.m_Local);
+    view.m_State.m_Context.m_IsTransportServer = true;
     view.m_State.m_Soldiers[0].m_Scripted = true;
     plan = C_CampaignControlAdapter::Plan(view.m_State.m_Context, view.m_State.m_Soldiers[0]);
     controller.m_Type = HUMAN_CONTROLLER_AI;

@@ -4,6 +4,7 @@
 // the saved games in game_save.cpp.
 #include "game/first_person_view.h"
 #include "game/game.h"
+#include "game/campaign_dev.h"
 #include "game/campaign_mission_native.h"
 
 #include <cmath>
@@ -402,7 +403,7 @@ void C_game::Render()                               // 0x0069bb40
 {
     // A dedicated server draws nothing.
 #ifndef HD2_DEDICATED   // no rendering in LS3DRF.dll
-    if (IsLocalGame() || !g_mpSettings->dedicated)
+    if ((IsLocalGame() || !g_mpSettings->dedicated) && !RenderDevelopmentCampaignCutscene(*m_scene))
         m_scene->Render(0);
 #endif
 }
@@ -503,7 +504,7 @@ bool C_game::HandleInput(float *held, float *pressed)   // 0x0069a830 (DS 0x006d
             return true;
         }
     }
-    if (pressed && pressed[INPUT_MENU] != 0.0f)
+    if (!IsCampaignMission() && pressed && pressed[INPUT_MENU] != 0.0f)
         m_state = GAME_STATE_GAME_MENU;
     return true;
 }

@@ -1,3 +1,4 @@
+#include "game/campaign_dev.h"
 #include "game/campaign_mission_adapter.h"
 #include "game/game_app.h"
 
@@ -25,6 +26,7 @@
 #include "game/team.h"
 #include "game/world.h"
 #include "ls3d/igraph.h"
+#include "net/campaign_net.h"
 #include "script/script_module.h"
 
 namespace {
@@ -106,9 +108,14 @@ C_GameApp::C_GameApp()                                  // 0x006c0a70
 
 C_GameApp::~C_GameApp()                                 // 0x006c0ab0
 {
-    DeleteCriticalSection(&m_commandLock);
     delete m_state;
     m_state = nullptr;
+#ifndef HD2_DEDICATED
+    if (IsCampaignNet())
+        g_netGame.Close(true);
+    ReleaseDevelopmentCampaign();
+#endif
+    DeleteCriticalSection(&m_commandLock);
 }
 
 bool C_GameApp::Init(bool resume)                       // 0x006c0b40
@@ -140,6 +147,10 @@ bool C_GameApp::StartFromCommandLine()                  // 0x006c0e10
     static const char SCRIPT_SWITCH[] = " -c";
     const char *commandLine = GetCommandLineA();
     m_state = nullptr;
+#ifndef HD2_DEDICATED
+    if (StartDevelopmentCampaign(*this))
+        return true;
+#endif
     if (const char *command = std::strstr(commandLine, CMD_SWITCH)) {
         // (The console state copies at most 0x204 chars; nothing limits the command here.)
         auto *console = new C_ConsoleState(command + std::strlen(CMD_SWITCH));
@@ -308,7 +319,7 @@ void C_GameApp::CloseGameMenu()
 C_game *C_GameApp::GetRunningGame() const
 {
     C_GameState *state = m_state;
-    if (state->GetTypeId() == GAME_STATE_TYPE_GAME_MENU)
+    if (state && state->GetTypeId() == GAME_STATE_TYPE_GAME_MENU)
         state = static_cast<C_GameMenu *>(state)->GetGame();
     if (!state || state->GetTypeId() != GAME_STATE_TYPE_GAME)
         return nullptr;
@@ -369,6 +380,9 @@ void C_GameApp::RenderState()                           // 0x006c34b0
 bool C_GameApp::UpdateClient(int timeDelta)             // 0x006c2410
 {
     m_updatePhase = 1;
+#ifndef HD2_DEDICATED
+    TickDevelopmentCampaign(*this);
+#endif
     if (m_volumeDelay > 0) {
         m_volumeDelay -= timeDelta;
         if (m_volumeDelay < 1) {

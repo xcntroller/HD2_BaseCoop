@@ -14,6 +14,7 @@
 #include "game/actor.h"
 #include "game/actors_module.h"
 #include "game/campaign.h"
+#include "game/campaign_mission_adapter.h"
 #include "game/game.h"
 #include "game/game_internal.h"
 #include "game/human.h"
@@ -407,7 +408,7 @@ bool C_MapScreen::Init(I3D_scene *scene, C_MapCursor *cursor)
     m_enemyTemplate = adopt("enemy");
     m_itemTemplate = adopt("objective");
 
-    if (IsLocalGame()) {
+    if (IsLocalGame() || IsCampaignMission()) {
         m_kind = MAP_KIND_SINGLE_PLAYER;
         m_markerCount = 6;
     } else {
