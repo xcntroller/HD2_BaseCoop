@@ -7,9 +7,9 @@
 - Canonical branch: `feature/coop-004-ownership`
 - Base commit: `0f367ed62af337633941bca0d22d3ff1932129ba`
 - Dependencies: COOP-002, COOP-011 (merged shared declarations)
-- Last checkpoint: implementation and validated harness (this commit; preparation `e2bb8477`)
+- Last checkpoint: implementation and validated harness `68bb0bc1`; current merge synchronizes integrated main `1b9b307f`
 - Checkpoint location: `.worktrees/COOP-004`; `origin/feature/coop-004-ownership`
-- Review/integration: local API/scope review passed; independent review requested; not merged
+- Review/integration: separate local API/scope review passed; COOP-005 journal consumer review requested; not merged
 - Pull request: https://github.com/xcntroller/HD2_BaseCoop/pull/9 (draft pending independent review)
 
 ## Branch authority and completion PR
@@ -122,7 +122,7 @@ model behavior only, and do not imply the later adapters or campaign mode are pl
   preparation uses injected callbacks/behavioral fake, no dependency on this unmerged
   header and no competing production journal. Later composition shares one authority
   queue and journal and synchronizes rights/preparation revisions before publication.
-- Remaining: independent/separate final review, address findings, ready PR and integration;
+- Remaining: final review, address findings, ready PR and integration;
   record actual merge SHA after acceptance. No outstanding implementation/toolchain blocker.
 - Next action: review published checkpoint/PR #9 against current `main`, reproduce native
   model harness and inspect target logs; integrate only after acceptance gates pass.
