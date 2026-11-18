@@ -2,7 +2,30 @@
 #error Progression regressions require a checked build in a disposable worktree.
 #endif
 
-void TickProgressionRegression(C_GameApp &app)
+bool StartSoloRegressionPreparation(const std::function<bool(C_CampaignNode *)> &start)
+{
+    g_playMode->mode = PLAY_MODE_CAMPAIGN;
+    g_playMode->singleMission = 0;
+    g_campaign->SetCurrentIndex(0);
+    if (!g_campaign->AdvanceToMission())
+        return false;
+    while (auto *step = g_campaign->NextStep()) {
+        if (g_campaign->GetMissionNumber(0) != 1 || step->GetType() != CAMPAIGN_NODE_SCREEN ||
+            static_cast<C_CampaignScreen *>(step)->GetKind() != C_CampaignScreen::KIND_EQUIPMENT)
+            continue;
+        g_missionSquad->Clear();
+        for (const int index : GetInitialCampaignRoster()) {
+            auto *soldier = g_missionSquad->AddSoldier();
+            if (!soldier->SetProfile(index, 0))
+                return false;
+            soldier->autoEquip = true;
+        }
+        return start(step);
+    }
+    return false;
+}
+
+void TickProgressionRegression(C_GameApp &app, const std::function<bool(C_CampaignNode *)> &start)
 {
     if (IsCampaignNet())
         return;
@@ -19,6 +42,8 @@ void TickProgressionRegression(C_GameApp &app)
             if (const char *save = std::getenv("HD2_PROGRESSION_SOLO_SAVE")) {
                 app.RequestLoad(C_str(save));
                 loaded = true;
+            } else {
+                loaded = StartSoloRegressionPreparation(start);
             }
         }
         auto *game = GetGame();

@@ -34,7 +34,7 @@ def install(root, progression_regressions=False):
         anchors["void TickDevelopmentCampaign(C_GameApp &app)\n{\n    if (!app.m_state)\n        return;"] = (
             "#include \"progression_regressions.inc\"\n\n"
             "void TickDevelopmentCampaign(C_GameApp &app)\n{\n    if (!app.m_state)\n        return;\n"
-            "    TickProgressionRegression(app);"
+            "    TickProgressionRegression(app, [&](auto *step) { return app.StartStep(step, 0); });"
         )
         shutil.copyfile(Path(__file__).with_name("progression_regressions.inc"),
                         target.with_name("progression_regressions.inc"))
