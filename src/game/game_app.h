@@ -121,6 +121,7 @@ private:
     bool StartIntro();                              // 0x006c0fc0
     // Replaces the state with the one campaign step `step` needs (null: the main menu).
     // (`unused`: every caller passes 0.)
+    friend void TickDevelopmentCampaign(C_GameApp &app);
     bool StartStep(C_CampaignNode *step, int unused);   // 0x006c1210
     // The next (`back`: previous) campaign step; a Lone Wolf campaign skips the squad screens.
     bool StartNextStep(bool back);

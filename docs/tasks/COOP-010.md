@@ -7,7 +7,7 @@
 - Canonical branch: `feature/coop-010-two-player-mission`
 - Base commit: `6f1bdd96075b074a6a7b958257af5f56f8374fb5`
 - Dependencies: COOP-008, COOP-009 and their transitive merged dependencies
-- Last checkpoint: Arctic1 development launch and live two-instance admission (this commit)
+- Last checkpoint: original Arctic1 host Loading with four bound soldiers (this commit)
 - Checkpoint location: `.worktrees/COOP-010` and the canonical branch on origin
 - Review/integration: claim acknowledged by coordination ledger commit `69cb6361`
 - Pull request: [#22](https://github.com/xcntroller/HD2_BaseCoop/pull/22) (draft)
@@ -77,14 +77,20 @@ roster/loadouts/policies as fixtures, not approved production menu behavior.
   `-campaign-coop join <IPv4>` launch paths. The launcher selects the original
   campaign PLAY step for **Arctic1** (mission index 1, seven objectives), builds
   the canonical compatibility descriptors from installed content, and commits
-  the same never-reused guest PlayerId assigned by transport.
+  the same never-reused guest PlayerId assigned by transport. The host imports
+  the original Arctic1 kits 23, 22, 21 and 24 for roster profiles 0 through 3.
+  It issues the original missing essentials (native item types 59 and 229),
+  validates the fixed loadouts and opens a four-soldier Loading generation
+  through the original PLAY step. Host and guest are assigned profiles 0 and 1.
+  Profiles 2 and 3 use the original campaign squad AI. Assignment, ready
+  actions, kit selection and essential distribution are development fixtures.
 - Remaining: live attachment, startup synchronization, host/guest verification and fixes.
-- Next action: import the Arctic1 mission equipment presets and four initial
-  roster profiles into a fixed development manifest. Install the merged lifecycle
-  and controller adapters and validate the host load with the Loading barrier
-  closed. Then implement guest world capture/reconstruction and tagged replication.
-  The first operation mission was selected for the four-soldier fixture. The
-  original Tutorial and native Sicily2 remain separate regression routes.
+- Next action: implement the versioned initial-world encoding and guest
+  installation. Audit host and guest static actor creation before defining the
+  dynamic actor, inventory UID, script and objective snapshot fields. Use the
+  merged world assembler and exact acknowledgment barrier before starting either
+  simulation. Then connect ownership-tagged input and replication. Tutorial and
+  native Sicily2 are the original-mode regression routes.
 - Blockers: no adapter dependency blocker. COOP-008 merged at `d34b6900` and
   COOP-009 at `ce306626`, with their transitive prerequisites integrated. This task
   still requires actual runnable host/guest instances, a complete initial-world
@@ -114,7 +120,20 @@ roster/loadouts/policies as fixtures, not approved production menu behavior.
     Guest used `-window -campaign-coop join 127.0.0.1`. Both logged Arctic1 and
     matching SessionId and PlayerId 2 (provider slot 1) in
     `build/runtime/{host,guest}/campaign-dev.log`.
-  - Both instances remained before mission load. Loading barrier, input,
-    AI transfer, objective progress and original-mode regressions remain pending.
-    Closing the guest window exited its process. No host ownership departure was
-    recorded in that run, so a graceful network close still needs verification.
+  - With the host Loading fixture, full isolated `game --all` compiled 285
+    units with zero diagnostics, linked and produced an LAA executable
+    (SHA-256 `6c617aae18d9384cd26add5fadbe8e5227a29e17f9e4ab16807304e7cad4af98`).
+    The two processes negotiated and the host loaded original Arctic1,
+    bound soldiers 1–4 to actor slots 0–3 and logged generation 1 at mission
+    time 0. Simulation remained stopped. The missing world acknowledgment
+    triggered the 10-second timeout at mission time 0, and the guest logged
+    session closure. The earlier admission-only run also logged the same
+    guest incarnation departing after closing the guest window.
+  - `python3 _re/harness/campaign_mission/run.py --compiler gcc` passed 409
+    lifecycle and 104 native-source checks. The GCC preparation run passed
+    behavior and original rule parity, including 810 capacity and 240
+    mission-essential differential cases.
+  - Build and runtime evidence is preserved in the root checkout's ignored
+    `build/coop-010-evidence/` directory. Guest initial-world reconstruction,
+    synchronized gameplay, in-play AI handoff and the original-mode runtime
+    regressions remain pending.

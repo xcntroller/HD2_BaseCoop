@@ -71,6 +71,8 @@ public:
     void Clear();                                       // 0x0067d4d0
     S_LoadoutPreset *AddPreset();                       // 0x0067d580
     S_LoadoutPreset *AddUserPreset();                   // 0x0067d770
+    // Load the installed presets without reading or writing the player profile.
+    bool LoadDefaults();
     // presets.def, then the profile's user presets (none: the defaults made and saved; false).
     bool Load();                                        // 0x0067d960
     // The user presets into the profile's user_presets.def (none yet: the defaults; version 3).

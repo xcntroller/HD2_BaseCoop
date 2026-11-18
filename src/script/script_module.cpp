@@ -5,6 +5,7 @@
 
 #include "common/chunk.h"
 #include "game/actor.h"
+#include "game/campaign_mission_adapter.h"
 #include "game/game.h"
 #include "game/interface.h"
 #include "game/pending.h"
@@ -334,7 +335,7 @@ void C_ScriptModule::StartMission(bool server)
     if (!server || m_started)
         return;
     m_fakeCutscene = false;
-    LoadScriptList((g_gameRole & GAME_ROLE_LOCAL) != GAME_ROLE_LOCAL);
+    LoadScriptList((g_gameRole & GAME_ROLE_LOCAL) != GAME_ROLE_LOCAL && !IsCampaignMission());
     for (size_t i = m_assignments.size(); i-- > 0;) {
         I3D_frame *frame = I3DGetDriver()->FindFrame(GetGame()->GetScene(), m_assignments[i].frameName);
         if (frame)
