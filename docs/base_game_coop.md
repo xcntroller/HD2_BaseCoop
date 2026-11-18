@@ -409,6 +409,41 @@ baseline for evaluating them.
 through binoculars while the other moves using that information. Check whether both
 can identify each other's pings and tell when a sighting has gone stale.
 
+### Planning and communication
+
+- **Proximity voice and radios.** Try separate push-to-talk controls for nearby voice
+  and long-range squad radio. A player needs to carry a Radio item to send or receive
+  on the radio channel. Use a filtered, slightly muffled voice and short switch sounds
+  to distinguish radio traffic. Test whether speech stays clear over mission audio
+  and give players mute and volume controls. Audit the existing
+  [DirectPlay Voice path](../src/net/net_voice.cpp) before selecting a co-op voice
+  transport. Keep AI reactions to voice chat as a separate playtest question.
+- **Shared planning map.** Start before deployment with a shared map where players
+  can draw routes and annotate positions in their squad colours. Let each player
+  undo their own marks and give the host a clear-plan action. Keep drawn plans
+  visually distinct from live sightings and pings. Test the pre-deployment workflow
+  first, then try lightweight edits on the tactical map during live play.
+- **Synchronized countdowns.** Let a squad member start a short, shared
+  **3, 2, 1, go** cue. Use the same host-scheduled end time for all players and make
+  the cue easy to cancel. Treat it as a coordination signal. Each player still
+  performs their own action. Test perceived alignment with latency and jitter.
+
+### Squad status and after-action stats
+
+- **Squad status panel.** Use a compact, on-demand panel for each deployed soldier's
+  stance, health, ammunition, and current action. Start with readable action labels
+  such as **Reloading**, **Downed**, or **Reviving**. Keep urgent teammate states easy
+  to see at a glance and detailed ammunition counts in the expanded panel.
+- **Interaction indicators.** Show which teammate is currently using an objective,
+  door, or vehicle. Put a short action label near the relevant interaction or in
+  the squad panel. Use confirmed interaction state and clear the label on completion
+  or cancellation. Test two players approaching the same interactive object.
+- **After-action stats.** Add squad totals and per-player contributions where the
+  game can attribute them. Try accuracy, downs and casualties, confirmed detections
+  or alarms, and objective results. Keep shared events at squad level when attribution
+  is ambiguous. Define how accuracy is counted and how credit follows a player who
+  changes soldiers. Keep the original mission result and Ready controls prominent.
+
 ### Casualties, stealth, and disguise
 
 - **Bleedout and revive.** Try an optional playthrough rule that gives a downed soldier
@@ -416,10 +451,20 @@ can identify each other's pings and tell when a sighting has gone stale.
   If the soldier dies, apply the selected permanent-death and respawn rules. Test what
   happens when the whole squad is down under each respawn mode and which scripted
   deaths go directly to the campaign's death path.
-- **Stealth feedback.** First make the existing AI reactions easier to read. Try a pause
-  or voice line when a guard investigates, with a brief HUD cue when that change would
-  be easy to miss. Test whether players can tell the difference between suspicion and
-  confirmed detection while watching the scene.
+- **Drag a downed teammate.** Let a teammate move a downed soldier to safety before
+  attempting a revive. Try slower movement and keep the bleedout timer running while
+  dragging so the squad weighs moving against treating them in place. Audit the
+  [existing body-carry system](../src/game/human_equipment.h) for reusable behavior.
+  Verify that one rescuer can move the soldier at a time and test safe release, a
+  rescuer disconnect, and bleedout during the move.
+- **Stealth feedback through behaviour.** When a guard notices a disturbance, try
+  having them stop, turn toward the sound, call out, and raise their weapon as suspicion
+  grows. Give confirmed detection its own readable reaction. Test whether players can
+  tell those states apart by watching and listening to the guard.
+- **Optional directional threat cue.** Offer a per-player HUD toggle for a brief cue
+  pointing toward the threat when suspicion or detection would otherwise be hard to
+  read. Tie the cue to a perceptible reaction and test whether it helps players orient
+  without giving away a hidden guard's precise position.
 - **Ranked disguises.** First verify the original disguise and
   [script toggle](../src/script/script_vm.cpp) in co-op. The current
   [disguise code](../src/game/human_combat.cpp) gates its updates on local play.
