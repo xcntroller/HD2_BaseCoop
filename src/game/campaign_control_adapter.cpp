@@ -1,0 +1,99 @@
+#include "campaign_control_adapter.h"
+#include <algorithm>
+
+namespace {
+bool SameCut(const S_CampaignOwnershipSnapshot &a, const S_CampaignOwnershipSnapshot &b) {
+    return a.m_Context.m_Session == b.m_Context.m_Session &&
+        a.m_Context.m_MissionGeneration == b.m_Context.m_MissionGeneration &&
+        a.m_Context.m_Phase == b.m_Context.m_Phase && a.m_Revision == b.m_Revision;
+}
+}
+C_CampaignControlAdapter::C_CampaignControlAdapter(C_CampaignOwnership &ownership, I_CampaignControlSink &sink)
+    : m_Ownership(ownership), m_Sink(sink) {}
+
+S_CampaignControllerPlan C_CampaignControlAdapter::Plan(const S_CampaignSessionContext &context,
+    const S_CampaignOwnershipRecord &record) {
+    S_CampaignControllerPlan plan;
+    plan.m_Record = record;
+    if (context.m_Kind != E_CampaignSessionKind::CampaignCoop || !record.m_Actor ||
+        !record.m_Alive || !record.m_Eligible || !record.m_Deployed ||
+        (context.m_Phase != E_CampaignPhase::Loading && context.m_Phase != E_CampaignPhase::Running)) return plan;
+    const bool server = context.m_IsTransportServer;
+    if (record.m_Scripted) plan.m_Controller = server ? E_CampaignController::Scripted : E_CampaignController::Replica;
+    else if (record.m_Owner && record.m_Owner == context.m_LocalPlayer) {
+        plan.m_Controller = E_CampaignController::LocalPlayer;
+        plan.m_LocalView = true;
+    } else if (record.m_Owner) plan.m_Controller = server ? E_CampaignController::RemotePlayer : E_CampaignController::Replica;
+    else plan.m_Controller = server ? E_CampaignController::SquadAI : E_CampaignController::Replica;
+    return plan;
+}
+bool C_CampaignControlAdapter::IsSynchronized() const {
+    const auto current = m_Ownership.GetSnapshot();
+    return m_Ready && m_Applied && SameCut(*m_Applied, *current);
+}
+E_CampaignReason C_CampaignControlAdapter::SynchronizeCommitted() {
+    const auto state = m_Ownership.GetSnapshot();
+    if (state->m_Context.m_Kind != E_CampaignSessionKind::CampaignCoop) return E_CampaignReason::WrongSession;
+    if (IsSynchronized()) return E_CampaignReason::None;
+    m_Ready = false;
+    m_Inputs.clear();
+    // Failed ports are retried from the beginning, while input stays disabled.
+    if (m_Applied) for (const auto &record : m_Applied->m_Soldiers)
+        if (record.m_Actor && !m_Sink.Drain(*record.m_Actor)) return E_CampaignReason::PendingTransaction;
+    for (const auto &record : state->m_Soldiers)
+        if (record.m_Actor && !m_Sink.Drain(*record.m_Actor)) return E_CampaignReason::PendingTransaction;
+    std::optional<ActorRef> local;
+    for (const auto &record : state->m_Soldiers) {
+        if (!record.m_Actor) continue;
+        const auto plan = Plan(state->m_Context, record);
+        if (!m_Sink.Apply(plan)) return E_CampaignReason::PendingTransaction;
+        if (plan.m_LocalView) local = record.m_Actor;
+    }
+    if (!m_Sink.Present(local)) return E_CampaignReason::PendingTransaction;
+    if (!SameCut(*state, *m_Ownership.GetSnapshot())) return E_CampaignReason::StaleRevision;
+    const auto phase = state->m_Context.m_Phase;
+    if (phase == E_CampaignPhase::Loading || phase == E_CampaignPhase::Running)
+        for (const auto &record : state->m_Soldiers) if (record.m_Actor) {
+            const auto reason = m_Ownership.CompleteControlHandoff({record.m_Soldier, record.m_ControlRevision});
+            if (reason != E_CampaignReason::None) return reason;
+        }
+    // Retain sequence fences across same-token reconciliations; remove disconnected
+    // incarnations only. A new token naturally replaces the protocol gate baseline.
+    for (auto it = m_Gates.begin(); it != m_Gates.end();) {
+        const bool live = std::any_of(state->m_Participants.begin(), state->m_Participants.end(),
+            [&](const S_CampaignParticipant &p) { return p.m_Player == it->first && p.m_Connected && p.m_Admitted; });
+        if (!live) it = m_Gates.erase(it); else ++it;
+    }
+    m_Applied = state;
+    m_Ready = true;
+    return E_CampaignReason::None;
+}
+E_CampaignReason C_CampaignControlAdapter::OnDisconnected(PlayerId exactIncarnation) {
+    const auto reason = m_Ownership.OnDisconnected(exactIncarnation);
+    if (reason != E_CampaignReason::None) return reason;
+    return SynchronizeCommitted();
+}
+E_CampaignReason C_CampaignControlAdapter::Enqueue(PlayerId sender, const CampaignProtocol::S_Input &input) {
+    auto reason = m_Ownership.ValidateInput(sender, input.m_Control);
+    if (reason != E_CampaignReason::None) return reason;
+    if (!IsSynchronized()) return E_CampaignReason::PendingTransaction;
+    if (m_Inputs.size() >= kMaxQueuedInputs) return E_CampaignReason::CapacityExceeded;
+    const auto state = m_Ownership.GetSnapshot();
+    const auto record = std::find_if(state->m_Soldiers.begin(), state->m_Soldiers.end(),
+        [&](const S_CampaignOwnershipRecord &r) { return r.m_Soldier == input.m_Control.m_Soldier; });
+    if (record == state->m_Soldiers.end()) return E_CampaignReason::InvalidSoldier;
+    reason = m_Gates[sender].Validate(input, sender, state->m_Context, *record, true, true);
+    if (reason != E_CampaignReason::None) return reason;
+    m_Inputs.push_back({sender, input});
+    return E_CampaignReason::None;
+}
+E_CampaignReason C_CampaignControlAdapter::ApplyNext() {
+    if (m_Inputs.empty()) return E_CampaignReason::None;
+    const auto queued = std::move(m_Inputs.front());
+    m_Inputs.pop_front();
+    const auto reason = m_Ownership.ValidateInput(queued.m_Sender, queued.m_Input.m_Control);
+    if (reason != E_CampaignReason::None) return reason;
+    if (!IsSynchronized()) return E_CampaignReason::PendingTransaction;
+    m_Sink.Execute(queued.m_Input);
+    return E_CampaignReason::None;
+}
