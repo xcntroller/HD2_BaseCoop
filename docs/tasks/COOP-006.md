@@ -2,15 +2,15 @@
 
 ## Coordination
 
-- Status: active
+- Status: review
 - Owner/session: Codex COOP-006 / thread `01a1ec01-a68f-7170-9f75-7536a079675b`, user assignment; coordinator acknowledgment published on `coord/coop-work-queue`
 - Canonical branch: `feature/coop-006-protocol`
 - Base commit: `dbc9a85a7161d8844f2907dbaf6586c7f3b67d19`
 - Dependencies: COOP-002, COOP-011 (merged shared declarations)
-- Last checkpoint: `08a2f5e2` implementation; `5bcdae38` sync with integrated main; final evidence follows
+- Last checkpoint: `08a2f5e2` implementation; `5bcdae38` main sync; `f4ed401c` validation/attachment evidence
 - Checkpoint location: `.worktrees/COOP-006`, `origin/feature/coop-006-protocol` (after push)
 - Review/integration: independent review requested from coordinator; component validation passed; no integration yet
-- Pull request: [#13](https://github.com/xcntroller/HD2_BaseCoop/pull/13) (draft pending independent review)
+- Pull request: [#13](https://github.com/xcntroller/HD2_BaseCoop/pull/13) (ready for independent review)
 
 ## Branch authority and completion PR
 
