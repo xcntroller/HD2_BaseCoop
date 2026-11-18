@@ -2,15 +2,16 @@
 
 ## Coordination
 
-- Status: review
+- Status: done
 - Owner/session: Codex COOP-008 / thread `01a1ec1f-4589-7051-9994-2a236a14b49b`
 - Canonical branch: `feature/coop-008-controller-adapters`
 - Base commit: `0fcea78f85d0fe9348c3b8e13d1a0f23f50a482a`
 - Dependencies: COOP-001, COOP-004, COOP-006
 - Last checkpoint: source `b3f240c2`; integrated-main sync `26303c03`
 - Checkpoint location: `.worktrees/COOP-008` / canonical branch on origin
-- Review/integration: independent review requested; not merged
+- Review/integration: independent COOP-009 full and final-delta review PASS; PR #17 merged `d34b690098df4d787763bd179b0a1e8d552a06a0`
 - Pull request: https://github.com/xcntroller/HD2_BaseCoop/pull/17
+- Merged commit: `d34b690098df4d787763bd179b0a1e8d552a06a0` (reviewed head `e367aac6`)
 
 ## Branch authority and completion PR
 
@@ -74,7 +75,7 @@ Full vehicle gameplay acceptance remains a later interaction gate.
 - Delivery: **Source-only**, inactive adapter component. No production context,
   admission, opcode, transport dispatch or menu entry is enabled. Trial-linked
   binaries and harness executables are local ignored artifacts, not distributed.
-- Remaining: independent source/evidence review and integration through PR #17.
+- Remaining for this task: none. Independent review passed and PR #17 merged.
   COOP-010 supplies negotiated payload dispatch and tagged authoritative replication,
   safe lifecycle composition with COOP-009, and actual two-instance campaign behavior.
   Full vehicle/mission interaction remains a later runtime gate. These are the
@@ -82,9 +83,9 @@ Full vehicle gameplay acceptance remains a later interaction gate.
 - Coordinator: COOP-009 accepted COOP-007 stopped-writer handoff at `9e051608`;
   COOP-008 has not written the ledger since `bf838b1e`. Both claims/reserved file
   scopes are acknowledged. Lifecycle/spawn/game_app/profile files remain untouched.
-- Next action: reviewer reads exact candidate and full diff, reproduces harnesses,
-  reviews native sink/authority fences and handoff integration contract, then handles
-  review findings before merger. No uncommitted implementation changes.
+- Next action: COOP-009 completes combined lifecycle integration using the merged
+  APIs; COOP-010 later attaches the live development path and demonstrates runtime
+  behavior. No uncommitted implementation changes.
 - Decisions: preserve explicit simulation authority, soldier identity/state and all
   original legacy routes; no production selection/readiness policy is newly chosen.
 
@@ -146,7 +147,8 @@ these with actual-sink/real-model and actual-source team regressions. It also ch
 native plans against the exact committed control revision, adds pre-reconstruction
 retirement seams, restores original address comments to their original signatures,
 and records legacy runner environment/compiler versions. Independent final-delta
-review is pending; no integration approval is inferred from these fixes.
+review passed through source `b3f240c2` and metadata `e367aac6`; the coordinator
+verified the exact clean PR head and merged normally as `d34b6900`.
 
 Final source `b3f240c2` also guards `C_Human::GetTeam`/`SetPlayerTeam` against native
 player-slot indexing when campaign transport settings are not native co-op, with
@@ -154,3 +156,14 @@ actual-source role/index regressions. Control adapters are noncopyable so sequen
 and revision fences cannot be cloned accidentally. Final GCC/MSVC/ASan suites each
 pass 1,272 + 232 + 36 checks; final affected 3-unit target repeat passes with zero
 diagnostics (`build/coop008/roles-final-compile.log`).
+
+## Actual completion
+
+PR #17 merged on 2026-11-18 at `d34b690098df4d787763bd179b0a1e8d552a06a0`,
+reviewed head `e367aac6`, source `b3f240c2`. COOP-009 independently read the complete
+initial implementation and every final correction, reproduced the final GCC
+1,272 + 232 + 36 checks and the original remote-controller 80,002 comparisons,
+and inspected target/sanitizer/compile/link evidence. Blocking findings were fixed
+before approval. Coordinator exact-head/scope/status checks passed before the
+ordinary merge. This completion metadata is documentation-only; no acceptance
+criterion or live COOP-010 gate has been changed.
