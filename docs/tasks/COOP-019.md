@@ -23,6 +23,7 @@ obtained before requesting review.
 Admit a new player while a mission is in progress. Install a current-world
 baseline and its subsequent updates before granting control of an eligible
 existing soldier, or follow the agreed behavior when none is available.
+Apply the [drop-in rule and synchronization policy](../base_game_coop.md#joining-during-a-mission).
 
 ## Files and shared contracts
 
@@ -38,6 +39,10 @@ the COOP-016 world interface and COOP-018 catch-up and input fences.
 - Exercise the four-player cap, ineligible or already owned soldiers, simultaneous
   claims for one soldier, and a mission transition during catch-up. Rejected or
   cancelled admission leaves the active mission and its ownership consistent.
+- Verify first-time Running joins with drop-in on and off. With drop-in enabled,
+  show join status and verify that any synchronization freeze clears after success,
+  timeout or cancellation. With drop-in disabled, verify that an eligible returning
+  player can still reconnect.
 - Repeat reconnect and pre-deployment admission smoke checks. Separate content or
   version rejection from lack of an available soldier in the observed results.
 
