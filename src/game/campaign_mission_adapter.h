@@ -7,10 +7,15 @@
 
 // Trusted lifecycle on the same serialized authority queue as ownership/preparation.
 // This boundary is dormant until explicitly installed by the live integration.
+// Retain exactly one adapter for the whole SessionId lifetime: snapshot counters
+// must never reset by recreating the adapter under an existing session.
 class C_CampaignMissionAdapter {
 public:
     explicit C_CampaignMissionAdapter(C_CampaignOwnership &ownership);
+    C_CampaignMissionAdapter(const C_CampaignMissionAdapter &) = delete;
+    C_CampaignMissionAdapter &operator=(const C_CampaignMissionAdapter &) = delete;
     E_CampaignReason Begin(const S_CampaignMissionManifest &frozen);
+    void SetRetirementHook(std::function<E_CampaignReason()> retire) { m_Retire = std::move(retire); }
     E_CampaignReason Bind(SoldierId soldier, const ActorRef &actor);
     // After ALL world categories have been captured/reconstructed, native bindings
     // installed and controller handoffs completed. Manifest alone is insufficient.
@@ -31,6 +36,7 @@ public:
     E_CampaignReason GetFailure() const { return m_Failure; }
 private:
     C_CampaignOwnership &m_Ownership;
+    std::function<E_CampaignReason()> m_Retire;
     std::optional<S_CampaignMissionManifest> m_Loading;
     std::shared_ptr<const S_CampaignMissionManifest> m_Manifest;
     std::set<PlayerId> m_Acknowledged;
@@ -49,11 +55,14 @@ public:
         const std::vector<std::uint8_t> &)>;
     C_CampaignMissionReconstruction(SessionId session, PlayerId player,
         const I_CampaignOwnershipView &installedView);
+    C_CampaignMissionReconstruction(const C_CampaignMissionReconstruction &) = delete;
+    C_CampaignMissionReconstruction &operator=(const C_CampaignMissionReconstruction &) = delete;
     E_CampaignReason Reconstruct(const S_CampaignMissionManifest &manifest,
         const std::vector<std::uint8_t> &verifiedWorld, const T_Reconstruct &reconstruct);
     std::optional<S_CampaignSnapshotAck> GetAcknowledgment() const;
     E_CampaignReason AcceptStart(const S_CampaignStartSimulation &start);
     bool IsStarted() const;
+    bool IsStartedFor(const S_CampaignSessionContext &context) const;
     void Invalidate();
 private:
     SessionId m_Session;
@@ -71,6 +80,7 @@ private:
 C_CampaignMissionAdapter *GetCampaignMissionAdapter();
 void SetCampaignMissionAdapter(C_CampaignMissionAdapter *adapter);
 void InstallCampaignMissionView(const I_CampaignOwnershipView *view);
+void InstallCampaignMissionReconstruction(const C_CampaignMissionReconstruction *reconstruction);
 T_CampaignOwnershipSnapshot GetCampaignMissionSnapshot();
 bool IsCampaignMission();
 bool IsCampaignSimulationAuthority();

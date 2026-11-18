@@ -8,6 +8,7 @@ using R = E_CampaignReason;
 using P = E_CampaignPhase;
 C_CampaignMissionAdapter *g_CampaignMission = nullptr;
 const I_CampaignOwnershipView *g_CampaignView = nullptr;
+const C_CampaignMissionReconstruction *g_CampaignReconstruction = nullptr;
 bool SameRules(const S_CampaignRulesDescriptor &a, const S_CampaignRulesDescriptor &b) {
     const auto &x = a.m_Content; const auto &y = b.m_Content;
     return a.m_Difficulty == b.m_Difficulty && x.m_CampaignContent == y.m_CampaignContent &&
@@ -70,6 +71,15 @@ E_CampaignReason C_CampaignMissionAdapter::Begin(const S_CampaignMissionManifest
     }
     if (deployed != loadouts) return R::InvalidSoldier;
     auto next = CampaignNextCounter(m_LastSnapshot); if (!next) return R::WrongGeneration;
+    // Drain the old physical world while its exact catalog/generation is still
+    // resolvable. The next generation must not be used to retire old handlers.
+    const bool oldBindings = std::any_of(state->m_Soldiers.begin(),state->m_Soldiers.end(),
+        [](const auto &s) { return s.m_Actor.has_value(); });
+    if (!m_Retire && (oldBindings || m_Manifest)) return R::SnapshotUnavailable;
+    if (m_Retire) { const auto retired=m_Retire(); if (retired!=R::None) return retired; }
+    const auto afterRetirement = m_Ownership.GetSnapshot();
+    if (afterRetirement->m_Revision != state->m_Revision || afterRetirement->m_Context.m_Phase != P::Frozen)
+        return R::StaleRevision;
     const auto reason = m_Ownership.BeginMissionGeneration(c.m_Mission);
     if (reason != R::None) return reason;
     m_LastSnapshot = *next; m_Manifest.reset(); m_Acknowledged.clear(); m_Failure = R::None;
@@ -181,6 +191,7 @@ void C_CampaignMissionReconstruction::Invalidate() { m_Ack.reset(); m_Started = 
 E_CampaignReason C_CampaignMissionReconstruction::Reconstruct(const S_CampaignMissionManifest &m,
     const std::vector<std::uint8_t> &world, const T_Reconstruct &reconstruct) {
     Invalidate();
+    if (!m_Session.IsValid() || !m_Player.IsValid()) return R::Malformed;
     if (m.m_Context.m_Session != m_Session) return R::WrongSession;
     if (!m_Player.IsValid() || !m.m_Snapshot.IsValid() || !m.m_Context.m_MissionGeneration.IsValid()) return R::Malformed;
     if (m.m_Context.m_MissionGeneration < m_HighestGeneration ||
@@ -236,10 +247,16 @@ bool C_CampaignMissionReconstruction::IsStarted() const {
         state->m_Context.m_MissionGeneration == m_Ack->m_Generation &&
         (state->m_Context.m_Phase == P::Loading || state->m_Context.m_Phase == P::Running);
 }
+bool C_CampaignMissionReconstruction::IsStartedFor(const S_CampaignSessionContext &context) const {
+    return IsStarted() && m_Ack->m_Session == context.m_Session && m_Ack->m_Generation == context.m_MissionGeneration;
+}
 E_CampaignReason C_CampaignMissionReconstruction::AcceptStart(const S_CampaignStartSimulation &start) {
     if (IsStarted() && start.m_Session == m_Ack->m_Session && start.m_Generation == m_Ack->m_Generation &&
         start.m_Snapshot == m_Ack->m_Snapshot) return R::None;
-    if (!GetAcknowledgment()) return R::SnapshotUnavailable;
+    const auto state = m_View.GetSnapshot();
+    if (!m_Ack || !state || state->m_Context.m_Session != m_Ack->m_Session ||
+        state->m_Context.m_MissionGeneration != m_Ack->m_Generation || state->m_Revision != m_Ack->m_OwnershipRevision ||
+        (state->m_Context.m_Phase != P::Loading && state->m_Context.m_Phase != P::Running)) return R::SnapshotUnavailable;
     if (start.m_Session != m_Session) return R::WrongSession;
     if (start.m_Generation != m_Ack->m_Generation) return R::WrongGeneration;
     if (start.m_Snapshot != m_Ack->m_Snapshot) return R::ContentMismatch;
@@ -248,6 +265,9 @@ E_CampaignReason C_CampaignMissionReconstruction::AcceptStart(const S_CampaignSt
 C_CampaignMissionAdapter *GetCampaignMissionAdapter() { return g_CampaignMission; }
 void SetCampaignMissionAdapter(C_CampaignMissionAdapter *adapter) { g_CampaignMission = adapter; }
 void InstallCampaignMissionView(const I_CampaignOwnershipView *view) { g_CampaignView = view; }
+void InstallCampaignMissionReconstruction(const C_CampaignMissionReconstruction *reconstruction) {
+    g_CampaignReconstruction = reconstruction;
+}
 T_CampaignOwnershipSnapshot GetCampaignMissionSnapshot() {
     if (g_CampaignMission) return g_CampaignMission->GetOwnership().GetSnapshot();
     return g_CampaignView ? g_CampaignView->GetSnapshot() : nullptr;
@@ -262,6 +282,9 @@ bool IsCampaignSimulationAuthority() {
 }
 bool CanCampaignSimulate() {
     const auto state = GetCampaignMissionSnapshot();
-    return !IsCampaignMission() || (state->m_Context.m_Phase == P::Running &&
-        (!g_CampaignMission || g_CampaignMission->CanSimulate()));
+    if (!IsCampaignMission()) return true;
+    if (state->m_Context.m_Phase != P::Running) return false;
+    if (state->m_Context.m_IsTransportServer)
+        return g_CampaignMission && g_CampaignMission->HasAuthority() && g_CampaignMission->CanSimulate();
+    return g_CampaignReconstruction && g_CampaignReconstruction->IsStartedFor(state->m_Context);
 }

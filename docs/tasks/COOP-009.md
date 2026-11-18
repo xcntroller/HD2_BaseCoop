@@ -66,15 +66,22 @@ and repeats affected checks; do not merge an unfinished dependency branch.
   reconstruction acknowledgment/start hooks, original-point native spawn conversion,
   dormant lifecycle/profile/script/AI guards and source-extracted legacy regressions.
   Native file split `campaign_mission_native.{h,cpp}` was acknowledged by COOP-007.
+- Peer review: COOP-008 found an unguarded guest Running publication; native
+  ticking now additionally requires an explicitly installed reconstruction receipt
+  and matching accepted Start. Reordered Running-before-Start remains gated.
+  Adapter copies are disabled and SessionId lifetime is explicit in its header.
+  Pre-generation retirement callback drains prior physical controllers before
+  advancing ownership generation; failed/missing prior-world retirement does not
+  advance the mission generation. Final peer rereview is still pending.
 - Remaining: final combined adapter check after COOP-008 merges (including its public
   progress setter), exact-head independent review, final source checks and review PR.
   No live attachment/menu or two-player campaign gameplay claim; COOP-010 owns those.
 - Next action: repeat target/sanitizer checks on the final source; add the agreed
   COOP-008 progress setter call after its merge and review the combined native paths.
-- Validation run: latest GCC 8 lifecycle suites / 312 checks and 4 extracted native
+- Validation run: latest GCC 9 lifecycle suites / 343 checks and 4 extracted native
   source regression suites / 100 checks PASS; MSVC 19.44.35230 x86 `/W4 /WX` same PASS in
-  `build/campaign_mission/msvc-1c7ncu78` on the restored private toolchain.
-  Native ASan/UBSan PASS both suites (`gcc-qvjj1iq2`) using process-local private
+  `build/campaign_mission/msvc-beskbd61` on the restored private toolchain.
+  Native ASan/UBSan PASS both suites (`gcc-ynts1zzb`) using process-local private
   libraries in `build/tooling/gccsan/usr/lib64`, `--sanitizer-library-dir` and
   LD_LIBRARY_PATH; no machine-global changes. Full source-extracted checks include
   original-point spawn/notification ordering and the real native departure helper.

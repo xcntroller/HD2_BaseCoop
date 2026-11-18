@@ -132,7 +132,11 @@ void TestNewGeneration() {
     f.frozen.m_Context=state->m_Context; f.frozen.m_PreparationGeneration=f.ownership.GetSession().GetPreparationGeneration();
     f.frozen.m_OwnershipRevision=state->m_Revision;
     for(auto &s:f.frozen.m_Soldiers) for(const auto &r:state->m_Soldiers) if(s.m_Soldier==r.m_Soldier) s.m_Ownership=r;
-    CHECK(f.adapter.Begin(f.frozen)==R::None); f.BindAll(); CHECK(f.adapter.SealInitialWorld()==R::None);
+    CHECK(f.adapter.Begin(f.frozen)==R::SnapshotUnavailable);
+    int retired=0;f.adapter.SetRetirementHook([&]{++retired;return R::PendingTransaction;});
+    CHECK(f.adapter.Begin(f.frozen)==R::PendingTransaction);CHECK(f.adapter.GetContext().m_MissionGeneration==MissionGeneration(1));
+    f.adapter.SetRetirementHook([&]{++retired;return R::None;});
+    CHECK(f.adapter.Begin(f.frozen)==R::None);CHECK(retired==2);f.BindAll();CHECK(f.adapter.SealInitialWorld()==R::None);
     CHECK(f.adapter.Acknowledge(f.guest,stale)==R::WrongGeneration);
     CHECK(f.adapter.GetManifest()->m_Snapshot!=old->m_Snapshot);
     CHECK(old->m_Context.m_MissionGeneration==MissionGeneration(1)); CHECK(f.adapter.GetContext().m_MissionGeneration==MissionGeneration(2));
@@ -186,9 +190,33 @@ void TestReconstruction() {
     CHECK(replica.Reconstruct(manifest,{1},success)==R::Malformed);CHECK(calls==3);
 }
 
+void TestGuestNativeGate() {
+    struct View : I_CampaignOwnershipView {
+        S_CampaignOwnershipSnapshot state;
+        T_CampaignOwnershipSnapshot GetSnapshot() const override { return std::make_shared<const S_CampaignOwnershipSnapshot>(state); }
+    } view;
+    Fixture f;f.Seal();const auto manifest=*f.adapter.GetManifest();view.state=*f.ownership.GetSnapshot();
+    view.state.m_Context.m_IsTransportServer=false;view.state.m_Context.m_IsTransportClient=true;
+    view.state.m_Context.m_LocalPlayer=f.guest;
+    C_CampaignMissionReconstruction replica(manifest.m_Context.m_Session,f.guest,view);
+    InstallCampaignMissionView(&view);InstallCampaignMissionReconstruction(&replica);
+    CHECK(!CanCampaignSimulate());
+    CHECK(replica.Reconstruct(manifest,{1,2},[](const auto &,const auto &){return R::None;})==R::None);
+    CHECK(!CanCampaignSimulate());
+    // The Running publication can arrive before the authenticated Start message.
+    view.state.m_Context.m_Phase=P::Running;CHECK(!CanCampaignSimulate());
+    S_CampaignStartSimulation start{manifest.m_Context.m_Session,manifest.m_Context.m_MissionGeneration,SnapshotId(99)};
+    CHECK(replica.AcceptStart(start)==R::ContentMismatch);CHECK(!CanCampaignSimulate());
+    start.m_Snapshot=manifest.m_Snapshot;CHECK(replica.AcceptStart(start)==R::None);CHECK(CanCampaignSimulate());
+    view.state.m_Context.m_MissionGeneration=MissionGeneration(99);CHECK(!CanCampaignSimulate());
+    view.state=*f.ownership.GetSnapshot();view.state.m_Context.m_IsTransportServer=true;
+    view.state.m_Context.m_Phase=P::Running;CHECK(!CanCampaignSimulate()); // host adapter must also be installed
+    InstallCampaignMissionReconstruction(nullptr);InstallCampaignMissionView(nullptr);
+}
+
 }
 int main() {
-    try { TestDormancy(); TestFrozenRejection(); TestBarrier(); TestAckFences(); TestInvalidation(); TestNewGeneration(); TestStartupScripts(); TestReconstruction(); }
+    try { TestDormancy(); TestFrozenRejection(); TestBarrier(); TestAckFences(); TestInvalidation(); TestNewGeneration(); TestStartupScripts(); TestReconstruction(); TestGuestNativeGate(); }
     catch(const std::exception &e) { std::cerr<<"FAIL after "<<g_Checks<<": "<<e.what()<<'\n'; return 1; }
-    std::cout<<"PASS: 8 lifecycle suites / "<<g_Checks<<" checks\n";
+    std::cout<<"PASS: 9 lifecycle suites / "<<g_Checks<<" checks\n";
 }

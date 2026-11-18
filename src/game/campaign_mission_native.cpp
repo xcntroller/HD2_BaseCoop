@@ -85,6 +85,7 @@ E_CampaignReason BuildCampaignNativeSpawns(const S_CampaignMissionManifest &mani
 }
 void InstallCampaignMissionNative(const S_CampaignNativeCatalog *catalog, S_CampaignMissionNativeHooks hooks) {
     g_Catalog = catalog; g_Hooks = std::move(hooks);
+    if (GetCampaignMissionAdapter()) GetCampaignMissionAdapter()->SetRetirementHook(g_Hooks.m_RetireBeforeReconstruction);
 }
 C_Human *ResolveCampaignHuman(const S_CampaignOwnershipRecord &record) {
     const auto snapshot = GetCampaignMissionSnapshot();

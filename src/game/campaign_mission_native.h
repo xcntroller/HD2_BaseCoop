@@ -28,6 +28,7 @@ E_CampaignReason BuildCampaignNativeSpawns(const S_CampaignMissionManifest &mani
 // control adapter's exact-incarnation disconnect helper and synchronize hook.
 struct S_CampaignMissionNativeHooks {
     std::function<E_CampaignReason()> m_SynchronizeControllers;
+    std::function<E_CampaignReason()> m_RetireBeforeReconstruction;
     std::function<std::optional<PlayerId>(int)> m_FindTransportPlayer;
     std::function<E_CampaignReason(PlayerId)> m_Disconnected;
     std::function<void(bool)> m_CampaignResult;

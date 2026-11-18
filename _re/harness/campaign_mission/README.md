@@ -65,14 +65,21 @@ run on **one serialized, nonreentrant authority queue**. The adapter is retained
 for the whole hosting session so SnapshotIds never reset within a session. Catalog
 lifetime and attachment lifetimes must exceed consumers; uninstall before teardown.
 
-1. Preparation validates policy/equipment and freezes ownership on the same queue.
+1. Stop/commit the previous mission while its Ending context/actors still exist,
+   before opening the next preparation or advancing the world generation.
+   Preparation validates policy/equipment and freezes ownership on the same queue.
    Pass `GetFrozenManifest()` into `C_CampaignMissionAdapter::Begin`. It checks the
    exact context, rules, generations, rights, quorum and deployed loadout set before
    advancing the mission generation. No new soldier or connection is manufactured.
+   Before that advancement, the trusted retirement hook drains the old physical
+   world/controller cut using COOP-008 `RetireBeforeReconstruction`; missing or
+   failed retirement of a prior world keeps the generation unchanged. Bind this
+   hook before Begin, while old incarnation coordinates remain resolvable.
 2. Install the SAME ownership view in mission and COOP-008 control runtime. On the
    host also attach the mission adapter and native catalog. All installation is
    explicit; no production menu, console command or dispatch installs it here.
-   Native hooks bind `m_SynchronizeControllers` to COOP-008
+   Native hooks bind `m_RetireBeforeReconstruction` to COOP-008
+   `RetireBeforeReconstruction` and `m_SynchronizeControllers` to COOP-008
    `SynchronizeCommitted`, `m_FindTransportPlayer` to
    `FindCampaignTransportPlayer`, and `m_Disconnected` to
    `HandleCampaignDisconnect(PlayerId)`. A missing/failed host hook fails closed.
@@ -97,7 +104,10 @@ lifetime and attachment lifetimes must exceed consumers; uninstall before teardo
    framing/assembler. CRC is integrity, not authentication. Only negotiated host
    messages enter guest reconstruction; no native spawn/control/round message
    may reach its legacy handler during campaign loading.
-6. On a guest, keep one `C_CampaignMissionReconstruction` per session/player. Its
+6. On a guest, keep one `C_CampaignMissionReconstruction` per session/player and
+   install it with `InstallCampaignMissionReconstruction`. Native ticking remains
+   gated even if a Running ownership publication arrives before the matching
+   authenticated Start message. Uninstall before destroying the reconstruction. Its
    callback reconstructs ALL world categories and installs the exact ownership
    view/native bindings/controllers and full deployed PlayerTeam membership while
    input remains suspended. The hook checks
