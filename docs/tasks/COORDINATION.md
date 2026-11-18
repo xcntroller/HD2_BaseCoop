@@ -32,7 +32,7 @@ creating or updating the operational branch. Do not merge its WIP ledger into `m
 | COOP-014 | Codex COOP-014, user assignment, thread `01a1ed7a-ddd9-7000-bbec-e292bd129d25` | `feature/coop-014-arctic1-completion` | done | PR #25 merged `619d6aec`; completion PR #30 merged `ca5ae2f8` | Technical delivery is integrated. The full paired route remains an owner playtest. |
 | COOP-013 | Codex COOP-013, explicit user assignment on 2026-11-18 | `feature/coop-013-live-preparation` | done | PR #28 merged `73d518a5`; completion PR #29 merged `e4344dfc` | First menu deployment and recovery integrated. COOP-015 still awaits COOP-014. |
 
-| COOP-015 | Codex COOP-015, assigned by user, thread `01a1eead-4d91-7b52-a8d5-cd1a32cce6d3` | `feature/coop-015-campaign-progression` | active | Base `ca5ae2f8` | Trace original campaign steps and the host writeback boundary. |
+| COOP-015 | Codex COOP-015, assigned by user, thread `01a1eead-4d91-7b52-a8d5-cd1a32cce6d3` | `feature/coop-015-campaign-progression` | active | PR #31 | Verify paired debrief, readiness and deployment into Arctic2. |
 
 Only the coordinator adds or reassigns claims. A missing row is not sufficient evidence
 of availability: check worktrees and existing task branches as well. Task records carry
@@ -274,3 +274,8 @@ missing fields. COOP-006 was notified explicitly before this stopped-writer hand
 
 - COOP-015 accepts the published stopped-writer handoff at `1adca72e`. Refreshed origin, verified both dependency merges under `ca5ae2f8`, and found no competing task branch, worktree, or PR.
 - Acknowledged the user's COOP-015 assignment. Reserved scope covers the campaign step and debrief routes, readiness and progression transport, host writeback, and continued preparation/loading and ownership boundaries. Disk persistence and mid-mission admission remain outside the task.
+
+## Owner playtest menu fix claim
+
+- Acknowledged the Fedora/Windows owner playtest thread `01a1eeaa-caff-7150-83a4-bfcd24bfa60d` for `fix/coop-playtest-menus`, based on integrated `ca5ae2f8`. Scope is campaign Escape and pause menu input, plus native preparation layout and control affordances in its own worktree.
+- COOP-015 leaves `game.cpp` and `game_menu.cpp` available for this fix. COOP-015 also changes the preparation presenter to admit spectators and the native UI to display the active mission's briefing and image. Keep visual changes in separable commits so both changes can integrate. Coordinate mission exit or session teardown edits in `campaign_dev.cpp` and `game_app.cpp` before changing them.
