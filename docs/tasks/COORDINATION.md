@@ -28,8 +28,8 @@ creating or updating the operational branch. Do not merge its WIP ledger into `m
 | COOP-001 | Codex / 2026-11-18 user assignment | `feature/coop-001-build-baseline` | done | PR #2 merge `15b572ff`; completion metadata PR #11 merge `1b9b307f` | Build/solo/native host-guest baseline and isolation accepted; guide/evidence integrated. Firing/reload/completion remain unverified downstream gates. |
 
 | COOP-010 | Codex COOP-010 (2026-11-18), user assignment | `feature/coop-010-two-player-mission` | done | PR #22 merged `738b124d`, completion PR #23 merged `dc41c6b7`, `.worktrees/COOP-010` | Arctic1 playable gate and original mode regressions recorded. |
-| COOP-012 | Codex COOP-012 (2026-11-18), user assignment | `feature/coop-012-session-setup` | active | base `9ec7fe48`; `.worktrees/COOP-012` | Gated singleplayer menu and campaign setup/admission/teardown. |
-| COOP-014 | Codex COOP-014, user assignment, thread `01a1ed7a-ddd9-7000-bbec-e292bd129d25` | `feature/coop-014-arctic1-completion` | active | base `9ec7fe48`; `.worktrees/COOP-014` | Arctic1 solo/dev reference, interactions, objectives and Running replication. |
+| COOP-012 | Codex COOP-012 (2026-11-18), user assignment | `feature/coop-012-session-setup` | active | PR #26 draft, source `6bcb163b` | Final x86 build and preliminary five-instance run passed. Final-source acceptance and original-mode repeats in progress. |
+| COOP-014 | Codex COOP-014, user assignment, thread `01a1ed7a-ddd9-7000-bbec-e292bd129d25` | `feature/coop-014-arctic1-completion` | active | PR #25 draft, base `9ec7fe48` | Arctic1 solo/dev reference, interactions, objectives and Running replication. |
 
 
 Only the coordinator adds or reassigns claims. A missing row is not sufficient evidence
