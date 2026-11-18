@@ -372,6 +372,15 @@ void C_Door::PresentDoorEvent(uint32_t kind)
 
 void C_Door::Animate(int time)                          // 0x005fffe0
 {
+    // The initial world compares the authored transform before the host starts simulating.
+    // Start the matching replica motion once that world enters Running.
+    if (m_motion == DOOR_OPEN && m_opened == 0.0f && !m_locked && !IsServer() &&
+        IsCampaignMission() && CanCampaignSimulate()) {
+        m_motion = DOOR_OPENING;
+        m_delay = m_openDelay;
+        m_handleMoving = true;
+        SetPortalsClosed(false);
+    }
     // The handles turn up to 45 degrees and back as it starts to open.
     if ((m_handle || m_handle2) && m_handleMoving) {
         m_handleAngle = (m_handleRising ? 1.0f : -1.0f) * static_cast<float>(time) * HANDLE_RATE + m_handleAngle;
@@ -650,21 +659,8 @@ void C_Door::StartMission(bool server)                  // 0x00600cc0 (DS 0x0062
     m_startRot = m_frame->GetRot();
     m_initialMotion = m_motion;
     m_initialLocked = m_locked;
-    if (m_motion == DOOR_OPEN) {
-        if (IsServer()) {
-            SetState(DOOR_ACTION_OPEN, true, false, 0);
-        } else if (IsCampaignMission() && !m_locked) {
-            // Campaign replicas load the authored state without the legacy door messages.
-            m_motion = DOOR_OPENING;
-            m_opened = m_openAngle;
-            if (m_kind == DOOR_HINGED)
-                TurnTo();
-            else
-                SlideTo();
-            m_motion = DOOR_OPEN;
-            SetPortalsClosed(false);
-        }
-    }
+    if (IsServer() && m_motion == DOOR_OPEN)
+        SetState(DOOR_ACTION_OPEN, true, false, 0);
     m_started = true;
     m_autoCloseTime = 0;
     MakeFrameBoxVolume(m_volume, m_invMatrix, m_frame, COLLISION_TYPE_ACTOR_DOOR, this);
