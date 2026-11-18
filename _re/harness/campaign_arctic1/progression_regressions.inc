@@ -94,21 +94,22 @@ void TickPairedProgressionProbe(const char *scenario)
         [&](const auto &entry) { return entry.m_Player == local; });
     if (participant == state->m_Participants.end())
         return;
-    static PreparationGeneration readied;
-    static PreparationGeneration deployed;
-    if (participant->m_ReadyAt != state->m_PreparationRevision && readied != state->m_Generation) {
+    static std::pair<PreparationGeneration, PreparationRevision> readied;
+    static std::pair<PreparationGeneration, PreparationRevision> deployed;
+    const auto revision = std::make_pair(state->m_Generation, state->m_PreparationRevision);
+    if (participant->m_ReadyAt != state->m_PreparationRevision && readied != revision) {
         const S_CampaignPreparationRequestContext request{
             {state->m_Context.m_Session, local, model->NextRequestId()}, state->m_Generation,
             state->m_PreparationRevision};
-        model->SetReady({request, true});
-        readied = state->m_Generation;
+        if (std::holds_alternative<S_CampaignQueuedSubmission>(model->SetReady({request, true})))
+            readied = revision;
     }
-    if (!g_guest && state->m_CanDeploy.m_Allowed && deployed != state->m_Generation) {
+    if (!g_guest && state->m_CanDeploy.m_Allowed && deployed != revision) {
         const S_CampaignPreparationRequestContext request{
             {state->m_Context.m_Session, local, model->NextRequestId()}, state->m_Generation,
             state->m_PreparationRevision};
-        model->RequestDeploy({request});
-        deployed = state->m_Generation;
+        if (std::holds_alternative<S_CampaignQueuedSubmission>(model->RequestDeploy({request})))
+            deployed = revision;
     }
 }
 

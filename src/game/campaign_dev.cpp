@@ -1610,6 +1610,18 @@ bool OpenContinuedPreparation(C_GameApp &app)
     return app.m_state->Start(const_cast<C_CampaignScreen *>(g_continuedEquipment));
 }
 
+R ReopenContinuedPreparation(C_GameApp &app)
+{
+    auto reason = RetireMenuWorld();
+    if (reason == R::None)
+        reason = g_menuSession->ReopenPreparation();
+    if (reason != R::None)
+        return reason;
+    g_menuSession->SetContinuedPreparationActive(true);
+    g_continuedPreparation = true;
+    return OpenContinuedPreparation(app) ? R::None : R::SnapshotUnavailable;
+}
+
 R StartProgressionStep(C_GameApp &app, C_CampaignNode *node,
                        const std::function<bool(C_CampaignNode *)> &startStep)
 {
@@ -1892,8 +1904,17 @@ void TickDevelopmentCampaign(C_GameApp &app)
         }
         const auto progression = TickCampaignProgression(app, [&](auto *step) { return app.StartStep(step, 0, true); });
         if (progression != R::None) {
-            LogDevelopmentCampaign("campaign progression failed", static_cast<unsigned>(progression));
-            returnToMenu(progression, false);
+            auto reason = progression;
+            if (reason == R::Disconnected && !g_guest && g_stepOrdinal != 0 &&
+                IsCampaignNet(E_CampaignLanRoute::CampaignSession) && g_mission &&
+                g_mission->GetContext().m_Phase == Phase::Loading) {
+                g_mission->Abort(reason);
+                reason = ReopenContinuedPreparation(app);
+            }
+            if (reason != R::None) {
+                LogDevelopmentCampaign("campaign progression failed", static_cast<unsigned>(reason));
+                returnToMenu(reason, false);
+            }
             return;
         }
         if (app.m_state->GetState() == GAME_STATE_MAIN_MENU) {
@@ -1990,16 +2011,9 @@ void TickDevelopmentCampaign(C_GameApp &app)
             LogDevelopmentCampaign("host aborted initial-world wait", static_cast<std::uint64_t>(reason),
                                    GetGame()->GetMissionTime());
             if (g_menuSession && g_stepOrdinal != 0) {
-                const auto retired = RetireMenuWorld();
-                const auto reopened = retired == R::None ? g_menuSession->ReopenPreparation() : retired;
-                if (reopened != R::None) {
+                const auto reopened = ReopenContinuedPreparation(app);
+                if (reopened != R::None)
                     returnToMenu(reopened, false);
-                } else {
-                    g_menuSession->SetContinuedPreparationActive(true);
-                    g_continuedPreparation = true;
-                    if (!OpenContinuedPreparation(app))
-                        returnToMenu(R::SnapshotUnavailable, false);
-                }
             } else if (g_menuSession) {
                 returnToMenu(reason, true);
             } else {
