@@ -8,6 +8,7 @@
 #include "common/c_str.h"
 #include "common/chunk.h"
 #include "game/campaign.h"
+#include "game/campaign_mission_adapter.h"
 #include "game/game.h"
 #include "game/game_internal.h"
 #include "game/human.h"
@@ -250,7 +251,7 @@ bool C_InfoScreen::Init(I3D_scene *scene)
         return false;
     }
 
-    if (IsLocalGame()) {
+    if (IsLocalGame() || IsCampaignMission()) {
         m_kind = 0;
     } else {
         switch (g_mpSettings->gameType) {
@@ -459,13 +460,14 @@ void C_InfoScreen::AddObjectives()
     C_MissionDef *mission = g_campaign->GetCurrentMission();
     if (!mission)
         return;
+    const bool campaignObjectives = IsLocalGame() || IsCampaignMission();
     for (int i = 0; i < mission->GetObjectiveCount(); ++i) {
         S_MissionObjective *objective = mission->GetObjective(i);
         const int status = objective->status;
         if (status == OBJECTIVE_INACTIVE)
             continue;
         int textId;
-        if (IsLocalGame()) {
+        if (campaignObjectives) {
             textId = objective->GetId();
         } else {
             const auto *mp = static_cast<S_MpObjective *>(objective);
@@ -480,7 +482,7 @@ void C_InfoScreen::AddObjectives()
         m_text->AddTextId(textId, Style(1));
 
         int stateText;
-        if (IsLocalGame()) {
+        if (campaignObjectives) {
             switch (status) {
             case OBJECTIVE_OPEN: stateText = TEXT_OBJECTIVE_OPEN; break;
             case OBJECTIVE_COMPLETED: stateText = TEXT_OBJECTIVE_COMPLETED; break;
@@ -657,7 +659,7 @@ void C_InfoScreen::AddServer()
 
 void C_InfoScreen::AddMissionName()
 {
-    if (IsLocalGame())
+    if (IsLocalGame() || IsCampaignMission())
         return;
     if (C_MissionDef *mission = GetGame()->GetMission())
         m_text->AddText(static_cast<C_MpMissionDef *>(mission)->GetMapName(), Style(66));

@@ -506,15 +506,16 @@ void C_Human::ApplyRemoteHit(int type, int zone, int health, int killerId, const
 
 void C_Human::OnDeath()
 {
-    if (CampaignControlsActive() && IsServer()) NotifyCampaignDeath(m_netId);
+    const bool campaignAuthority = CampaignControlsActive() && IsServer();
+    if (campaignAuthority) NotifyCampaignDeath(m_netId);
     m_bleeding = 0.0f;
     m_deadTime = 0;
     m_controller->OnDeath();
     m_body.PlayDeath();
-    if (IsLocalGame() || g_gameProfile.IsCooperativeGame()) {
+    if (IsLocalGame() || g_gameProfile.IsCooperativeGame() || campaignAuthority) {
         PeriodicLinks_SetRate(m_periodicLink, 1);
         if (m_role == HUMAN_ROLE_ENEMY) {
-            if (IsLocalGame())
+            if (IsLocalGame() || campaignAuthority)
                 g_teamManager.GetPlayerTeam()->GetEnemyRecords().Add(this);
             else
                 g_teamManager.GetCoopTeam()->GetEnemyRecords().Add(this);

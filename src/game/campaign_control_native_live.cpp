@@ -56,8 +56,9 @@ bool C_CampaignNativeControlSink::ApplySquadActors(
         const auto facing = NativeVector(actor.m_Facing, 0.0f);
         const auto view = NativeVector(actor.m_ViewDirection, 0.0f);
         auto &visual = human.GetMovement()->m_visual;
+        const bool died = human.IsAlive() && actor.m_Health == 0;
         human.m_stats[STAT_HEALTH] = actor.m_Health;
-        if (human.GetWork()->GetStance() != actor.m_Stance)
+        if (human.IsAlive() && human.GetWork()->GetStance() != actor.m_Stance)
             human.m_body.SetStance(actor.m_Stance);
         // Only host-authored state can populate these native presentation tracks.
         if (auto *object = g_netReplication->FindObject(human.GetNetId(), false)) {
@@ -76,6 +77,8 @@ bool C_CampaignNativeControlSink::ApplySquadActors(
             visual.SetPosition(pos);
             visual.SetDirection(facing, 0.0f);
         }
+        if (died)
+            human.ShowDeath();
     }
     return true;
 }

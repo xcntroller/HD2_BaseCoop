@@ -120,12 +120,14 @@ roster/loadouts/policies as fixtures, not approved production menu behavior.
 - Native squad controller attachment preserves the departing player's current
   equipment through the ownership transfer. The host verifies the same
   native actor, recorded pose, stats and entire inventory at the handoff.
-- Remaining: verify a bounded original objective route and the native Sicily2
-  gameplay regression. The intro still differs on the guest in scripted
-  props, audio and HUD.
-- Next action: use the trace-free MSVC x86 build to exercise the opening
-  Arctic1 route with the original objectives visible on both instances. The
-  ignored Win32 SendInput helper under `build/initial-world/native-keys.py`
+- Both peers use the original campaign information screen for objective
+  text and status. Campaign mode leaves the native multiplayer score,
+  loadout and respawn routes inactive. Use the window close control to
+  leave the development session. Escape still skips the host's intro.
+- Remaining: verify the bounded original route on the latest build.
+  The intro still differs on the guest in scripted props, audio and HUD.
+- Next action: continue the paired route east of the Arctic1 drop zone.
+  The ignored Win32 SendInput helper under `build/initial-world/native-keys.py`
   drives the original windows.
 - Blockers: none. COOP-008 merged at `d34b6900` and COOP-009 at `ce306626`.
 - Local prerequisites: root-checkout ignored `build/coop-shared-tooling/run-python.bat`
@@ -295,3 +297,37 @@ roster/loadouts/policies as fixtures, not approved production menu behavior.
     campaign menus reached Tutorial, and native W and D moved Pte. Jenkins
     away from the starting watchtower once the briefing ended. Captures are
     under the `original-solo` evidence directory.
+
+- Native Sicily2 gameplay regression
+  - Both original LAN instances used the terrain validation executable.
+    Opened the normal player setup, chose roster profiles 0 and 1, added
+    British green camouflage Battledress, the Enfield Mk. 4 and its
+    magazine, and accepted the loadouts. Both spawned in Sicily2
+    with the committed equipment and the original three lives. Host W for
+    three seconds moved the host ahead in the guest view. Guest W for six
+    seconds moved the guest to the stone wall in the host view. Both opened
+    the original inventories. The paired captures and process logs are
+    under `build/coop-010-evidence/initial-world/native-sicily2/`.
+  - The controller composition harness initially failed to build because
+    its instrumented native sink has stubs only for the controller handoff.
+    Source `4048303b` separates the live state and item presentation methods
+    from that handoff translation unit. Both GCC and x86 MSVC passed the
+    controller adapters (1,272 checks), native sink (237), and team rules
+    (36). The native checks include the host's remote-owned player body
+    and its absence from the host's local view.
+
+- Original objective presentation and patrol follow-up
+  - A paired run at `4048303b` exposed the legacy score overlay on the
+    guest and a host crash on first patrol contact, at
+    `C_SightModule::TestNow`. The host was missing the original sight and
+    hearing registration. The guest also tried to render an extra actor
+    frame after host loss had freed native replication objects.
+  - In the subsequent `patrol-objectives` run, both original objective
+    screens showed the guide, underground entrance and complex enemies as
+    open. The host capture identifies Pte. Robert Czakowski, and the guest
+    capture renders the other squad soldiers at the drop zone. Both peers
+    crossed 134 m of horizontal displacement in the direct patrol attempt.
+    The host resolved the casualties and both processes stayed running.
+    Stopping the host caused the guest to exit without a fault report.
+    The tested executable SHA-256 was
+    `134903191e4a566bc5665526c41e537c5f47b79735bff9d6fb6f6d15b096cece`.

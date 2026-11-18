@@ -12,6 +12,7 @@
 #include "common/radix_sort.h"
 #include "game/actor.h"
 #include "game/actors_module.h"
+#include "game/campaign_mission_adapter.h"
 #include "game/game.h"
 #include "game/game_internal.h"
 #include "game/human.h"
@@ -249,7 +250,7 @@ bool C_ScoreTable::Init(I3D_scene *scene)
     m_frame = scene->FindFrame("mp_scoretable", FRAME_MASK_ANY);
     m_text = NewText(scene, m_frame, true);
     m_gameType = -1;
-    if (!IsLocalGame()) {
+    if (!IsLocalGame() && !IsCampaignMission()) {
         m_gameType = g_mpSettings->gameType;
         if (m_gameType == MP_GAME_DEATHMATCH)
             m_gameType = -1;

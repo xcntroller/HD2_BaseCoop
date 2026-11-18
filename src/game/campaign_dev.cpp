@@ -391,7 +391,7 @@ void FailGuest(R reason)
         return;
     g_guest->m_Aborted = true;
     LogDevelopmentCampaign("guest initial world rejected", static_cast<std::uint64_t>(reason));
-    GetGameApp()->m_state->SetPendingState(GAME_STATE_QUIT);
+    GetGameApp()->m_state->SetState(GAME_STATE_QUIT);
 }
 
 bool MatchesContent(const S_CampaignContentDescriptor &a, const S_CampaignContentDescriptor &b)
@@ -940,8 +940,9 @@ bool Join(std::uint32_t address, S_CampaignNetConfig config)
         LogDevelopmentCampaign("guest session closed", player.Value(), static_cast<std::uint64_t>(reason));
         if (g_netGame.m_lastError < 0)
             LogDevelopmentCampaign("DirectPlay status", static_cast<std::uint32_t>(g_netGame.m_lastError));
+        // The transport may retire replication objects before the next state update.
         if (auto *app = GetGameApp(); app && app->m_state)
-            app->m_state->SetPendingState(GAME_STATE_QUIT);
+            app->m_state->SetState(GAME_STATE_QUIT);
     };
     S_ServerEntry entry{};
     entry.Reset();

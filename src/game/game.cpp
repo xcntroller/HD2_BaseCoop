@@ -504,7 +504,7 @@ bool C_game::HandleInput(float *held, float *pressed)   // 0x0069a830 (DS 0x006d
             return true;
         }
     }
-    if (pressed && pressed[INPUT_MENU] != 0.0f)
+    if (!IsCampaignMission() && pressed && pressed[INPUT_MENU] != 0.0f)
         m_state = GAME_STATE_GAME_MENU;
     return true;
 }
