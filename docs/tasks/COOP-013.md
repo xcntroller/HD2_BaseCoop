@@ -2,13 +2,13 @@
 
 ## Coordination
 
-- Status: ready
-- Owner/session: unassigned
+- Status: active
+- Owner/session: Codex COOP-013, explicit user assignment on 2026-11-18
 - Canonical branch: `feature/coop-013-live-preparation`
-- Base commit: not started
+- Base commit: `fd5ad4c3e997be8a6d4a7211e04dd3319677e9a2`
 - Dependencies: [COOP-005](COOP-005.md) equipment transactions, [COOP-007](COOP-007.md) preparation screen, [COOP-012](COOP-012.md) session setup
-- Last checkpoint: none
-- Checkpoint location: task queue only
+- Last checkpoint: claim and worktree setup at the start of this branch
+- Checkpoint location: `.worktrees/COOP-013`
 - Review/integration: none
 - Pull request: none
 
@@ -68,10 +68,10 @@ runtime evidence and legacy regression requirements.
 
 ## Handoff
 
-- Completed: task definition.
+- Completed: confirmed dependency ancestry and created the isolated canonical worktree. The coordination ledger acknowledges the claim after the COOP-012 stopped-writer handoff.
 - Remaining: implementation or verification and the acceptance evidence above.
 - Next action: Use the admitted-session interface to trace a real equipment step from briefing through freeze. Resolve any open policy that blocks the player flow before implementing it.
 - Dependency status: COOP-005, COOP-007 and COOP-012 are integrated. COOP-012 merged at `4ef8b814` and documents the admitted-session contract.
 - Decisions: Roster allocation, readiness quorum, scarce stock UX and deployment cancellation remain subject to the open design decisions. Preserve per-player edit permissions and the original equipment rules.
-- Local state: no task worktree or artifacts.
+- Local state: canonical worktree created from integrated main. Build and runtime evidence pending.
 - Review notes: none.
