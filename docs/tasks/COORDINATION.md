@@ -10,7 +10,7 @@ creating or updating the operational branch. Do not merge its WIP ledger into `m
 - Contact/shared channel: this ledger and COOP-014 PR #25.
 - Integrator: Codex COOP-014 for the Arctic1 technical delivery after separate review.
 - Latest checkpoint: `HEAD` on `origin/coord/coop-work-queue`.
-- Next action: integrate the reviewed COOP-014 technical delivery. The full paired original route remains an owner playtest.
+- Next action: COOP-014 is integrated and has stopped coordination writes. COOP-015 is ready and unassigned. The full paired original Arctic1 route remains an owner playtest.
 
 ## Accepted task claims
 
@@ -29,7 +29,7 @@ creating or updating the operational branch. Do not merge its WIP ledger into `m
 
 | COOP-010 | Codex COOP-010 (2026-11-18), user assignment | `feature/coop-010-two-player-mission` | done | PR #22 merged `738b124d`, completion PR #23 merged `dc41c6b7`, `.worktrees/COOP-010` | Arctic1 playable gate and original mode regressions recorded. |
 | COOP-012 | Codex COOP-012 (2026-11-18), user assignment | `feature/coop-012-session-setup` | done | PR #26 merged `4ef8b814`; completion PR #27 merged `fd5ad4c3` | Five-instance setup matrix, concurrent admission, route isolation, original-mode regressions and COOP-013 contract recorded. |
-| COOP-014 | Codex COOP-014, user assignment, thread `01a1ed7a-ddd9-7000-bbec-e292bd129d25` | `feature/coop-014-arctic1-completion` | review | PR #25, reviewed source and harness at `c96d169d`, documentation at `4aa68925` | Integrate reviewed technical delivery. Keep the full paired route in the owner playtest handoff. |
+| COOP-014 | Codex COOP-014, user assignment, thread `01a1ed7a-ddd9-7000-bbec-e292bd129d25` | `feature/coop-014-arctic1-completion` | done | PR #25 merged `619d6aec`; completion PR #30 merged `ca5ae2f8` | Technical delivery is integrated. The full paired route remains an owner playtest. |
 | COOP-013 | Codex COOP-013, explicit user assignment on 2026-11-18 | `feature/coop-013-live-preparation` | done | PR #28 merged `73d518a5`; completion PR #29 merged `e4344dfc` | First menu deployment and recovery integrated. COOP-015 still awaits COOP-014. |
 
 
@@ -262,3 +262,9 @@ missing fields. COOP-006 was notified explicitly before this stopped-writer hand
 - COOP-014 accepts the published stopped-writer handoff at `815659a2`. The canonical task branch and accepted claim continue. Current main at `a40563bb` includes the completed COOP-010 and COOP-013 dependencies. The only open candidate is COOP-014 PR #25.
 - Separate source and evidence review passed at `c96d169d`. The reviewer repeated the terminal log checks and assessed route scope, legacy gating, compatibility and result lifecycle. The follow-up `4aa68925` records the review, the guest-originated wire action for owner testing and the result of auditing the authored doors.
 - The production x86 build, menu deployment and native guest-to-AI handoff passed. Three checked-host and ordinary-guest fixtures verified native wire cutting, the original entrance, garrison and assembly triggers, critical guide failure, and matching final results. Genuine full paired completion remains pending owner playtest.
+
+## COOP-014 integration outcome and stopped-writer handoff
+
+- PR #25 merged as `619d6aec77ed902e30e0b79dddad2cf67bffaf5d`. Its tree matches the reviewed candidate `4aa68925`. The separate documentation review passed and PR #30 merged as `ca5ae2f897524cc1905e343b5b7ad3910e56f4c3`.
+- COOP-015 is ready and unassigned. The readiness entry gives the host result API and preserves its debrief and progression scope. The paired owner playtest is still pending with exact route steps. The task worktree, production build and debug-assisted evidence are preserved.
+- COOP-014 stops all ledger writes after this ordinary push. A successor can accept this published stopped-writer handoff before writing the ledger.
