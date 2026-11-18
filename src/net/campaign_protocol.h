@@ -11,7 +11,7 @@ namespace CampaignProtocol {
 constexpr std::uint32_t kCommand = 0x434f4f50;
 constexpr std::uint16_t kMajor = 1, kMinor = 0;
 constexpr std::uint64_t kFeatures = 7; // identities, atomic preparation, guarded input
-constexpr std::uint64_t kMissionUpdates = 8, kWeaponEvents = 16;
+constexpr std::uint64_t kMissionUpdates = 8, kWeaponEvents = 16, kInventoryMoves = 32;
 constexpr std::size_t kHeaderBytes = 16, kMaxFrameBytes = 24576;
 constexpr std::size_t kMaxStringBytes = 256, kMaxCollection = 256;
 constexpr std::size_t kMaxSoldiers = 64, kMaxParticipants = 4;
@@ -123,17 +123,33 @@ struct S_WeaponEvent {
     std::uint16_t m_ReloadTime = 0;
     std::optional<std::uint32_t> m_ConsumedAmmo;
 };
+// A single soldier rearranges an item already in their own mission inventory.
+struct S_ItemMove {
+    std::uint32_t m_ItemUid = 0;
+    std::uint8_t m_From = 0, m_To = 0;
+    std::uint16_t m_Slot = 0;
+    std::optional<std::uint32_t> m_ReplacedUid;
+};
+E_CampaignReason EncodeItemMove(const S_ItemMove &move, T_Bytes &out);
+E_CampaignReason DecodeItemMove(const T_Bytes &bytes, S_ItemMove &out);
+struct S_InventoryEvent {
+    ActorRef m_Actor;
+    SnapshotId m_Snapshot;
+    OwnershipRevision m_OwnershipRevision;
+    std::uint64_t m_Sequence = 0;
+    S_ItemMove m_Move;
+};
 using T_Message = std::variant<S_Hello, S_Accept, S_NegotiationAck, S_Reject,
     S_CampaignOwnershipRequest, S_CampaignEditRequest, S_CampaignReadyRequest,
     S_CampaignDeployRequest, S_CampaignRequestResult, S_CampaignOwnershipSnapshot,
     S_CampaignPreparationSnapshot, S_PreparationDelta, S_CampaignMissionManifest,
-    S_CampaignSnapshotAck, S_CampaignStartSimulation, S_Input, S_WorldChunk, S_MissionUpdate, S_WeaponEvent>;
-// Stable explicit tags 1..19 in the above order; variant object layout is never wire.
+    S_CampaignSnapshotAck, S_CampaignStartSimulation, S_Input, S_WorldChunk, S_MissionUpdate, S_WeaponEvent, S_InventoryEvent>;
+// Stable explicit tags 1..20 in the above order; variant object layout is never wire.
 enum class E_Message : std::uint16_t {
     Hello = 1, Accept, NegotiationAck, Reject, OwnershipRequest, EditRequest,
     ReadyRequest, DeployRequest, RequestResult, OwnershipSnapshot,
     PreparationSnapshot, PreparationDelta, BeginMission, SnapshotAck,
-    StartSimulation, Input, WorldChunk, MissionUpdate, WeaponEvent
+    StartSimulation, Input, WorldChunk, MissionUpdate, WeaponEvent, InventoryEvent
 };
 struct S_FrameInfo { E_Message m_Type = E_Message::Reject; std::uint32_t m_BodyBytes = 0; };
 E_CampaignReason Inspect(const std::uint8_t *data, std::size_t size, S_FrameInfo &out);

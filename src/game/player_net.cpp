@@ -586,6 +586,8 @@ void C_PlayerController::RequestPickUpItem(int actorId, int container)
 
 bool C_PlayerController::RequestMoveItem(int uid, int otherId, int fromContainer, int toContainer, int slot)
 {
+    if (CampaignControlsActive())
+        return RequestDevelopmentCampaignInventoryMove(m_human->GetNetId(), uid, otherId, fromContainer, toContainer, slot);
     S_MsgMoveItem *message = new S_MsgMoveItem;
     message->uid = uid;
     message->other = otherId;
@@ -598,6 +600,10 @@ bool C_PlayerController::RequestMoveItem(int uid, int otherId, int fromContainer
 
 bool C_PlayerController::RequestTransferItem(int uid, int arg, int otherId, int otherUid, int container)
 {
+    if (CampaignControlsActive()) {
+        return uid >= 0 && RequestDevelopmentCampaignInventoryMove(
+            m_human->GetNetId(), otherUid, otherId, container, arg, 0, uid);
+    }
     // (The original stores CTRL_MSG_MOVE_ITEM as the message's type; its Write sends
     // CTRL_MSG_TRANSFER_ITEM regardless.)
     S_MsgTransferItem *message = new S_MsgTransferItem;

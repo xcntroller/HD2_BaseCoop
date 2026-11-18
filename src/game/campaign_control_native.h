@@ -16,6 +16,8 @@ public:
     bool CaptureSquadActor(CampaignProtocol::S_SquadActorState &state) const;
     bool ApplySquadActors(const std::vector<CampaignProtocol::S_SquadActorState> &squad) const;
     bool ApplyWeaponEvent(const CampaignProtocol::S_WeaponEvent &event) const;
+    E_CampaignReason MoveInventory(const ActorRef &actor, CampaignProtocol::S_ItemMove &move) const;
+    bool ApplyInventoryEvent(const CampaignProtocol::S_InventoryEvent &event) const;
 private:
     T_Dispatch m_Dispatch;
     std::map<SoldierId, ActorRef> m_AppliedBindings;

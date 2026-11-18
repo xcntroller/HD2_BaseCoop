@@ -70,6 +70,8 @@ bool Valid(const S_Input &x);
 bool Valid(const S_WorldChunk &x);
 bool Valid(const S_MissionUpdate &x);
 bool Valid(const S_WeaponEvent &x);
+bool Valid(const S_ItemMove &x);
+bool Valid(const S_InventoryEvent &x);
 template<class T> struct S_EnumMax;
 template<> struct S_EnumMax<E_CampaignSessionKind> { static constexpr auto value = E_CampaignSessionKind::CampaignCoop; };
 template<> struct S_EnumMax<E_CampaignPhase> { static constexpr auto value = E_CampaignPhase::Closed; };
@@ -140,6 +142,8 @@ template<class A> bool Fields(A &a, S_SquadActorState &x);
 template<class A> bool Fields(A &a, S_MissionCamera &x);
 template<class A> bool Fields(A &a, S_MissionUpdate &x);
 template<class A> bool Fields(A &a, S_WeaponEvent &x);
+template<class A> bool Fields(A &a, S_ItemMove &x);
+template<class A> bool Fields(A &a, S_InventoryEvent &x);
 
 class C_Archive {
 public:
@@ -366,6 +370,13 @@ template<class A> bool Fields(A &a, S_MissionCamera &x) {
 template<class A> bool Fields(A &a, S_MissionUpdate &x) {
     return a(x.m_Session, x.m_Generation, x.m_Snapshot, x.m_OwnershipRevision, x.m_Sequence,
              x.m_MissionTime, x.m_PlayerInputEnabled, x.m_CutsceneCamera, x.m_Squad, x.m_Objectives) && Valid(x);
+}
+
+template<class A> bool Fields(A &a, S_ItemMove &x) {
+    return a(x.m_ItemUid, x.m_From, x.m_To, x.m_Slot, x.m_ReplacedUid) && Valid(x);
+}
+template<class A> bool Fields(A &a, S_InventoryEvent &x) {
+    return a(x.m_Actor, x.m_Snapshot, x.m_OwnershipRevision, x.m_Sequence, x.m_Move) && Valid(x);
 }
 
 // Structural/transport validation. Catalog membership, equipment physics and
@@ -622,6 +633,15 @@ bool Valid(const S_WeaponEvent &x) {
              *x.m_ConsumedAmmo != x.m_ItemUid));
 }
 
+bool Valid(const S_ItemMove &x) {
+    return x.m_ItemUid <= INT32_MAX && x.m_From < 7 && x.m_To <= 7 && x.m_Slot < 256 &&
+        (!x.m_ReplacedUid || (x.m_To == 3 && x.m_From != x.m_To &&
+            *x.m_ReplacedUid <= INT32_MAX && *x.m_ReplacedUid != x.m_ItemUid));
+}
+bool Valid(const S_InventoryEvent &x) {
+    return Id(x.m_Snapshot) && Id(x.m_OwnershipRevision) && x.m_Sequence && x.m_Move.m_To < 7;
+}
+
 std::uint16_t Read16(const std::uint8_t *p) { return static_cast<std::uint16_t>(p[0] | (p[1] << 8)); }
 std::uint32_t Read32(const std::uint8_t *p) {
     return static_cast<std::uint32_t>(p[0]) | (static_cast<std::uint32_t>(p[1]) << 8) |
@@ -681,6 +701,8 @@ bool BoundPayload(const T_Message &message, bool server, const S_Accept &agreeme
             return !server && (agreement.m_Features & kMissionUpdates) && x.m_Session == session;
         else if constexpr (std::is_same<T, S_WeaponEvent>::value)
             return !server && (agreement.m_Features & kWeaponEvents) && x.m_Actor.m_Session == session;
+        else if constexpr (std::is_same<T, S_InventoryEvent>::value)
+            return !server && (agreement.m_Features & kInventoryMoves) && x.m_Actor.m_Session == session;
         else return false;
     }, message);
 }
@@ -851,6 +873,25 @@ E_CampaignReason DecodePlayerControls(const T_Bytes &bytes, S_PlayerControls &ou
     return E_CampaignReason::None;
 }
 
+E_CampaignReason EncodeItemMove(const S_ItemMove &move, T_Bytes &out) {
+    auto candidate = move;
+    std::uint8_t version = 1;
+    T_Bytes bytes;
+    C_Archive archive(bytes);
+    if (!archive(version, candidate)) return E_CampaignReason::Malformed;
+    out = std::move(bytes);
+    return E_CampaignReason::None;
+}
+
+E_CampaignReason DecodeItemMove(const T_Bytes &bytes, S_ItemMove &out) {
+    std::uint8_t version = 0;
+    S_ItemMove move;
+    C_Archive archive(bytes.data(), bytes.size());
+    if (!archive(version, move) || !archive.Done() || version != 1) return E_CampaignReason::Malformed;
+    out = move;
+    return E_CampaignReason::None;
+}
+
 std::uint32_t Crc32(const T_Bytes &bytes) {
     std::uint32_t crc = 0xffffffff;
     for (auto byte : bytes) {
@@ -863,7 +904,7 @@ E_Route Route(E_CampaignSessionKind kind, E_Traffic traffic) {
     if (kind != E_CampaignSessionKind::CampaignCoop) return traffic == E_Traffic::Extension ? E_Route::Drop : E_Route::Legacy;
     return traffic == E_Traffic::Extension ? E_Route::Campaign : E_Route::Drop;
 }
-constexpr std::uint64_t kSupportedFeatures = kFeatures | kMissionUpdates | kWeaponEvents;
+constexpr std::uint64_t kSupportedFeatures = kFeatures | kMissionUpdates | kWeaponEvents | kInventoryMoves;
 
 C_Admission::C_Admission(E_CampaignSessionKind kind, bool server, S_Hello local,
     SessionId session, PlayerId assignedPlayer, std::uint64_t nowMs)

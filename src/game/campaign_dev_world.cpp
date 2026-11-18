@@ -116,9 +116,12 @@ void RecordActors(C_InitialWorldRecord &record, const std::vector<C_Actor *> &ac
     }
 }
 
-void RecordItems(C_InitialWorldRecord &record)
+void RecordItems(C_InitialWorldRecord &record, const C_Actor *filter = nullptr)
 {
     auto items = g_itemsModule.GetInstances();
+    if (filter)
+        items.erase(std::remove_if(items.begin(), items.end(),
+            [&](const auto *item) { return item->GetOwner() != filter; }), items.end());
     std::stable_sort(items.begin(), items.end(), [](const C_Item *a, const C_Item *b) {
         return a->GetUid() < b->GetUid();
     });
@@ -134,6 +137,8 @@ void RecordItems(C_InitialWorldRecord &record)
         record.Word(item->GetTime());
         record.Float(item->GetAmount());
         record.Float(item->GetCharges());
+        if (filter && item->GetKind() == ITEM_KIND_WEAPON)
+            record.Float(static_cast<C_WeaponItem *>(item)->GetLoadedRounds());
     }
 }
 
@@ -347,4 +352,30 @@ E_CampaignReason InstallDevelopmentInitialWorld(const CampaignProtocol::T_Bytes 
 
     ApplyPoses(poses);
     return R::None;
+}
+
+std::optional<S_DevelopmentSoldierState> CaptureDevelopmentSoldier(const ActorRef &actor)
+{
+    const auto state = GetCampaignMissionSnapshot();
+    if (!state || state->m_Context.m_Session != actor.m_Session ||
+        state->m_Context.m_MissionGeneration != actor.m_Generation ||
+        !state->m_Context.m_IsTransportServer)
+        return std::nullopt;
+    const auto id = static_cast<int>(actor.m_Actor.Value());
+    if (id < 0 || id >= C_ActorsModule::PLAYER_SLOTS ||
+        static_cast<std::uint8_t>(g_actorsModule.GetPlayerSlotUse(id)) != actor.m_SlotUse.Value())
+        return std::nullopt;
+    auto *human = g_actorsModule.GetHuman(id);
+    if (!human)
+        return std::nullopt;
+    C_InitialWorldRecord record;
+    const auto pose = ReadLocalPose(*human);
+    record.Vector(pose.m_Position);
+    record.Vector(pose.m_Direction);
+    record.Vector(pose.m_Up);
+    record.Vector(human->GetPosition());
+    record.Vector(human->GetDirection());
+    RecordActor(record, *human);
+    RecordItems(record, human);
+    return S_DevelopmentSoldierState{human, std::move(record.m_Data)};
 }

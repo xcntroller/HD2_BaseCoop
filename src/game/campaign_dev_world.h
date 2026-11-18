@@ -9,4 +9,11 @@
 E_CampaignReason CaptureDevelopmentInitialWorld(CampaignProtocol::T_Bytes &world);
 E_CampaignReason InstallDevelopmentInitialWorld(const CampaignProtocol::T_Bytes &world);
 
+class C_Actor;
+struct S_DevelopmentSoldierState {
+    const C_Actor *m_Actor = nullptr;
+    CampaignProtocol::T_Bytes m_State;
+};
+std::optional<S_DevelopmentSoldierState> CaptureDevelopmentSoldier(const ActorRef &actor);
+
 #endif

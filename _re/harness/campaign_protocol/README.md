@@ -32,13 +32,14 @@ Alternatively pass `--vcvars C:\toolchain\vcvars32.bat` or set `HD2_VCVARS32`.
 Hostx64/x86 is supported; the fixture rejects an x64 MSVC target. The compiler
 uses `/std:c++17 /EHsc /W4 /WX /permissive- /Zc:__cplusplus /arch:IA32 /MT /O2`
 and `/MACHINE:X86`. The standalone-header probe and conformance executable must
-both compile; execution must print `campaign protocol: 11 suites, ... checks passed`.
+both compile; execution must print `campaign protocol: 12 suites, ... checks passed`.
 Outputs/logs/argv/environment go into a new private ignored
 `build/campaign_protocol/{gcc,msvc}-*` directory per invocation. No legacy fixed
 temporary output is used. Exact local validation is in
 [the task handoff](../../../docs/tasks/COOP-006.md).
 
-Eleven suites cover paced world transmission, live mission and weapon state, and 29 deterministic fixtures across all 19 message families and
+Twelve suites cover paced world transmission, live mission, weapon and inventory
+updates, and 30 deterministic fixtures across all 20 message families and
 all operation/state variants, fractional skill bits, signed64/unsigned64 extrema,
 zero actor coordinates, every byte truncation (also with a rewritten frame length
 so nested decoding is exercised), malformed counts/flags/enums/variants/UTF-8,
@@ -66,15 +67,15 @@ current bit offset (usually 37); it is **not byte-aligned** in the native stream
 | 0 | u32 LE | 0x50433248, literal bytes `48 32 43 50` / `H2CP` |
 | 4 | u16 LE | major, 1 |
 | 6 | u16 LE | minor, 0 |
-| 8 | u16 LE | explicit message tag, 1..19 |
+| 8 | u16 LE | explicit message tag, 1..20 |
 | 10 | u16 LE | flags, exactly zero; unknown flags fail closed |
 | 12 | u32 LE | exact body byte count, excluding the 16-byte header |
 | 16 | bytes | message body; no trailing bytes or implicit padding |
 
-Tags 1..19 are Hello, Accept, NegotiationAck, Reject, OwnershipRequest,
+Tags 1..20 are Hello, Accept, NegotiationAck, Reject, OwnershipRequest,
 EditRequest, ReadyRequest, DeployRequest, RequestResult, OwnershipSnapshot,
 PreparationSnapshot, PreparationDelta, BeginMission, SnapshotAck,
-StartSimulation, Input, WorldChunk, MissionUpdate, WeaponEvent. Tags never depend on C++ struct layout.
+StartSimulation, Input, WorldChunk, MissionUpdate, WeaponEvent, InventoryEvent. Tags never depend on C++ struct layout.
 `T_Message` order is intentionally bound to these tags; a reorder is a wire change.
 Version 1.0 is the only implemented body schema. Unknown major/minor/tag/flags
 reject; no guessed decoding or fallback. Negotiation's bootstrap header remains
@@ -222,6 +223,13 @@ resulting rounds, reload duration in milliseconds and optional consumed ammo
 UID. The guest uses it to present a committed host action and update native
 inventory state.
 
+The development ActorAction payload uses version byte 1, an item UID, a source
+and destination container, and a slot index. A destination of 7 lets the host
+choose a container using original mission inventory rules. The InventoryEvent
+returns the resolved destination and slot with the exact actor, initial snapshot,
+ownership revision and sequence. Containers and item UIDs are resolved on the
+assigned soldier.
+
 The development ControlBits payload uses version byte 1, two little-endian
 u16 held and pressed masks, and the unit view direction as three IEEE binary32
 coordinates. The host checks the known mask bits and complete payload before
@@ -237,7 +245,8 @@ The server issues SessionId/PlayerId, accepts only the exact ack and rejects nat
 unmodded peers by deadline before spawn. Unknown required features reject;
 unsupported optional features are disabled. Feature bits 0/1/2 mean distinct
 identities, atomic preparation, guarded input; all three are required by defaults.
-Bits 3 and 4 enable host-to-guest mission updates and weapon events. The development launcher requires both.
+Bits 3 through 5 enable host-to-guest mission updates, weapon events and
+inventory moves. The development launcher requires all three.
 Matching duplicate Hello while AwaitAck, retransmitted Accept on the admitted
 client and Ack on the admitted server are harmless and deadline/rate-bounded; rejected/closed endpoints stay terminal.
 `Tick` must run even with no incoming traffic. On timeout, the caller sends one

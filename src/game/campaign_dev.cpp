@@ -24,6 +24,7 @@
 #include "game/game.h"
 #include "game/game_app.h"
 #include "game/human.h"
+#include "game/human_controller.h"
 #include "game/items_module.h"
 #include "game/pending.h"
 #include "game/profile.h"
@@ -284,6 +285,7 @@ struct S_GuestSession {
     bool m_Aborted = false;
     std::uint64_t m_LastUpdate = 0;
     std::uint64_t m_LastWeaponEvent = 0;
+    std::uint64_t m_LastInventoryEvent = 0;
     std::uint32_t m_HostMissionTime = 0;
     std::uint64_t m_InputSequence = 0;
     std::uint16_t m_PendingButtons = 0;
@@ -298,9 +300,42 @@ struct S_GuestSession {
 std::unique_ptr<S_GuestSession> g_guest;
 std::optional<Clock::time_point> g_nextMissionUpdate;
 std::uint64_t g_missionUpdateSequence = 0;
-std::uint64_t g_weaponSequence = 0;
+std::uint64_t g_weaponSequence = 0, g_inventorySequence = 0;
 bool g_liveSendFailed = false;
 OwnershipRevision g_publishedOwnership;
+std::vector<std::uint8_t> g_publishedObjectives;
+
+struct S_DevelopmentMotion {
+    std::optional<S_vector> m_Origin;
+    unsigned m_RecordedCentimeters = 0;
+};
+std::array<S_DevelopmentMotion, 4> g_squadMotion;
+
+void ObserveSquadMotion(const Wire::S_MissionUpdate &update, const char *event)
+{
+    if (!update.m_PlayerInputEnabled)
+        return;
+    for (const auto &actor : update.m_Squad) {
+        const auto id = actor.m_Actor.m_Actor.Value();
+        if (id >= g_squadMotion.size())
+            continue;
+        auto &motion = g_squadMotion[id];
+        const auto &p = actor.m_Position;
+        const S_vector current(p[0], p[1], p[2]);
+        if (!motion.m_Origin) {
+            motion.m_Origin = current;
+            continue;
+        }
+        const float distance = (current - *motion.m_Origin).Magnitude();
+        if (!(distance >= 0.25f) || distance >= 10000.0f)
+            continue;
+        const auto cm = static_cast<unsigned>(distance * 100.0f);
+        if (cm >= motion.m_RecordedCentimeters + 25) {
+            motion.m_RecordedCentimeters = cm;
+            LogDevelopmentCampaign(event, id, cm);
+        }
+    }
+}
 
 struct S_ReceivedControls {
     S_CampaignControlToken m_Token;
@@ -310,8 +345,16 @@ struct S_ReceivedControls {
 std::optional<S_ReceivedControls> g_receivedControls;
 bool g_loggedInput = false;
 
+bool ApplyInventoryMove(const S_CampaignControlToken &token, Wire::S_ItemMove move);
+
 void StoreDevelopmentControls(const Wire::S_Input &input)
 {
+    if (input.m_Kind == Wire::E_InputKind::ActorAction) {
+        Wire::S_ItemMove move;
+        if (Wire::DecodeItemMove(input.m_Payload, move) == R::None)
+            ApplyInventoryMove(input.m_Control, move);
+        return;
+    }
     Wire::S_PlayerControls controls;
     if (Wire::DecodePlayerControls(input.m_Payload, controls) != R::None)
         return;
@@ -406,6 +449,7 @@ R ApplyMissionUpdate(S_GuestSession &guest, const Wire::S_MissionUpdate &update)
         return R::ContentMismatch;
     if (!g_sink.ApplySquadActors(update.m_Squad))
         return R::ActorUnavailable;
+    ObserveSquadMotion(update, "guest applied host squad movement cm");
 
     for (std::size_t index = 0; index < update.m_Objectives.size(); ++index) {
         auto *objective = mission->GetObjective(static_cast<int>(index));
@@ -442,6 +486,21 @@ void ReceiveWeaponEvent(S_GuestSession &guest, const Wire::S_WeaponEvent &event)
     guest.m_LastWeaponEvent = event.m_Sequence;
     LogDevelopmentCampaign(event.m_Action == Wire::E_WeaponEvent::Fire ? "guest presented host shot" :
                            "guest presented host reload", event.m_Actor.m_Actor.Value(), event.m_Rounds);
+}
+
+void ReceiveInventoryEvent(S_GuestSession &guest, const Wire::S_InventoryEvent &event)
+{
+    const auto state = GetCampaignMissionSnapshot();
+    if (!state || !CanCampaignSimulate() || !guest.m_Manifest ||
+        event.m_Actor.m_Generation != state->m_Context.m_MissionGeneration ||
+        event.m_Snapshot != guest.m_Manifest->m_Snapshot || event.m_OwnershipRevision != state->m_Revision)
+        return FailGuest(R::SnapshotGap);
+    if (event.m_Sequence <= guest.m_LastInventoryEvent)
+        return;
+    if (event.m_Sequence != guest.m_LastInventoryEvent + 1 || !g_sink.ApplyInventoryEvent(event))
+        return FailGuest(R::InvalidPlacement);
+    guest.m_LastInventoryEvent = event.m_Sequence;
+    LogDevelopmentCampaign("guest applied host inventory move", event.m_Actor.m_Actor.Value(), event.m_Move.m_ItemUid);
 }
 
 void ReceiveGuestWorld(PlayerId, Wire::T_Message message)
@@ -489,8 +548,10 @@ void ReceiveGuestWorld(PlayerId, Wire::T_Message message)
         const auto reason = ApplyMissionUpdate(guest, *update);
         if (reason != R::None && reason != R::StaleRevision)
             FailGuest(reason);
-    } else if (const auto *event = std::get_if<Wire::S_WeaponEvent>(&message)) {
-        ReceiveWeaponEvent(guest, *event);
+    } else if (const auto *weapon = std::get_if<Wire::S_WeaponEvent>(&message)) {
+        ReceiveWeaponEvent(guest, *weapon);
+    } else if (const auto *inventory = std::get_if<Wire::S_InventoryEvent>(&message)) {
+        ReceiveInventoryEvent(guest, *inventory);
     }
 }
 
@@ -640,9 +701,14 @@ R SendHostInitialWorld(PlayerId guest)
 void ReceiveHostWorld(PlayerId player, Wire::T_Message message)
 {
     if (const auto *input = std::get_if<Wire::S_Input>(&message)) {
+        if (!g_control)
+            return;
         Wire::S_PlayerControls controls;
-        if (!g_control || input->m_Kind != Wire::E_InputKind::ControlBits ||
-            Wire::DecodePlayerControls(input->m_Payload, controls) != R::None)
+        Wire::S_ItemMove move;
+        const bool valid = input->m_Kind == Wire::E_InputKind::ControlBits
+            ? Wire::DecodePlayerControls(input->m_Payload, controls) == R::None
+            : input->m_Kind == Wire::E_InputKind::ActorAction && Wire::DecodeItemMove(input->m_Payload, move) == R::None;
+        if (!valid)
             return;
         const auto result = g_control->Enqueue(player, *input);
         if (result != R::None && result != R::PendingTransaction)
@@ -677,6 +743,32 @@ bool PublishLiveOwnership(const S_CampaignOwnershipSnapshot &state)
         return false;
     g_publishedOwnership = state.m_Revision;
     return true;
+}
+
+bool ApplyInventoryMove(const S_CampaignControlToken &token, Wire::S_ItemMove move)
+{
+    auto *game = GetGame();
+    if (!game || !game->IsPlayerInputEnabled() || !CanCampaignSimulate())
+        return false;
+    const auto reason = g_sink.MoveInventory(token.m_Actor, move);
+    if (reason != R::None) {
+        LogDevelopmentCampaign("host rejected inventory move", token.m_Actor.m_Actor.Value(), static_cast<std::uint64_t>(reason));
+        if (reason == R::SnapshotGap)
+            g_liveSendFailed = true;
+        return false;
+    }
+    LogDevelopmentCampaign("host committed inventory move", token.m_Actor.m_Actor.Value(), move.m_ItemUid);
+    if (!g_transferPlayer.Value() || g_liveSendFailed)
+        return true;
+    const auto state = g_ownership->GetSnapshot();
+    const auto manifest = g_mission->GetManifest();
+    if (!state || !manifest) {
+        g_liveSendFailed = true;
+        return false;
+    }
+    const Wire::S_InventoryEvent event{token.m_Actor, manifest->m_Snapshot, state->m_Revision, ++g_inventorySequence, move};
+    g_liveSendFailed = !PublishLiveOwnership(*state) || !SendCampaignMessage(g_netGame, g_transferPlayer, event);
+    return !g_liveSendFailed;
 }
 
 bool PublishMissionUpdate(Clock::time_point now)
@@ -724,9 +816,42 @@ bool PublishMissionUpdate(Clock::time_point now)
     g_nextMissionUpdate = now + std::chrono::milliseconds(66);
     if (!SendCampaignMessage(g_netGame, g_transferPlayer, update))
         return false;
+    ObserveSquadMotion(update, "host measured authoritative squad movement cm");
+    for (std::size_t index = 0; index < update.m_Objectives.size(); ++index) {
+        if (index >= g_publishedObjectives.size() || g_publishedObjectives[index] != update.m_Objectives[index])
+            LogDevelopmentCampaign("host published objective state", index + 1, update.m_Objectives[index]);
+    }
+    g_publishedObjectives = update.m_Objectives;
     if (update.m_Sequence == 1)
         LogDevelopmentCampaign("host published first live mission state", update.m_MissionTime, update.m_Squad.size());
     return true;
+}
+
+R ReconcileGuestDeparture(PlayerId player)
+{
+    const auto token = g_ownership->GetControlToken(player);
+    const auto before = token ? CaptureDevelopmentSoldier(token->m_Actor) : std::nullopt;
+    const auto reason = HandleCampaignDisconnect(player);
+    if (reason != R::None || !token)
+        return reason;
+    const auto stale = g_ownership->ValidateInput(player, *token);
+    if (stale == R::None)
+        return R::NotOwner;
+    LogDevelopmentCampaign("host refused retired input token", player.Value(), static_cast<std::uint64_t>(stale));
+    if (!before)
+        return R::ActorUnavailable;
+
+    const auto after = CaptureDevelopmentSoldier(token->m_Actor);
+    const auto actor = static_cast<int>(token->m_Actor.m_Actor.Value());
+    const auto record = FindCampaignActorControl(actor);
+    const auto *human = static_cast<const C_Human *>(after ? after->m_Actor : nullptr);
+    if (!after || before->m_Actor != after->m_Actor || before->m_State != after->m_State ||
+        !record || record->m_Owner || human->GetControllerType() != HUMAN_CONTROLLER_SQUAD) {
+        LogDevelopmentCampaign("host guest soldier handoff differed", actor, static_cast<std::uint64_t>(reason));
+        return R::ActorUnavailable;
+    }
+    LogDevelopmentCampaign("host preserved same guest soldier for squad AI", actor, Wire::Crc32(after->m_State));
+    return R::None;
 }
 
 bool Host(const C_MissionDef &mission, S_CampaignNetConfig config)
@@ -756,7 +881,7 @@ bool Host(const C_MissionDef &mission, S_CampaignNetConfig config)
         if (g_pendingGuest && g_pendingGuest->first == player)
             g_pendingGuest.reset();
         if (g_control && GetGame() && GetGame()->IsMissionLoaded()) {
-            const auto result = HandleCampaignDisconnect(player);
+            const auto result = ReconcileGuestDeparture(player);
             if (result != R::None || g_mission->GetContext().m_Phase == E_CampaignPhase::Loading)
                 g_mission->Abort(result == R::None ? R::Disconnected : result);
         } else {
@@ -836,8 +961,8 @@ bool StartDevelopmentCampaign(C_GameApp &app)
         return true;
     }
 
-    config.m_Hello.m_Required |= Wire::kMissionUpdates | Wire::kWeaponEvents;
-    config.m_Hello.m_Offered |= Wire::kMissionUpdates | Wire::kWeaponEvents;
+    config.m_Hello.m_Required |= Wire::kMissionUpdates | Wire::kWeaponEvents | Wire::kInventoryMoves;
+    config.m_Hello.m_Offered |= Wire::kMissionUpdates | Wire::kWeaponEvents | Wire::kInventoryMoves;
     const bool started = host ? Host(*mission, std::move(config)) : Join(launch.m_Address, std::move(config));
     if (!started) {
         LogDevelopmentCampaign("campaign connection setup failed", static_cast<std::uint32_t>(g_netGame.m_lastError));
@@ -941,8 +1066,11 @@ void ReleaseDevelopmentCampaign()
     g_nextMissionUpdate.reset();
     g_missionUpdateSequence = 0;
     g_weaponSequence = 0;
+    g_inventorySequence = 0;
     g_liveSendFailed = false;
     g_publishedOwnership = {};
+    g_publishedObjectives.clear();
+    g_squadMotion = {};
     g_receivedControls.reset();
     g_loggedInput = false;
     g_guest.reset();
@@ -1067,4 +1195,41 @@ void PublishDevelopmentCampaignWeapon(int actor, Wire::E_WeaponEvent action, int
     if (consumedAmmo >= 0)
         event.m_ConsumedAmmo = static_cast<std::uint32_t>(consumedAmmo);
     g_liveSendFailed = !PublishLiveOwnership(*state) || !SendCampaignMessage(g_netGame, g_transferPlayer, event);
+}
+
+bool RequestDevelopmentCampaignInventoryMove(int actor, int itemUid, int fromActor,
+                                             int fromContainer, int toContainer, int slot, int replacedUid)
+{
+    if (!CanCampaignSimulate() || !GetGame() || !GetGame()->IsPlayerInputEnabled() ||
+        (fromActor != -1 && fromActor != actor) || itemUid < 0 || fromContainer < 0 ||
+        fromContainer >= ITEM_CONTAINER_COUNT || toContainer < 0 || toContainer > ITEM_CONTAINER_COUNT ||
+        slot < 0 || slot >= 256 || !IsCampaignLocalActor(actor))
+        return false;
+    if (replacedUid >= 0 && (toContainer != ITEM_CONTAINER_HANDS || fromContainer == toContainer || itemUid == replacedUid))
+        return false;
+    Wire::S_ItemMove move{static_cast<std::uint32_t>(itemUid), static_cast<std::uint8_t>(fromContainer),
+                         static_cast<std::uint8_t>(toContainer), static_cast<std::uint16_t>(slot), std::nullopt};
+    if (replacedUid >= 0)
+        move.m_ReplacedUid = static_cast<std::uint32_t>(replacedUid);
+    if (g_ownership) {
+        const auto token = g_ownership->GetControlToken(kHostPlayer);
+        if (!token || static_cast<int>(token->m_Actor.m_Actor.Value()) != actor || !g_control->IsSynchronized())
+            return false;
+        bool moved = false;
+        DispatchCampaignInput(*token, [&] { moved = ApplyInventoryMove(*token, move); });
+        return moved;
+    }
+    if (!g_guest || g_guest->m_Aborted || !g_guest->m_LastUpdate)
+        return false;
+    const auto state = GetCampaignControlSnapshot();
+    const auto record = FindCampaignActorControl(actor);
+    if (!state || !record || !record->m_Actor)
+        return false;
+    auto &guest = *g_guest;
+    Wire::S_Input input;
+    input.m_Control = {state->m_Context.m_Session, state->m_Context.m_MissionGeneration, guest.m_Agreement.m_Player,
+                       record->m_Soldier, *record->m_Actor, record->m_ControlRevision};
+    input.m_Sequence = ++guest.m_InputSequence;
+    input.m_Kind = Wire::E_InputKind::ActorAction;
+    return Wire::EncodeItemMove(move, input.m_Payload) == R::None && SendCampaignMessage(g_netGame, guest.m_Agreement.m_Player, input);
 }

@@ -10,6 +10,7 @@
 #include "game/controller_internal.h"
 #include "game/controller_net.h"
 #include "game/game.h"
+#include "game/game_internal.h"
 #include "game/team.h"
 #include "game/first_person_view.h"
 #include "game/interface.h"
@@ -217,4 +218,78 @@ bool C_CampaignNativeControlSink::ApplyWeaponEvent(const CampaignProtocol::S_Wea
     }
 #endif
     return true;
+}
+
+namespace {
+std::optional<std::uint16_t> FindItemSlot(C_Human &human, C_Item &item, int where)
+{
+    auto *container = human.GetContainer(where);
+    if (!container)
+        return std::nullopt;
+    if (const auto *slots = container->GetSlots()) {
+        for (int index = 0; index < container->GetSlotCount(); ++index) {
+            if (std::find(slots[index].begin(), slots[index].end(), &item) != slots[index].end())
+                return static_cast<std::uint16_t>(index);
+        }
+    } else if (container->GetItem() == &item) {
+        return 0;
+    }
+    return std::nullopt;
+}
+}
+
+E_CampaignReason C_CampaignNativeControlSink::MoveInventory(const ActorRef &actor, CampaignProtocol::S_ItemMove &move) const
+{
+    using R = E_CampaignReason;
+    static_assert(ITEM_CONTAINER_COUNT == 7 && ITEM_CONTAINER_HANDS == 3);
+    auto *human = Resolve(actor);
+    if (!human)
+        return R::ActorUnavailable;
+    if (!IsServer() || !CampaignInputAuthorized(human->GetNetId()))
+        return R::NotOwner;
+    const auto uid = static_cast<int>(move.m_ItemUid);
+    auto *item = human->FindItemInContainer(uid, move.m_From);
+    if (!item || item->GetOwner() != human)
+        return R::InvalidItem;
+
+    int destination = move.m_To;
+    if (move.m_ReplacedUid) {
+        if (!human->ServerTransferItem(static_cast<int>(*move.m_ReplacedUid), destination,
+                                       human->GetNetId(), uid, move.m_From))
+            return R::InvalidPlacement;
+    } else if (!human->ServerMoveItem(uid, human->GetNetId(), move.m_From, &destination, move.m_Slot)) {
+        return R::InvalidPlacement;
+    }
+    // ServerMoveItem resolves an automatic destination and existing stack layout.
+    if (destination < 0 || destination >= ITEM_CONTAINER_COUNT)
+        return R::SnapshotGap;
+    item = human->FindItemInContainer(uid, destination);
+    const auto actual = item ? FindItemSlot(*human, *item, destination) : std::nullopt;
+    if (!actual || *actual >= 256)
+        return R::SnapshotGap;
+    move.m_To = static_cast<std::uint8_t>(destination);
+    move.m_Slot = *actual;
+    return R::None;
+}
+
+bool C_CampaignNativeControlSink::ApplyInventoryEvent(const CampaignProtocol::S_InventoryEvent &event) const
+{
+    auto *human = Resolve(event.m_Actor);
+    if (!human || IsServer())
+        return false;
+    const auto &move = event.m_Move;
+    const auto uid = static_cast<int>(move.m_ItemUid);
+    auto *item = human->FindItemInContainer(uid, move.m_From);
+    if (!item || item->GetOwner() != human)
+        return false;
+    if (move.m_ReplacedUid) {
+        const auto replaced = static_cast<int>(*move.m_ReplacedUid);
+        if (!human->FindItemInContainer(replaced, move.m_To))
+            return false;
+        human->ClientTransferItem(replaced, move.m_To, human->GetNetId(), uid, move.m_From);
+    } else {
+        human->ClientMoveItem(uid, human->GetNetId(), move.m_From, move.m_To, move.m_Slot);
+    }
+    item = human->FindItemInContainer(uid, move.m_To);
+    return item && FindItemSlot(*human, *item, move.m_To) == move.m_Slot;
 }
