@@ -2,13 +2,13 @@
 
 ## Coordination
 
-- Status: ready
-- Owner/session: unassigned
+- Status: active
+- Owner/session: Codex COOP-006 / thread `01a1ec01-a68f-7170-9f75-7536a079675b`, user assignment; coordinator acknowledgment published on `coord/coop-work-queue`
 - Canonical branch: `feature/coop-006-protocol`
-- Base commit: not started
+- Base commit: `dbc9a85a7161d8844f2907dbaf6586c7f3b67d19`
 - Dependencies: COOP-002, COOP-011 (merged shared declarations)
 - Last checkpoint: none
-- Checkpoint location: none
+- Checkpoint location: `.worktrees/COOP-006`, `origin/feature/coop-006-protocol` (after push)
 - Review/integration: none
 - Pull request: none
 
@@ -64,8 +64,7 @@ adapters merge. Tests must reject pre-admission mutation without claiming a live
 - Completed: task scope and dependencies; COOP-002 merged `9f59ff47`, COOP-011 merged `0f367ed6`;
   native transport available for investigation.
 - Remaining: extension audit, codecs, compatibility component, fixtures, adapter documentation.
-- Next action: obtain coordinator claim acknowledgment, create the canonical worktree,
-  then trace dispatch/bitstream bounds and implement against the merged contract/header.
+- Next action: implement bounded version 1 codecs/negotiation and deterministic hostile-input harness after read-only dispatch audit. No native/shared-header edits.
 - Blockers: none for this isolated component; production integration remains downstream.
 - Decisions: reuse networking infrastructure; keep campaign semantics explicit.
 - Validation: none for this task.
