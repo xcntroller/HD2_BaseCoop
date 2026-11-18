@@ -7,7 +7,7 @@
 - Canonical branch: `feature/coop-010-two-player-mission`
 - Base commit: `6f1bdd96075b074a6a7b958257af5f56f8374fb5`
 - Dependencies: COOP-008, COOP-009 and their transitive merged dependencies
-- Last checkpoint: runtime verification of source checkpoint `33ad68fe` (this commit)
+- Last checkpoint: initial-world entry verified at source checkpoint `055daf08`
 - Checkpoint location: `.worktrees/COOP-010` and the canonical branch on origin
 - Review/integration: claim acknowledged by coordination ledger commit `69cb6361`
 - Pull request: [#22](https://github.com/xcntroller/HD2_BaseCoop/pull/22) (draft)
@@ -88,18 +88,23 @@ roster/loadouts/policies as fixtures, not approved production menu behavior.
   and tested it against the existing assembler through the maximum 8 MiB cut.
   DirectPlay now captures the per-packet monotonic arrival time before enqueueing
   to account for frames received while world loading stalls the game thread.
-- Remaining: live attachment, startup synchronization, host/guest verification and fixes.
-- Next action: implement the versioned initial-world encoding and guest
-  installation. Audit host and guest static actor creation before defining the
-  dynamic actor, inventory UID, script and objective snapshot fields. Use the
-  merged world assembler and exact acknowledgment barrier before starting either
-  simulation. Then connect ownership-tagged input and replication. Tutorial and
-  native Sicily2 are the original-mode regression routes.
-- Blockers: no adapter dependency blocker. COOP-008 merged at `d34b6900` and
-  COOP-009 at `ce306626`, with their transitive prerequisites integrated. This task
-  still requires actual runnable host/guest instances, a complete initial-world
-  format/reconstruction path and its stated runtime evidence; dormant components
-  do not establish those behaviors.
+- Both peers now build the frozen Arctic1 startup state through the original
+  PLAY step. The guest reconstructs the original mission actors, spawn points,
+  kits, and initial scripts, then validates the typed CIW1 world cut. The
+  validation covers the initial objective IDs/status, actor poses, type and
+  activation, human native inventory slots and stats, vehicle fuel, temporary
+  actors, native item UID/state, and script startup cursors and save values.
+  The time-zero actor poses come from the host. The guest sends an exact
+  snapshot acknowledgment after controller, actor and world installation.
+  The host releases simulation only after both required acknowledgments.
+- Remaining: the host intro and script events still diverge from the guest
+  presentation after the barrier. Guarded live player input, host-to-guest
+  gameplay and objective replication, in-play disconnect preservation and
+  original Tutorial and native Sicily2 gameplay verification remain open.
+- Next action: connect the existing ownership-tagged input adapter and publish
+  generation-bound squad and objective state. Verify original scripted startup
+  on both instances, then exercise both players and the disconnect in mission.
+- Blockers: none. COOP-008 merged at `d34b6900` and COOP-009 at `ce306626`.
 - Local prerequisites: root-checkout ignored `build/coop-shared-tooling/run-python.bat`
   configures preserved MSVC 14.44.35207 / SDK 10.0.26100.0 / Windows Python 3.13.9.
   Its `engine/` directory retains the matching port import libraries/DLLs; final
@@ -107,7 +112,7 @@ roster/loadouts/policies as fixtures, not approved production menu behavior.
   Confirm these local paths exist before borrowing read-only with separate prefixes
   and isolated build outputs. No game installation/data is supplied by Git.
 - Decisions: use the agreed four-soldier host-led model and preserve original campaign rules.
-- Validation at this transport checkpoint:
+- Validation through the transport checkpoint:
   - `python3 _re/harness/campaign_protocol/run.py --compiler gcc` and the same
     runner using Windows Python and `--compiler msvc` passed eight suites with
     562,702 checks each. Logs are under ignored `build/campaign_protocol/`.
@@ -153,6 +158,23 @@ roster/loadouts/policies as fixtures, not approved production menu behavior.
     native Sicily2 LAN player setup. Both LAN instances listed both peers as
     preparing. Tutorial and native Sicily2 gameplay regressions remain pending.
   - Build and runtime evidence is preserved in the root checkout's ignored
-    `build/coop-010-evidence/` directory. Guest initial-world reconstruction,
-    synchronized gameplay, in-play AI handoff and the original-mode runtime
-    regressions remain pending.
+    `build/coop-010-evidence/` directory.
+- Initial-world validation at `055daf08`
+  - Both real instances started generation 1 / snapshot 1. On the
+    `tracker-replica` run the host and guest logged the same 37,646-byte
+    committed record with CRC32 `2617437219`. Each rendered Arctic1 and
+    remained responsive beyond the first frame. The guest rendered the
+    starting terrain with its assigned soldier, while the host played the
+    original aircraft intro. This documents the live presentation gap.
+  - The preceding run crashed in melee tracker animation on the guest's
+    first frame. Initialize the original dog's remote animation controller
+    during the Loading phase and release it on guest mission teardown.
+    The subsequent run had no recurrence of that crash.
+  - The GCC and pinned MSVC x86 mission runners passed 409 lifecycle and
+    108 native-source checks per compiler. The source tests cover the guest
+    spawn during Loading and its rejection after Running.
+  - The pinned MSVC x86 incremental runtime link completed with zero
+    diagnostics. Host and guest used the same executable (SHA-256
+    `4cca4f6c2fc0a9027e38ef0b821e9d5651a6187a1e841f04a052f37e9c058248`).
+    Runtime logs, captures and the preceding crash report are in
+    `build/coop-010-evidence/initial-world/` in the root checkout.
