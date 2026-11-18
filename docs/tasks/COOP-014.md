@@ -2,14 +2,14 @@
 
 ## Coordination
 
-- Status: ready
-- Owner/session: unassigned
+- Status: active
+- Owner/session: Codex COOP-014, user assignment, thread `01a1ed7a-ddd9-7000-bbec-e292bd129d25`
 - Canonical branch: `feature/coop-014-arctic1-completion`
-- Base commit: not started
+- Base commit: `9ec7fe48bb21c38f9d95976b99198c6fb1576e74`
 - Dependencies: [COOP-010](COOP-010.md) two-player Arctic1 development path
-- Last checkpoint: none
-- Checkpoint location: task queue only
-- Review/integration: none
+- Last checkpoint: claim accepted and canonical worktree created
+- Checkpoint location: `.worktrees/COOP-014` and the canonical branch on origin
+- Review/integration: COOP-012 coordinator accepted the claim in ledger `75131f7a`.
 - Pull request: none
 
 ## Branch authority and completion PR
@@ -30,7 +30,8 @@ Pass a trustworthy mission result to the lifecycle boundary for COOP-015.
 Own the in-mission interaction and presentation path for Arctic1 in the campaign
 controller, script, objective and Running replication adapters. Audit original
 interactions and scripted events on the route before changing shared native code.
-Coordinate edits to common dispatch, protocol or launch code with COOP-012/013;
+COOP-012 retains setup UI, admission/lifetime, and DirectPlay setup. Coordinate shared
+campaign development dispatch, protocol, or launch edits with COOP-012/013;
 leave debrief and next-step glue to COOP-015. Record uncovered interaction families
 for the later campaign-wide verification task.
 
@@ -63,10 +64,14 @@ runtime evidence and legacy regression requirements.
 
 ## Handoff
 
-- Completed: task definition.
+- Completed: refreshed origin, verified COOP-010 merge `738b124d` is an ancestor of
+  the base, checked for duplicate work, and established the canonical worktree.
 - Remaining: implementation or verification and the acceptance evidence above.
 - Next action: Reproduce the last verified route and capture a solo reference beyond the forest patrol to identify the first missing live behavior.
-- Blockers: None in scope. Obtain a coordination claim before implementation.
+- Blockers: none. Serialize live LAN tests with COOP-012 if the fixed provider port
+  is occupied.
 - Decisions: Use the existing development launch and game data. Base the interaction scope on what the original Arctic1 route exercises.
-- Local state: no task worktree or artifacts.
+- Local state: private build outputs and runtime copies under ignored worktree `build/`.
+  Shared pinned MSVC x86 and matching engine builds are available read-only in the
+  root checkout at `build/coop-shared-tooling/`.
 - Review notes: none.
