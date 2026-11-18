@@ -11,6 +11,7 @@
 - Last source checkpoint: `22763e24` native gameplay integrated with COOP-013
 - Checkpoint location: `.worktrees/COOP-014` and the canonical branch on origin
 - Review/integration: COOP-012 coordinator accepted the claim in ledger `75131f7a`.
+  Separate integration review passed at `c96d169d`.
 - Pull request: [#25](https://github.com/xcntroller/HD2_BaseCoop/pull/25)
 
 ## Branch authority and completion PR
@@ -100,7 +101,10 @@ native lifecycle boundary for COOP-015.
 The [campaign-wide verification task](COOP-020.md) should cover the optional
 vehicle objective and interaction families outside these route checks, including
 vehicle operation, ladders, body carrying, medical treatment, resupply and
-special equipment.
+special equipment. The eight standard door actors in the Arctic1 scene start
+unlocked and have no configured key or linked second leaf. Keyed double doors
+and door closure across differing peer collision states remain outside the
+verified Arctic1 door cases.
 
 ### Implementation checkpoint
 
@@ -327,9 +331,11 @@ separate from that build.
 4. Contact the guide at the rendezvous. Stay near him during the dialogue
    and follow the route he shows. Keep both players on his path in the swamp.
    Confirm both sides mark the guide objective as Success.
-5. With the cutters in the pouches, aim at an intact fence panel from within
-   reach, press Space and choose **Use wire-cutters**. Wait for the native
-   action. The gap should appear on both sides.
+5. Equip the guest with cutters in the pouches. On the guest, aim at an intact
+   fence panel from within reach, press Space and choose **Use wire-cutters**.
+   Wait for the native action. The gap should appear on both sides. The checked
+   fixture exercised a host-originated cut and guest presentation. The guest's
+   original action menu is the remaining wire-cut playtest case.
 6. Locate the underground entrance. Clear the original garrison, including
    the guards along the docks. The east road also provides a route into the
    facility. Return every living squad member to the underground entrance.
@@ -352,4 +358,6 @@ separate from that build.
 - Local state: private build outputs and runtime copies under ignored worktree `build/`.
   Shared pinned MSVC x86 and matching engine builds are available read-only in the
   root checkout at `build/coop-shared-tooling/`.
-- Review notes: none.
+- Review notes: scoped production and evidence review passed. The reviewer
+  repeated the three log checks. A scene audit confirmed the original Arctic1
+  doors have no linked leaves. The owner route includes a guest-originated cut.
