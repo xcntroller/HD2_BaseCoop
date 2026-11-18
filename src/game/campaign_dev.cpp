@@ -200,8 +200,9 @@ bool BuildDevContent(const C_MissionDef &mission, bool host, S_CampaignNetConfig
     auto &content = config.m_Hello.m_Content;
     content.m_CampaignContent = DigestCategory(provider, 1, {{"GameData/Gamedata00.gdt", {}}});
     content.m_MissionContent = DigestCategory(provider, 2, {
-        {path + "scene.4ds", {}}, {path + "scene2.bin", {}}, {path + "tree.klz", {}}, {path + "Scripts.dta", {}},
-        {"Scripts.dta", {}}
+        {path + "scene.4ds", {}}, {path + "scene2.bin", {}}, {path + "tree.klz", {}},
+        {path + "actors.bin", {}}, {path + "check2.bin", {}}, {path + "sounds.bin", {}},
+        {path + "Scripts.dta", {}}, {"Scripts.dta", {}}
     });
     content.m_SoldierContent = DigestCategory(provider, 3, {{"tables/HumanStore.def", {}}});
     content.m_ItemContent = DigestCategory(provider, 4, {
