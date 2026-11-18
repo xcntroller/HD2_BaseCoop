@@ -6,11 +6,11 @@ creating or updating the operational branch. Do not merge its WIP ledger into `m
 
 ## Coordinator
 
-- Owner/session: handoff available. Codex COOP-006 / thread `01a1ec01-a68f-7170-9f75-7536a079675b` explicitly STOPS ledger writes after publishing this completed-task checkpoint (2026-11-18).
-- Contact/shared channel: this published ledger and active COOP-007 thread below. Next coordinator must explicitly accept this stopped-writer handoff and notify active workers before ledger edits/claims.
-- Integrator: transferable. COOP-006 and independently reviewed completion metadata are merged; no COOP-007 integration approval is implied.
-- Latest checkpoint: `HEAD` identifies this update. Ordinary push to `origin/coord/coop-work-queue`; never merge this operational branch wholesale into main.
-- Next action: next assigned coordinator accepts handoff, preserves COOP-007 active scope/resources, and serializes claims for ready COOP-008/009. Their later live integration remains COOP-010.
+- Owner/session: Codex COOP-007 / thread `01a1ec02-1d0b-7791-8a57-e16ee680b905`; accepts COOP-006's explicit stopped-writer handoff `95afcaed` on 2026-11-18.
+- Contact/shared channel: this published ledger and active COOP-007 conversation; notifying prior coordinator and available reviewers. Existing claims/scopes remain unchanged.
+- Integrator: Codex COOP-007, with independent review before integration. No COOP-007 merge approval yet.
+- Latest checkpoint: `HEAD`; ordinary push to `origin/coord/coop-work-queue`.
+- Next action: finish/review COOP-007 native component evidence. COOP-008/009 remain ready/unclaimed; no new claims issued.
 
 ## Accepted task claims
 
@@ -89,3 +89,11 @@ missing fields. COOP-006 was notified explicitly before this stopped-writer hand
 - Active writer: COOP-007 only. Its PR #12/native rendering/input gate and private pinned tooling/resources remain preserved, not reviewed/approved by this handoff. COOP-006 has finished compiler borrowing; no resources were removed or changed. Prior workers stopped after their completed task handoffs.
 - Source-only protocol is dormant: no live dispatch/native layout changes; full schema/content fingerprints/limits and concrete live hooks are in `_re/harness/campaign_protocol/README.md`. Input additionally requires ownership handoff barrier/validation at enqueue and apply. No world/host-client runtime evidence claimed by component tests.
 - Transfer: COOP-006 explicitly stops all ledger writes after this ordinary push. No successor is yet designated; next coordinator can accept this recorded stopped-writer handoff and notify COOP-007, then handle claims/reviews. No unfinished or unreviewed work may merge on the strength of this handoff.
+
+## COOP-007 coordinator acceptance
+
+- COOP-006's durable `95afcaed` handoff explicitly stopped the previous writer; COOP-007 accepts the coordinator role. Only COOP-007 is an active task writer.
+- Main `0fcea78f` contains completed 001/002/003/004/005/006/011 and reviewed completion metadata. 008/009 are ready/unclaimed; do not interpret this takeover as an assignment.
+- COOP-007 PR #12 remains draft. GCC and MSVC x86 screen behavior pass; actual LS3D preview/resource audit and native Win32 keyboard/mouse smoke pass at 1024x768 and 800x600 during implementation. Final source/capture review and widescreen repeat are ongoing; no component acceptance or merge approval yet.
+- The private COOP-007 MSVC/SDK/Windows Python, engine/DTA DLLs, Wine prefix and captures stay preserved under ignored build paths; other workers finished borrowing without modifying them. No automated cleanup.
+- Next: publish final review checkpoint and request an independent source/campaign-style/native evidence review, then integrate only after its gates pass.
