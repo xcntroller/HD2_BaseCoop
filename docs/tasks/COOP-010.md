@@ -7,7 +7,7 @@
 - Canonical branch: `feature/coop-010-two-player-mission`
 - Base commit: `6f1bdd96075b074a6a7b958257af5f56f8374fb5`
 - Dependencies: COOP-008, COOP-009 and their transitive merged dependencies
-- Last checkpoint: initial-world entry and live host publication at source checkpoint `30b2d519`
+- Last checkpoint: initial-world entry and live host publication at source checkpoint `e206fce9`
 - Checkpoint location: `.worktrees/COOP-010` and the canonical branch on origin
 - Review/integration: claim acknowledged by coordination ledger commit `69cb6361`
 - Pull request: [#22](https://github.com/xcntroller/HD2_BaseCoop/pull/22) (draft)
@@ -107,17 +107,20 @@ roster/loadouts/policies as fixtures, not approved production menu behavior.
   at enqueue and again at execution, expires held input, and applies controls
   through native simulation and aiming from the guest soldier's actual muzzle.
   The guest's native network controller sends no position or authority state.
-- Remaining: verify actual displacement, shot and reload transitions for both
-  soldiers, then wire inventory requests and authoritative weapon effects and
-  item state. The guest intro camera follows the host,
-  with scripted scene props, audio and HUD transitions still pending. The
-  preserved guest soldier's health, equipment and position on disconnect
-  require explicit live evidence. Verify the Tutorial and native Sicily2
-  in mission and record a bounded co-op objective route.
-- Next action: route realized authoritative weapon and inventory events to
-  replica controllers and add live evidence for actor displacement, rounds,
-  inventory positions and same-actor handoff. Use the native Win32 SendInput
-  helper in ignored `build/initial-world/native-keys.py` to drive the windows.
+- The host sends realized fire and reload events with the exact actor and
+  inventory identity. The guest uses the committed rounds and consumed magazine
+  to update its native inventory and present the event. Both players use the
+  native inventory and weapon selector. Requests to move or swap items stay
+  within the owned soldier's containers and pass the original capacity and
+  placement rules at the host.
+- Remaining: verify displacement of the guest soldier after the host body
+  integration fix. Repeat the disconnect with changed gear after preventing
+  equipment selection during the native squad AI controller attach. The intro
+  still differs on the guest in scripted props, audio and HUD. Verify a bounded
+  original objective route and in-mission Tutorial and native Sicily2 regressions.
+- Next action: run the paired movement and changed-equipment disconnect test
+  with the pinned MSVC x86 build. The ignored Win32 SendInput helper under
+  `build/initial-world/native-keys.py` drives the original windows.
 - Blockers: none. COOP-008 merged at `d34b6900` and COOP-009 at `ce306626`.
 - Local prerequisites: root-checkout ignored `build/coop-shared-tooling/run-python.bat`
   configures preserved MSVC 14.44.35207 / SDK 10.0.26100.0 / Windows Python 3.13.9.
@@ -232,3 +235,32 @@ roster/loadouts/policies as fixtures, not approved production menu behavior.
     `30a3ef3c3300304f3d960564d06ddc461b2a9eaf5f06cbafddbc32a13b3c04c3`.
   - GCC and MSVC x86 protocol conformance passed ten suites with 566,056
     checks each, including malformed typed control masks, length and version.
+
+
+- Native weapon, inventory and handoff evidence through `e206fce9`
+  - Both instances matched 17 committed fire and reload events in the
+    `weapon-events` run. Actor 0 fired the Sten from 32 to 22 and reloaded
+    to 32. Actor 1 fired the Springfield from 5 to 0 and reloaded to 5. The
+    guest HUD showed the remaining four Springfield magazines. This build
+    was source `1edb3770`, with executable SHA-256
+    `b4ecf447cde414b7ee60b572bd50563ede4aac1a303cb38659fcbbf40196738f`.
+  - The `inventory-swap` run at `e206fce9` used original weapon selector
+    inputs on both machines. The host committed items 251 and 271 for actors
+    0 and 1, and the guest replayed both transactions. Captures show the
+    Grenade No.36 for the host and Enfield .38 for the guest. Both logs
+    matched the host displacement samples of 28, 63 and 91 cm and objective
+    transitions 2, 3 and 1 to open. Guest displacement still needs a live
+    verification. Both processes used SHA-256
+    `23033938bd8dea1c4adddb786317a0e927b00f3616bba9e9ffe327db39920655`.
+  - The earlier `inventory-handoff` run compared exact before/after native
+    state and identity for actor 1. It preserved the same actor, health,
+    original inventory and position at squad AI takeover and refused the
+    departed PlayerId's control token (NotAdmitted). In the subsequent
+    `inventory-swap` run with changed gear, the controller attached but
+    state differed. Old-token rejection still passed. Native squad AI chose
+    a weapon during controller attach. Retesting the changed kit is pending.
+  - GCC and MSVC x86 protocol conformance at `e206fce9` passed 12 suites and
+    567,370 checks on each compiler. The full x86 game build compiled 286
+    units with zero diagnostics, linked and set LAA. The final single-unit
+    trace link also passed. Logs and captures are preserved under
+    `build/coop-010-evidence/initial-world/` in the root checkout.
