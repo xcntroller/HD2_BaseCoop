@@ -1,3 +1,4 @@
+#include "game/campaign_dev.h"
 // The video player (game/video_state.h, part 9g-iv).
 #include "game/video_state.h"
 
@@ -156,7 +157,7 @@ bool C_VideoState::Stop()
         graph->Flip();
     }
 #endif
-    if (!m_video->IsBriefing())
+    if (!m_video->IsBriefing() && !IsLiveCampaignProgression())
         g_gameProfile.GetPlayerProfile()->SetMovieSeen(NodeFile(m_video), true);
     if (m_musicTrack == -1 || m_musicPosition == -1)
         GetSoundModule()->FadeBackgroundMusic(1.0f, MUSIC_FADE);

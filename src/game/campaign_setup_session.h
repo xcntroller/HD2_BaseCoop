@@ -8,6 +8,7 @@
 
 struct S_CampaignNativeCatalog;
 class C_CampaignMissionAdapter;
+class C_CampaignScreen;
 
 enum class E_CampaignSetupState { Idle, Joining, Hosting, Guest };
 
@@ -43,7 +44,9 @@ public:
     void SetMissionCallbacks(std::function<void(PlayerId, CampaignProtocol::T_Message)> receive,
         std::function<void(PlayerId, E_CampaignReason)> departure);
     C_CampaignMissionAdapter &GetMissionAdapter();
-    E_CampaignReason ReopenPreparation();
+    E_CampaignReason ReopenPreparation(const S_CampaignMissionManifest *retry = nullptr);
+    E_CampaignReason BeginContinuedPreparation(const C_CampaignScreen &equipment);
+    void SetContinuedPreparationActive(bool active) { m_ContinuedPreparation = active; }
 
 private:
     class C_SetupPolicy final : public I_CampaignPolicyView {
@@ -53,6 +56,7 @@ private:
         }
     };
 
+    bool m_ContinuedPreparation = false;
     E_CampaignSetupState m_State = E_CampaignSetupState::Idle;
     E_CampaignReason m_JoinFailure = E_CampaignReason::None;
     C_SetupPolicy m_Policy;

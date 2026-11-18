@@ -14,6 +14,7 @@ constexpr std::uint64_t kFeatures = 7; // identities, atomic preparation, guarde
 // Bit 3 identified the earlier mission update layout.
 constexpr std::uint64_t kMissionUpdates = 64, kWeaponEvents = 16, kInventoryMoves = 32;
 constexpr std::uint64_t kLivePreparation = 128;
+constexpr std::uint64_t kCampaignProgression = 256;
 constexpr std::size_t kHeaderBytes = 16, kMaxFrameBytes = 24576;
 constexpr std::size_t kMaxStringBytes = 256, kMaxCollection = 256;
 constexpr std::size_t kMaxSoldiers = 64, kMaxParticipants = 4;
@@ -186,19 +187,66 @@ struct S_InventoryEvent {
     std::uint64_t m_Sequence = 0;
     S_ItemMove m_Move;
 };
+// Mission generation and sealed world identify the report and all steps
+// issued from it. The transport supplies the Ready sender's identity.
+struct S_ReportKey {
+    SessionId m_Session;
+    MissionGeneration m_Generation;
+    SnapshotId m_Snapshot;
+    bool operator==(const S_ReportKey &other) const {
+        return m_Session == other.m_Session && m_Generation == other.m_Generation &&
+            m_Snapshot == other.m_Snapshot;
+    }
+};
+struct S_ReportParticipant {
+    PlayerId m_Player;
+    std::string m_Name;
+    bool m_Ready = false;
+    bool m_Spectating = false;
+};
+struct S_ReportSoldier {
+    SoldierId m_Soldier;
+    std::int32_t m_Health = 0;
+    std::int32_t m_Experience = 0;
+    std::array<float, 8> m_Gains{};
+    std::uint8_t m_Rank = 0;
+    std::optional<std::uint8_t> m_Promotion;
+    std::optional<std::uint8_t> m_Award;
+    std::vector<std::uint8_t> m_Medals;
+};
+struct S_CampaignReport {
+    S_ReportKey m_Report;
+    bool m_Success = false;
+    std::vector<S_ReportParticipant> m_Participants;
+    std::vector<S_ReportSoldier> m_Soldiers;
+    std::vector<std::int32_t> m_Diary;
+    std::array<std::int32_t, 256> m_ScriptValues{};
+};
+struct S_ReportReady {
+    S_ReportKey m_Report;
+};
+enum class E_CampaignStep { Video, Screen, Play, Retry, End };
+struct S_CampaignStep {
+    S_ReportKey m_Report;
+    std::uint32_t m_Ordinal = 0;
+    E_CampaignStep m_Kind = E_CampaignStep::Video;
+    MissionKey m_Mission;
+    std::string m_Video;
+    std::uint8_t m_Screen = 0;
+};
 using T_Message = std::variant<S_Hello, S_Accept, S_NegotiationAck, S_Reject,
     S_CampaignOwnershipRequest, S_CampaignEditRequest, S_CampaignReadyRequest,
     S_CampaignDeployRequest, S_CampaignRequestResult, S_CampaignOwnershipSnapshot,
     S_CampaignPreparationSnapshot, S_PreparationDelta, S_CampaignMissionManifest,
     S_CampaignSnapshotAck, S_CampaignStartSimulation, S_Input, S_WorldChunk, S_MissionUpdate, S_WeaponEvent,
-    S_InventoryEvent, S_PreparationResync>;
+    S_InventoryEvent, S_PreparationResync, S_CampaignReport, S_ReportReady, S_CampaignStep>;
 // Stable tags in the above order; variant object layout is never wire.
 enum class E_Message : std::uint16_t {
     Hello = 1, Accept, NegotiationAck, Reject, OwnershipRequest, EditRequest,
     ReadyRequest, DeployRequest, RequestResult, OwnershipSnapshot,
     PreparationSnapshot, PreparationDelta, BeginMission, SnapshotAck,
     StartSimulation, Input, WorldChunk, MissionUpdate, WeaponEvent, InventoryEvent,
-    PreparationResync = 21
+    PreparationResync = 21, CampaignReport, ReportReady, CampaignStep
 };
 struct S_FrameInfo { E_Message m_Type = E_Message::Reject; std::uint32_t m_BodyBytes = 0; };
 E_CampaignReason Inspect(const std::uint8_t *data, std::size_t size, S_FrameInfo &out);

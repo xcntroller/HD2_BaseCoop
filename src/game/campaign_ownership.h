@@ -44,6 +44,7 @@ public:
     E_CampaignReason StartSimulation(); // caller has verified full peer/world barrier
     E_CampaignReason EndMission();
     E_CampaignReason ReturnToSetup(MissionKey mission);
+    E_CampaignReason RestoreRetryRoster(const std::vector<S_CampaignSoldierPresentation> &soldiers);
     E_CampaignReason Close();
 private:
     E_CampaignReason Commit(C_CampaignSession session, S_CampaignOwnershipSnapshot candidate,

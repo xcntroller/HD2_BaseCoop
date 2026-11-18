@@ -420,6 +420,25 @@ E_CampaignReason C_CampaignOwnership::ReturnToSetup(MissionKey mission) {
     for (auto &record : candidate.m_Soldiers) { record.m_Actor.reset(); record.m_Scripted = false; }
     return Commit(std::move(session), std::move(candidate), true);
 }
+E_CampaignReason C_CampaignOwnership::RestoreRetryRoster(
+    const std::vector<S_CampaignSoldierPresentation> &soldiers)
+{
+    if (m_State.m_Context.m_Phase != E_CampaignPhase::Setup)
+        return E_CampaignReason::InvalidPhase;
+    auto candidate = m_State;
+    for (const auto &soldier : soldiers) {
+        auto *record = FindRecord(candidate, soldier.m_Soldier);
+        if (!record)
+            return E_CampaignReason::InvalidSoldier;
+        const auto &saved = soldier.m_Ownership;
+        record->m_Alive = saved.m_Alive;
+        record->m_Eligible = saved.m_Eligible;
+        record->m_Deployed = saved.m_Deployed;
+        record->m_Owner = saved.m_Owner && IsAdmitted(*saved.m_Owner) ? saved.m_Owner : std::nullopt;
+    }
+    return Commit(m_Session, std::move(candidate), true);
+}
+
 E_CampaignReason C_CampaignOwnership::Close() {
     if (!IsLive()) return E_CampaignReason::None;
     auto session = m_Session;

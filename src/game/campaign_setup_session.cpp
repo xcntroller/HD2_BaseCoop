@@ -2,6 +2,7 @@
 
 #include "game/campaign_setup_session.h"
 
+#include <algorithm>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -59,7 +60,8 @@ bool MakeSetupConfig(bool host, S_CampaignNetConfig &config, MissionKey &mission
     const bool valid = BuildCampaignNetConfig(map->GetName(), host, "campaign-setup/original-v2",
                                               "original-campaign mission=1 difficulty=2 preparation", config);
     constexpr auto features = CampaignProtocol::kLivePreparation | CampaignProtocol::kMissionUpdates |
-        CampaignProtocol::kWeaponEvents | CampaignProtocol::kInventoryMoves;
+        CampaignProtocol::kWeaponEvents | CampaignProtocol::kInventoryMoves |
+        CampaignProtocol::kCampaignProgression;
     config.m_Hello.m_Required |= features;
     config.m_Hello.m_Offered |= features;
     if (!valid)
@@ -278,11 +280,96 @@ R C_CampaignSetupSession::BeginPreparation()
     return R::None;
 }
 
+R C_CampaignSetupSession::BeginContinuedPreparation(const C_CampaignScreen &equipment)
+{
+    if (m_State != State::Hosting || !m_Preparation)
+        return R::InvalidPhase;
+    const auto *mission = g_campaign->GetCurrentMission();
+    if (!mission)
+        return R::SnapshotUnavailable;
+    const int index = g_campaign->GetCurrentIndex();
+    const int number = g_campaign->GetMissionNumber(index);
+    const auto previous = m_Ownership->GetSnapshot();
+    auto reason = m_Ownership->ReturnToSetup(MissionKey(mission->GetName()));
+    if (reason != R::None)
+        return reason;
+
+    const auto &session = m_Ownership->GetSession();
+    const auto host = *previous->m_Context.m_HostPlayer;
+    const bool single = index == 0 && (number == 2 || number == 15);
+    const auto roster = session.GetRoster();
+    std::vector<S_CampaignRosterEntry> candidates;
+    for (const auto &entry : roster)
+        if (const auto *profile = GetSoldierProfile(entry.m_ProfileIndex))
+            if (!profile->dead && g_gameProfile.FindSoldierState(entry.m_ProfileIndex))
+                candidates.push_back(entry);
+    if (candidates.empty())
+        return R::InvalidSoldier;
+    if (single) {
+        // The authored mission permits one deployed soldier. Keep the host's
+        // surviving assignment when possible, otherwise use the first survivor.
+        // The existing owner of that survivor retains their claim.
+        const auto selected = std::find_if(candidates.begin(), candidates.end(), [&](const auto &entry) {
+            return std::any_of(previous->m_Soldiers.begin(), previous->m_Soldiers.end(), [&](const auto &soldier) {
+                return soldier.m_Soldier == entry.m_Soldier && soldier.m_Owner == host;
+            });
+        });
+        const auto lead = selected == candidates.end() ? candidates.front() : *selected;
+        candidates.assign(1, lead);
+    }
+    for (const auto &entry : roster) {
+        const bool deploy = std::any_of(candidates.begin(), candidates.end(),
+            [&](const auto &candidate) { return candidate.m_Soldier == entry.m_Soldier; });
+        reason = m_Ownership->SetAvailability(entry.m_Soldier, deploy, deploy);
+        if (reason != R::None)
+            return reason;
+    }
+    reason = m_Ownership->StartPreparation();
+    if (reason != R::None)
+        return reason;
+
+    const auto ownership = m_Ownership->GetSnapshot();
+    S_CampaignPreparationSnapshot initial;
+    initial.m_Context = ownership->m_Context;
+    initial.m_Generation = session.GetPreparationGeneration();
+    initial.m_PreparationRevision = PreparationRevision(1);
+    initial.m_ViewRevision = ViewRevision(1);
+    initial.m_OwnershipRevision = ownership->m_Revision;
+    initial.m_Briefing = {TextKey("original-campaign/operation"), TextKey("original-campaign/mission"),
+        TextKey("original-campaign/briefing"), AssetKey(mission->GetImage().c_str())};
+    for (std::size_t i = 0; i < candidates.size(); ++i) {
+        const auto &entry = candidates[i];
+        auto &presentation = initial.m_Soldiers.emplace_back();
+        presentation.m_Soldier = entry.m_Soldier;
+        presentation.m_Profile = SoldierProfileKey("original-roster/" + std::to_string(entry.m_ProfileIndex));
+        presentation.m_DisplayName = GetSoldierProfile(entry.m_ProfileIndex)->fullName.c_str();
+        presentation.m_Preview = AssetKey("original-portrait/" + std::to_string(entry.m_ProfileIndex));
+        const auto record = std::find_if(ownership->m_Soldiers.begin(), ownership->m_Soldiers.end(),
+            [&](const auto &soldier) { return soldier.m_Soldier == entry.m_Soldier; });
+        presentation.m_Ownership = *record;
+        initial.m_Slots[i].m_Soldier = entry.m_Soldier;
+    }
+    auto catalog = std::make_unique<S_CampaignNativeCatalog>();
+    S_CampaignEquipmentRuleCatalog rules;
+    reason = ImportContinuedCampaignPreparation(session, number, equipment, *catalog, rules, initial);
+    if (reason != R::None) {
+        LogSetup("campaign carryover equipment import failed", static_cast<std::uint64_t>(reason), number);
+        return reason;
+    }
+    reason = m_Preparation->OpenNextHost(std::move(initial), std::move(rules));
+    if (reason != R::None)
+        return reason;
+    m_Catalog = std::move(catalog);
+    m_ContinuedPreparation = true;
+    LogSetup("host opened continued campaign preparation", number, session.GetPreparationGeneration().Value());
+    return R::None;
+}
+
 void C_CampaignSetupSession::Receive(PlayerId peer, CampaignProtocol::T_Message message)
 {
     // Requests belong to the preparation generation until the runtime takes
     // over. The guest still accepts a new preparation generation after abort.
-    if (m_Preparation && (!m_MissionReceive || m_State == State::Guest) && m_Preparation->Receive(peer, message)) {
+    if (m_Preparation && (!m_MissionReceive || m_ContinuedPreparation || m_State == State::Guest) && m_Preparation->Receive(peer, message)) {
         if (!m_MissionQueue.empty()) {
             const auto state = m_Preparation->GetSnapshot().m_Snapshot;
             if (state && state->m_Context.m_Phase == E_CampaignPhase::Preparation)
@@ -335,12 +422,14 @@ C_CampaignMissionAdapter &C_CampaignSetupSession::GetMissionAdapter()
     return *m_MissionAdapter;
 }
 
-R C_CampaignSetupSession::ReopenPreparation()
+R C_CampaignSetupSession::ReopenPreparation(const S_CampaignMissionManifest *retry)
 {
     if (m_State != State::Hosting || !m_Preparation)
         return R::InvalidPhase;
     const auto mission = m_Ownership->GetSession().GetContext().m_Mission;
     auto reason = m_Ownership->ReturnToSetup(mission);
+    if (reason == R::None && retry)
+        reason = m_Ownership->RestoreRetryRoster(retry->m_Soldiers);
     if (reason == R::None)
         reason = m_Ownership->StartPreparation();
     if (reason == R::None)
@@ -354,7 +443,7 @@ R C_CampaignSetupSession::ReopenPreparation()
 
 void C_CampaignSetupSession::Update()
 {
-    if (m_Preparation && m_JoinFailure == R::None && (!m_MissionReceive || m_State == State::Guest)) {
+    if (m_Preparation && m_JoinFailure == R::None && (!m_MissionReceive || m_ContinuedPreparation || m_State == State::Guest)) {
         m_JoinFailure = m_Preparation->Tick();
         if (m_JoinFailure != R::None && m_State == State::Hosting &&
             m_Ownership->GetSession().GetContext().m_Phase == E_CampaignPhase::Frozen)
@@ -377,6 +466,7 @@ void C_CampaignSetupSession::Close()
         LogSetup("local setup closed", static_cast<unsigned>(state));
     }
     m_Agreement.reset();
+    m_ContinuedPreparation = false;
     SetMissionCallbacks({}, {});
     m_PeerSlots.clear();
     m_MissionAdapter.reset();

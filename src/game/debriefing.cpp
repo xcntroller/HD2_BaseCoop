@@ -1,3 +1,4 @@
+#include "game/campaign_dev.h"
 // The mission's debriefing (game/debriefing.h, part 9g-v).
 #include "game/debriefing.h"
 
@@ -69,6 +70,10 @@ bool C_DebriefingMenu::IsCampaign()
 
 bool C_DebriefingMenu::OnStart(void *)
 {
+#ifndef HD2_DEDICATED
+    if (GetLiveCampaignReport())
+        return true;
+#endif
     // (The original's copy protection is left out.)
     C_Diary *diary = g_gameProfile.GetPlayerProfile()->GetDiary();
     if (IsCampaign()) {
@@ -81,8 +86,35 @@ bool C_DebriefingMenu::OnStart(void *)
     return true;
 }
 
+namespace { constexpr uint32_t DEBRIEF_MSG_LEAVE_SESSION = 0x200013C; }
+
 void C_DebriefingMenu::OnMessage(S_ControlMessage *message)
 {
+#ifndef HD2_DEDICATED
+    if (GetLiveCampaignReport()) {
+        switch (message->id & CONTROL_MSG_MASK) {
+        case DEBRIEF_MSG_CONTINUE:
+            ReadyLiveCampaignReport();
+            return;
+        case DEBRIEF_MSG_RESTART:
+            AdvanceLiveCampaignReport();
+            return;
+        case DEBRIEF_MSG_LEAVE_SESSION:
+            SetState(GAME_STATE_MAIN_MENU);
+            return;
+        case MENU_MSG_ESCAPE:
+            if (!g_menuScreens.empty() && g_menuScreens.back() &&
+                (g_menuScreens.back()->GetId() >> SCREEN_SHIFT & SCREEN_MASK) == DIARY_SCREEN) {
+                Post(MENU_MSG_BACK, 0);
+            } else {
+                ShowMessage(MESSAGE_QUESTION, "Leave this campaign session?", DEBRIEF_MSG_LEAVE_SESSION, 0);
+            }
+            return;
+        default:
+            return;
+        }
+    }
+#endif
     C_Campaign *campaign = g_gameProfile.m_campaign;
     // The campaign's debriefing kept: the results, the progress, the game saved.
     const auto keep = [this, campaign]() {
@@ -394,4 +426,12 @@ void C_DebriefingMenu::StoreProgress()
             AddStat(profile, stats[k], factor() * averages[k]);
         cap(profile);
     }
+}
+
+void C_DebriefingMenu::OnUpdate(int)
+{
+#ifndef HD2_DEDICATED
+    if (GetLiveCampaignReport())
+        RefreshCampaignReport();
+#endif
 }

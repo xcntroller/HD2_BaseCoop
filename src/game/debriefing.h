@@ -40,6 +40,10 @@ public:
     // mission's: the diary's entry dropped. True.
     bool OnStart(void *arg) override;                   // 0x40 0x0068cfe0 (DS 0x006cad70)
 
+    void OnUpdate(int timeDelta) override;
+    static void ApplyCampaignReportResults() { ApplyResults(); }
+    static void CommitCampaignReportProgress() { StoreProgress(); }
+
     // The campaign played, not a single mission.
     static bool IsCampaign();                           // 0x0068c5d0
 
@@ -101,6 +105,7 @@ protected:
     static bool OnSoldierScroll(void *menu, void *argument, C_Control *control, uint32_t notification,
                                 uint32_t value);        // 0x0068ff70
 
+    void RefreshCampaignReport();
     int m_diaryPage = -1;                               // +0x1B0 the diary's left page (-1: none yet)
     int m_shownSoldier = -1;                            // +0x1B4 the squad's soldier shown
     I3D_frame *m_medalFrames[DEBRIEF_MEDALS][2] = {};   // +0x1B8 the medals' two frames ("DSO_a", "DSO_b", ..)
@@ -111,4 +116,7 @@ protected:
     I3D_frame *m_rankSlot = nullptr;                    // +0x27C "soldier_rank"
     I3D_frame *m_deathFrame = nullptr;                  // +0x280 "death"
     uint8_t m_unknown284[0xC] = {};                     // +0x284
+    uint32_t m_reportReady = 0;
+    uint32_t m_reportAdvance = 0;
+    unsigned m_reportStatus = 0;
 };

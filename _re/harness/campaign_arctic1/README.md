@@ -51,3 +51,46 @@ the pinned x86 build setup in [the build guide](../../../docs/build_baseline.md)
 
 Debug setup only affects the disposable executable. Build the normal executable
 from the task checkout for user playtesting.
+
+## Campaign progression checks
+
+Pass `--progression-regressions` to the installer and build a checked executable.
+Use a private runtime copy per peer. Start fresh processes for each case and
+launch through **Single Player → Co-op Campaign** without `-campaign-coop`.
+The host starts preparation, each player claims a different soldier, and
+everyone readies before the host deploys. Skip the aircraft scene on the host.
+
+- **Arctic2 continuation.** Set `HD2_ARCTIC1_DEBUG=wire-success` on the
+  checked host and `HD2_PROGRESSION_DEBUG=campaign` on both checked peers.
+  The probe uses the production report and preparation request handlers. It
+  tries host advancement before the guest is ready, readies the guest later,
+  and submits advancement twice. After the original Arctic2 briefing appears,
+  let it finish and press Space on the host, or skip it with Escape. The probe
+  readies both participants for field equipment and deploys. Expect one report
+  commit, generation 2, refusal of the generation-1 input token, and a matched
+  world snapshot acknowledgment before simulation starts. The guest follows
+  the Arctic2 opening scene without owning a soldier.
+- **Failure and departures.** Use `HD2_ARCTIC1_DEBUG=guide-failure` and
+  `HD2_PROGRESSION_DEBUG=campaign` on the host. Use
+  `HD2_PROGRESSION_DEBUG=loading-departure` on the first guest and
+  `HD2_PROGRESSION_DEBUG=report-departure` on the second guest. Expect
+  failure on all three reports, the second guest leaving the readiness barrier,
+  no victory commit, and a retry of Arctic1. The first guest leaves after
+  receiving the retry manifest and before acknowledging it. Expect the host to
+  reopen preparation and retry in generation 3 in the same session.
+- **Solo.** Set `HD2_PROGRESSION_DEBUG=solo` and start a fresh checked
+  game. The fixture opens original Arctic1 campaign equipment with four
+  original roster soldiers. Select Continue, finish loading and skip the
+  aircraft scene. The fixture seeds the objectives and calls the original
+  mission-ending routine. Expect the original report and Save and Continue
+  into the original Arctic2 briefing and equipment.
+- **Native LAN.** Set `HD2_PROGRESSION_DEBUG=native-map` on both checked
+  peers. Start the host with
+  `-window -cmd port 11001 domain local style cooperative mapname Sicily2 mapname Sicily1 dedicated 0 sessionname COOP015Native maxclients 4 coopdifficulty 2 cooplives 3 voicechat none server`.
+  Start the guest with `-window -cmd port 11001 domain local voicechat none join 127.0.0.1`
+  when running both on one machine. The fixture requests the native map change
+  after 30 seconds of mission time. Expect both peers to load Sicily2 and then
+  Sicily1 through the native path.
+
+These probes are debug-assisted. Build the ordinary executable from the task
+checkout for the full owner playtest.

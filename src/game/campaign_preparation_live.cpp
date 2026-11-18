@@ -45,6 +45,10 @@ S_CampaignDeployEvaluation C_CampaignPreparationLive::C_DeploymentPolicy::Evalua
     const S_CampaignPreparationSnapshot &state) const
 {
     S_CampaignDeployEvaluation evaluation{R::None, {}, {}};
+    const bool available = std::any_of(state.m_Soldiers.begin(), state.m_Soldiers.end(), [](const auto &soldier) {
+        const auto &record = soldier.m_Ownership;
+        return record.m_Alive && record.m_Eligible && record.m_Deployed && !record.m_Owner && !record.m_Scripted;
+    });
     for (const auto &participant : state.m_Participants) {
         if (!participant.m_Admitted || !participant.m_Connected)
             continue;
@@ -53,7 +57,7 @@ S_CampaignDeployEvaluation C_CampaignPreparationLive::C_DeploymentPolicy::Evalua
             return soldier.m_Ownership.m_Owner == participant.m_Player && soldier.m_Ownership.m_Alive &&
                 soldier.m_Ownership.m_Eligible && soldier.m_Ownership.m_Deployed && !soldier.m_Ownership.m_Scripted;
         };
-        if (std::none_of(state.m_Soldiers.begin(), state.m_Soldiers.end(), ownsSoldier))
+        if ((!m_AllowSpectators || available) && std::none_of(state.m_Soldiers.begin(), state.m_Soldiers.end(), ownsSoldier))
             evaluation.m_Reason = R::NotDeployed;
         else if (evaluation.m_Reason == R::None && participant.m_ReadyAt != state.m_PreparationRevision)
             evaluation.m_Reason = R::PendingTransaction;
@@ -97,6 +101,21 @@ R C_CampaignPreparationLive::OpenHost(C_CampaignOwnership &ownership, C_Campaign
         return R::InvalidItem;
     }
     return R::None;
+}
+
+R C_CampaignPreparationLive::OpenNextHost(S_CampaignPreparationSnapshot initial, S_CampaignEquipmentRuleCatalog catalog)
+{
+    if (!m_Authority || !m_Ownership || !m_Journal)
+        return R::InvalidPhase;
+    m_Authority.reset();
+    m_DeploymentPolicy.m_AllowSpectators = true;
+    m_DeploymentPolicy.m_Uniform.reset();
+    m_LocalRequest.reset();
+    m_Pending.reset();
+    m_FreezeDeadline.reset();
+    m_Events.clear();
+    m_Published.clear();
+    return OpenHost(*m_Ownership, *m_Journal, std::move(initial), std::move(catalog));
 }
 
 R C_CampaignPreparationLive::ReopenHost()

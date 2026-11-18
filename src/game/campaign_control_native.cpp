@@ -1,6 +1,8 @@
 #include "campaign_control_native.h"
 #include "campaign_control_runtime.h"
 
+#include <algorithm>
+
 #include "game/actors_module.h"
 #include "game/human.h"
 #include "game/human_controller.h"
@@ -106,6 +108,24 @@ bool C_CampaignNativeControlSink::Present(const std::optional<ActorRef> &actor) 
     if (actor && (!human || !IsCampaignLocalActor(human->GetNetId()))) return false;
     if (human && !team->IsMember(human)) return false;
     team->SelectCampaignMember(human);
+    if (!human) {
+        const auto state = GetCampaignControlSnapshot();
+        if (state && state->m_Context.m_Phase == E_CampaignPhase::Running) {
+            const auto owning = std::any_of(state->m_Soldiers.begin(), state->m_Soldiers.end(), [&](const auto &soldier) {
+                return soldier.m_Alive && soldier.m_Deployed && soldier.m_Owner &&
+                    soldier.m_Owner == state->m_Context.m_LocalPlayer;
+            });
+            if (!owning) {
+                for (const auto &soldier : state->m_Soldiers) {
+                    auto *watch = soldier.m_Alive && soldier.m_Actor ? Resolve(*soldier.m_Actor) : nullptr;
+                    if (watch) {
+                        team->SetWatchedHuman(watch);
+                        break;
+                    }
+                }
+            }
+        }
+    }
 #ifndef HD2_DEDICATED
     GetGame()->GetInterface()->ShowInventory(false, nullptr);
     GetGame()->GetInterface()->RefreshInventory();

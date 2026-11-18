@@ -151,6 +151,12 @@ template<class A> bool Fields(A &a, S_PresentationFramePose &x);
 template<class A> bool Fields(A &a, S_WeaponEvent &x);
 template<class A> bool Fields(A &a, S_ItemMove &x);
 template<class A> bool Fields(A &a, S_InventoryEvent &x);
+template<class A> bool Fields(A &a, S_ReportKey &x);
+template<class A> bool Fields(A &a, S_ReportParticipant &x);
+template<class A> bool Fields(A &a, S_ReportSoldier &x);
+template<class A> bool Fields(A &a, S_CampaignReport &x);
+template<class A> bool Fields(A &a, S_ReportReady &x);
+template<class A> bool Fields(A &a, S_CampaignStep &x);
 
 class C_Archive {
 public:
@@ -402,6 +408,29 @@ template<class A> bool Fields(A &a, S_ItemMove &x) {
 }
 template<class A> bool Fields(A &a, S_InventoryEvent &x) {
     return a(x.m_Actor, x.m_Snapshot, x.m_OwnershipRevision, x.m_Sequence, x.m_Move) && Valid(x);
+}
+
+template<class A> bool Fields(A &a, S_ReportKey &x) {
+    return a(x.m_Session, x.m_Generation, x.m_Snapshot) && x.m_Session.IsValid() &&
+        x.m_Generation.IsValid() && x.m_Snapshot.IsValid();
+}
+template<class A> bool Fields(A &a, S_ReportParticipant &x) {
+    return a(x.m_Player, x.m_Name, x.m_Ready, x.m_Spectating) && x.m_Player.IsValid() && !x.m_Name.empty();
+}
+template<class A> bool Fields(A &a, S_ReportSoldier &x) {
+    if (!a(x.m_Soldier, x.m_Health, x.m_Experience, x.m_Gains, x.m_Rank, x.m_Promotion, x.m_Award, x.m_Medals))
+        return false;
+    return x.m_Soldier.IsValid() && x.m_Rank < 8 && (!x.m_Promotion || *x.m_Promotion < 8) &&
+        (!x.m_Award || *x.m_Award < 12) && x.m_Medals.size() <= 12 &&
+        std::all_of(x.m_Medals.begin(), x.m_Medals.end(), [](auto medal) { return medal < 12; });
+}
+template<class A> bool Fields(A &a, S_ReportReady &x) { return a(x.m_Report); }
+template<> struct S_EnumMax<E_CampaignStep> { static constexpr auto value = E_CampaignStep::End; };
+template<class A> bool Fields(A &a, S_CampaignStep &x) {
+    return a(x.m_Report, x.m_Ordinal, x.m_Kind, x.m_Mission, x.m_Video, x.m_Screen) &&
+        x.m_Ordinal && x.m_Mission.IsValid() && x.m_Screen <= 6 &&
+        (x.m_Kind == E_CampaignStep::Screen || x.m_Screen == 0) &&
+        (x.m_Kind == E_CampaignStep::Video ? !x.m_Video.empty() : x.m_Video.empty());
 }
 
 // Structural/transport validation. Catalog membership, equipment physics and
@@ -729,6 +758,14 @@ bool Valid(const S_InventoryEvent &x) {
     return Id(x.m_Snapshot) && Id(x.m_OwnershipRevision) && x.m_Sequence && x.m_Move.m_To < 7;
 }
 
+template<class A> bool Fields(A &a, S_CampaignReport &x) {
+    return a(x.m_Report, x.m_Success, x.m_Participants, x.m_Soldiers, x.m_Diary, x.m_ScriptValues) &&
+        !x.m_Participants.empty() && x.m_Participants.size() <= kMaxParticipants &&
+        !x.m_Soldiers.empty() && x.m_Soldiers.size() <= kMaxParticipants &&
+        Unique(x.m_Participants, [](const auto &peer) { return peer.m_Player; }) &&
+        Unique(x.m_Soldiers, [](const auto &soldier) { return soldier.m_Soldier; });
+}
+
 std::uint16_t Read16(const std::uint8_t *p) { return static_cast<std::uint16_t>(p[0] | (p[1] << 8)); }
 std::uint32_t Read32(const std::uint8_t *p) {
     return static_cast<std::uint32_t>(p[0]) | (static_cast<std::uint32_t>(p[1]) << 8) |
@@ -793,6 +830,10 @@ bool BoundPayload(const T_Message &message, bool server, const S_Accept &agreeme
             return !server && (agreement.m_Features & kWeaponEvents) && x.m_Actor.m_Session == session;
         else if constexpr (std::is_same<T, S_InventoryEvent>::value)
             return !server && (agreement.m_Features & kInventoryMoves) && x.m_Actor.m_Session == session;
+        else if constexpr (std::is_same<T, S_ReportReady>::value)
+            return server && (agreement.m_Features & kCampaignProgression) && x.m_Report.m_Session == session;
+        else if constexpr (std::is_same<T, S_CampaignReport>::value || std::is_same<T, S_CampaignStep>::value)
+            return !server && (agreement.m_Features & kCampaignProgression) && x.m_Report.m_Session == session;
         else return false;
     }, message);
 }
@@ -1038,7 +1079,7 @@ E_Route Route(E_CampaignSessionKind kind, E_Traffic traffic) {
     return traffic == E_Traffic::Extension ? E_Route::Campaign : E_Route::Drop;
 }
 constexpr std::uint64_t kSupportedFeatures = kFeatures | kMissionUpdates | kWeaponEvents | kInventoryMoves |
-    kLivePreparation;
+    kLivePreparation | kCampaignProgression;
 
 C_Admission::C_Admission(E_CampaignSessionKind kind, bool server, S_Hello local,
     SessionId session, PlayerId assignedPlayer, std::uint64_t nowMs)

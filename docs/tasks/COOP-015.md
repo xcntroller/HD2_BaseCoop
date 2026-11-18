@@ -2,15 +2,15 @@
 
 ## Coordination
 
-- Status: ready
-- Owner/session: unassigned
+- Status: review
+- Owner/session: Codex COOP-015, user assignment, thread `01a1eead-4d91-7b52-a8d5-cd1a32cce6d3`
 - Canonical branch: `feature/coop-015-campaign-progression`
-- Base commit: not started
+- Base commit: `ca5ae2f897524cc1905e343b5b7ad3910e56f4c3`
 - Dependencies: [COOP-013](COOP-013.md) menu preparation/deployment, [COOP-014](COOP-014.md) authoritative mission outcome
-- Last checkpoint: none
-- Checkpoint location: task queue only
-- Review/integration: none
-- Pull request: none
+- Last source checkpoint: `b1a92949`
+- Checkpoint location: canonical branch, `.worktrees/COOP-015`; claim acknowledged by coordinator at `16963b69`
+- Review/integration: separate source and evidence review passed for PR #31
+- Pull request: [#31](https://github.com/xcntroller/HD2_BaseCoop/pull/31)
 
 ## Branch authority and completion PR
 
@@ -54,32 +54,108 @@ COOP-013. Keep disk save/resume and mid-mission admission outside this scope.
 
 ## Owner playtest
 
-Hand off the normal menu-to-Arctic1-to-next-mission route with exact launch steps and
-expected results. Record any genuine end-to-end evidence separately under the
-[campaign testing strategy](../agent_workflow.md#campaign-testing-strategy).
+**Pending owner playtest.** Build the production x86 executable with
+`python _re/tools/build_isolated.py game --all --copy <runtime>` using the
+[build baseline](../build_baseline.md). Use Hidden & Dangerous 2 Sabre Squadron
+1.12.0 and the matching port DLLs. Start `HD2_Port.exe -window` on both peers
+without any debug environment variables. Select **Single Player → Co-op
+Campaign**, host on one instance, and join its IPv4 address on the other.
+Claim separate soldiers, ready and deploy. Use the
+[original Arctic1 route](COOP-014.md#owner-playtest) to reach the report.
+
+The original report should show the same objectives, soldier details and
+readiness on both peers. Ready the host first and check that Continue stays
+disabled until the guest also readies. Select Continue on the host. Watch the
+original Arctic2 briefing and press Space at its end. Expect the field
+equipment screen and one eligible soldier. Ready the guest as a spectator,
+ready and deploy from the host, then wait for both peers to load the original
+Arctic2 opening scene. The assigned player controls the soldier after the
+scene. The other player follows the view without gaining control. Both peers
+remain in the same LAN session.
 
 ## Validation evidence
 
-Pending. Record the tested commit, toolchain and game version, exact checks, outcomes
-and evidence locations. Use the [build guide](../build_baseline.md) for isolated x86
-builds and the [campaign design](../base_game_coop.md#validation-requirements) for
-runtime evidence and legacy regression requirements.
+- **Build.** MSVC 14.44.35207 x86 and Windows SDK 10.0.26100.0 under Wine,
+  using separate `build/isolated` roots for production and checked sources.
+  The full production build compiled 292 units with zero diagnostics. The
+  incremental production and checked builds at `b1a92949` linked with zero
+  compiler diagnostics. See `build/evidence/build-msvc-r3.log`,
+  `build/evidence/build-msvc-r9.log` and `build/evidence/build-checked-r9.log`.
+- **Simulated.** Protocol conformance passed 13 suites and 567,598 checks on
+  MSVC x86 and GCC with ASan/UBSan. GCC ownership, mission lifecycle,
+  preparation authority and original-rule parity, and preparation UI harnesses
+  passed. Commands and output are in `build/evidence/` with `protocol-`,
+  `ownership-`, `mission-` and `preparation-` log prefixes.
+- **Debug-assisted Arctic1 to Arctic2.** The game menu launched both peers.
+  The checked host used the wire and casualty fixture and completed the
+  terminal conditions through the native objective handlers. The original
+  report appeared on both peers with the same objectives, gains and survivor
+  presentation. An early host advancement did not commit. The late guest
+  Ready opened the gate. Two advancement requests produced one commit and
+  three surviving roster records. The same session showed the original
+  Arctic2 briefing and field equipment. The guest readied as a spectator.
+  In generation 2 the previous input token returned WrongGeneration, host
+  simulation stayed at mission time zero until the guest acknowledged
+  snapshot 2, and both peers matched the 29,833-byte world with CRC32
+  4,207,940,800. The guest received the Arctic2 startup and its cutscene
+  after the host sent the 68-event presentation burst in bounded batches.
+  A repeat on the final source skipped the next opening scene through normal
+  host input and recorded 600 cm of matching soldier movement on both peers.
+  Evidence is in `build/evidence/final-success/` and
+  `build/evidence/source-final-movement/` with screenshots and driver logs.
+- **Campaign writeback.** The host reuses the native debrief result and
+  progress functions. In the checked success, the report recorded soldier 4
+  as dead, Continue removed the casualty, and the Arctic2 field stock
+  included the returned helmet and uniform. The lead kept surviving gear
+  and received the required camera if needed. The paired test copies'
+  `profile.sav` and `Options.bin` matched their baseline copies byte for
+  byte. Full solo disk saves stay with the original solo route.
+- **Debug-assisted solo and native LAN.** The solo probe opened original
+  Arctic1 inventory, set terminal objectives and called the native fade and
+  report path. The ordinary report showed Save and Continue and wrote
+  `CAM_0001.sav`. The original Arctic2 briefing and field inventory
+  followed, including the original one-soldier selection prompt. Host and
+  guest in a native LAN session both loaded Sicily2
+  and then Sicily1 following the original map-change command. Captures
+  and logs are under `build/evidence/solo-regression/` and
+  `build/evidence/native-map/`.
+- **Debug-assisted failure and departures.** Three menu clients reached
+  the failed Arctic1 report after the checked host induced the guide's native
+  death. The second guest departed while the host was waiting. The report
+  barrier removed that guest and accepted the first guest's late Ready. The
+  host retried Arctic1 without a victory commit. The remaining guest
+  disconnected before acknowledging generation 2. The host aborted this
+  barrier at mission time zero, reopened preparation in the same session,
+  and started Arctic1 on generation 3. No participant acknowledged or
+  started generation 2. Logs are in `build/evidence/failure-departures/`.
+- **Genuine unmodified gameplay.** The full owner route remains pending.
+  The evidence above covers the transition from controlled terminal states.
 
 ## PR test instructions and delivery
 
-- Delivery: Integrated gameplay; specify runnable artifact or Source-only at review.
-- Prerequisites and reproduction steps: record build, game setup, player count, actions
-  and expected results before review.
-- Validation actually run: none for this planned work.
+**Source-only** integrated gameplay. Build with the isolated x86 command above
+and follow the [checked probe instructions](../../_re/harness/campaign_arctic1/README.md#campaign-progression-checks)
+for the paired, solo and LAN cases. The owner playtest uses the production
+executable. Checked fixtures are installed into a detached test checkout.
 
 ## Handoff
 
-- Completed: task definition.
-- Remaining: implementation or verification and the acceptance evidence above.
-- Next action: Trace the original campaign nodes from Arctic1 mission exit to the next playable step and identify the host writeback boundary.
+- Completed: published the claim and implemented mission-scoped report readiness,
+  host writeback, synchronized original step dispatch and continued live preparation.
+  The x86 builds, protocol and model harnesses, and scoped success and legacy runs pass.
+- Remaining: integration review and the owner playtest.
+- Next action: review the final candidate against `main`, then integrate
+  through PR #31 and record the actual merge commit.
 - Blockers: none. COOP-013 merged at `73d518a5` and COOP-014 merged at
   `619d6aec`. The host result is available through `GetCampaignMissionResult()`
   while the session is in Ending.
-- Decisions: Preserve the original step sequence and record any necessary eligibility or transition departure decision before exposing that policy.
-- Local state: no task worktree or artifacts.
-- Review notes: none.
+- Decisions: Arctic2 uses the original one-soldier limit. Preserve the host's
+  surviving assignment if possible, otherwise choose the first surviving squad
+  soldier in roster order and retain that soldier's owner. Additional players
+  can ready up as spectators. A departure invalidates a frozen or loading
+  world cut. The remaining players return to preparation in the same session.
+- Local state: ignored runtime and evidence under `build/`, using private game copies and Wine prefixes.
+- Review notes: checked the final diff and merge-tree rehearsal against
+  `ca5ae2f8`, report/session fences and one-time commit, host-only writeback,
+  spectator ownership, world acknowledgments, departure recovery, native
+  regression paths, and recorded checks. The owner route remains pending.

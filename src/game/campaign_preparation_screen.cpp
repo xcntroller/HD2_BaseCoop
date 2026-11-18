@@ -22,7 +22,8 @@ bool S_CampaignPreparationRect::Contains(float x, float y) const {
     return x >= m_X && y >= m_Y && x < m_X + m_Width && y < m_Y + m_Height;
 }
 C_CampaignPreparationScreen::C_CampaignPreparationScreen(I_CampaignPreparation &model,
-    I_CampaignPreparationPresentation &presentation) : m_Model(model), m_Presentation(presentation) { Tick(); }
+    I_CampaignPreparationPresentation &presentation, bool allowSpectators)
+    : m_Model(model), m_Presentation(presentation), m_AllowSpectators(allowSpectators) { Tick(); }
 C_CampaignPreparationScreen::~C_CampaignPreparationScreen() { Close(); }
 void C_CampaignPreparationScreen::Close() { m_Open = false; m_Pending.reset(); m_Snapshot.reset(); m_Controls.clear(); }
 std::string C_CampaignPreparationScreen::Label(const char *key) const { return m_Presentation.Label(key); }
@@ -248,7 +249,7 @@ void C_CampaignPreparationScreen::BuildControls() {
     bool ready = false;
     if (m_Snapshot) for (const auto &p : m_Snapshot->m_Participants) if (p.m_Player == m_Snapshot->m_Context.m_LocalPlayer)
         ready = p.m_ReadyAt == m_Snapshot->m_PreparationRevision;
-    add(E_CampaignPreparationAction::Ready, 0, {540, 690, 136, 38}, Label(ready ? "COOP_READY_UNSET" : "COOP_READY_SET"), IsCurrent() && !m_Pending && HasLocalSoldier(), E_CampaignReason::Ineligible);
+    add(E_CampaignPreparationAction::Ready, 0, {540, 690, 136, 38}, Label(ready ? "COOP_READY_UNSET" : "COOP_READY_SET"), IsCurrent() && !m_Pending && (HasLocalSoldier() || m_AllowSpectators), E_CampaignReason::Ineligible);
     if (m_Snapshot && m_Snapshot->m_Context.m_LocalPlayer == m_Snapshot->m_Context.m_HostPlayer && m_Snapshot->m_Context.m_LocalPlayer)
         add(E_CampaignPreparationAction::Deploy, 0, {688, 690, 136, 38}, Label("COOP_READY_DEPLOY"), IsCurrent() && !m_Pending && m_Snapshot->m_CanDeploy.m_Allowed, m_Snapshot->m_CanDeploy.m_Reason);
     add(E_CampaignPreparationAction::Leave, 0, {836, 690, 132, 38}, Label("COOP_READY_LEAVE"));
@@ -466,7 +467,7 @@ void C_CampaignPreparationScreen::Render(I_CampaignPreparationPainter &p) {
     else if (m_Snapshot && m_Snapshot->m_Context.m_Phase != E_CampaignPhase::Preparation) status = Label("COOP_PREP_FROZEN");
     else if (m_Pending) status = Label("COOP_PREP_PENDING");
     else if (m_Notice != E_CampaignReason::None) status = m_Presentation.Reason(m_Notice);
-    else if (m_Snapshot && !HasLocalSoldier()) status = Label("COOP_OWNER_NO_SOLDIER");
+    else if (m_Snapshot && !HasLocalSoldier()) status = Label(m_AllowSpectators ? "COOP_OWNER_SPECTATOR" : "COOP_OWNER_NO_SOLDIER");
     else if (m_Snapshot && !m_Snapshot->m_DeployBlockers.empty()) status = m_Presentation.Reason(m_Snapshot->m_DeployBlockers.front().m_Reason);
     else status = Label("COOP_PREP_COMMITTED");
     text(40, 642, 928, 36, status);

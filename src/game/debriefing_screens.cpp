@@ -1,3 +1,5 @@
+#include "game/campaign_dev.h"
+#include "net/campaign_protocol.h"
 // The debriefing's screens (game/debriefing.h): part 9g-vi the diary; 9g-vii the debriefing's.
 #include "game/debriefing.h"
 
@@ -166,6 +168,21 @@ bool C_DebriefingMenu::DescribeDebriefing(S_ScreenDesc *desc, I3D_frame *model)
     AddDescMessage(scroll, 0, CONTROL_MSG_SET_COUNT, static_cast<uint32_t>(g_gameProfile.m_missionSquad->states.size()));
     AddDescMessage(scroll, 0, CONTROL_MSG_ADD_CALLBACK, CONTROL_NOTIFY_CHANGED, self,
                    reinterpret_cast<uintptr_t>(&C_DebriefingMenu::OnSoldierScroll));
+#ifndef HD2_DEDICATED
+    if (const auto *report = GetLiveCampaignReport()) {
+        auto *ready = desc->AddControl(CONTROL_BUTTON, "bsave and continue");
+        AddDescMessage(ready, 0, CONTROL_MSG_SET_TEXT, BUTTON_STYLE, C_str("Ready"));
+        AddDescMessage(ready, 0, CONTROL_NOTIFY_CLICK | DEBRIEF_MSG_CONTINUE, 0);
+        m_reportReady = ready->id;
+        auto *advance = desc->AddControl(CONTROL_BUTTON, "bretry immediately");
+        AddDescMessage(advance, 0, CONTROL_MSG_SET_TEXT, BUTTON_STYLE,
+            C_str(report->m_Success ? "Continue" : "Retry Mission"));
+        AddDescMessage(advance, 0, CONTROL_NOTIFY_CLICK | DEBRIEF_MSG_RESTART, 0);
+        AddDescMessage(advance, 0, IsLiveCampaignReportHost() ? CONTROL_MSG_DEACTIVATE : CONTROL_MSG_HIDE, 0);
+        m_reportAdvance = advance->id;
+    } else
+#endif
+    {
     // Saving and going on: the mission won, the campaign's.
     S_ControlDesc *save = text(CONTROL_BUTTON, "bsave and continue", BUTTON_STYLE, TEXT_SAVE_CONTINUE);
     AddDescMessage(save, 0, CONTROL_NOTIFY_CLICK | DEBRIEF_MSG_CONTINUE, 0);
@@ -178,6 +195,7 @@ bool C_DebriefingMenu::DescribeDebriefing(S_ScreenDesc *desc, I3D_frame *model)
                    : IsCampaign()                     ? CONTROL_NOTIFY_CLICK | DEBRIEF_MSG_RESTART
                                                       : CONTROL_NOTIFY_CLICK | DEBRIEF_MSG_REPLAY,
                    0);
+    }
     // The diary (the campaign's): its page, its screen opened.
     S_ControlDesc *diary = text(CONTROL_BUTTON, "bload", BUTTON_STYLE, TEXT_DIARY);
     AddDescMessage(diary, 0, CONTROL_MSG_ADD_CALLBACK, CONTROL_NOTIFY_CLICK, self,
@@ -330,7 +348,11 @@ void C_DebriefingMenu::ShowMissionResult(S_ScreenDesc *, I3D_frame *)
 {
     Post(OBJECTIVES_TEXT, CONTROL_MSG_CLEAR, 0);
     // (The original's copy protection is left out: "FAILED" for a cracked copy from the sixteenth mission.)
-    const bool won = m_mode == KIND_OPERATION_END_SCREEN || ListObjectives();
+    bool won = m_mode == KIND_OPERATION_END_SCREEN || ListObjectives();
+#ifndef HD2_DEDICATED
+    if (const auto *report = GetLiveCampaignReport())
+        won = report->m_Success;
+#endif
     Post(MISSION_STATUS_TEXT, CONTROL_MSG_SET_TEXT_ID, MISSION_STATUS_STYLE, won ? TEXT_ACCOMPLISHED : TEXT_FAILED);
     GetSoundModule()->SetBackgroundMusic(won ? MUSIC_WON : MUSIC_LOST, 0);
     GetSoundModule()->FadeBackgroundMusic(1.0f, 2000);
@@ -498,4 +520,31 @@ bool C_DebriefingMenu::OnSoldierScroll(void *menu, void *, C_Control *control, u
     if (self->m_shownSoldier != static_cast<int>(get.value))
         self->ShowSoldier(static_cast<int>(get.value));
     return true;
+}
+
+void C_DebriefingMenu::RefreshCampaignReport()
+{
+#ifndef HD2_DEDICATED
+    const auto *report = GetLiveCampaignReport();
+    if (!report)
+        return;
+    unsigned status = 1;
+    for (const auto &peer : report->m_Participants)
+        status = (status << 2) | (peer.m_Ready ? 1 : 0) | (peer.m_Spectating ? 2 : 0);
+    if (m_reportStatus == status)
+        return;
+    m_reportStatus = status;
+    Post(m_reportReady, IsLocalLiveCampaignReportReady() ? CONTROL_MSG_DEACTIVATE : CONTROL_MSG_ACTIVATE, 0);
+    if (IsLiveCampaignReportHost())
+        Post(m_reportAdvance, CanAdvanceLiveCampaignReport() ? CONTROL_MSG_ACTIVATE : CONTROL_MSG_DEACTIVATE, 0);
+    Post(OBJECTIVES_TEXT, CONTROL_MSG_CLEAR, 0);
+    ListObjectives();
+    PostText(OBJECTIVES_TEXT, GAP_STYLE, " ");
+    for (const auto &peer : report->m_Participants) {
+        PostText(OBJECTIVES_TEXT, OBJECTIVE_STYLE, C_fstr("%s%s  %s",
+            peer.m_Name.c_str(), peer.m_Spectating ? " (spectator)" : "", peer.m_Ready ? "Ready" : "Waiting"));
+        PostText(OBJECTIVES_TEXT, GAP_STYLE, " ");
+    }
+    Post(OBJECTIVES_TEXT, CONTROL_MSG_REFRESH, 0);
+#endif
 }

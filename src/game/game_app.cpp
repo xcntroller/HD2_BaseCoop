@@ -234,11 +234,12 @@ bool C_GameApp::Close()                                 // 0x006c0c40
 // ---------------------------------------------------------------------------
 // The states
 
-bool C_GameApp::StartStep(C_CampaignNode *step, int /*unused*/)   // 0x006c1210
+bool C_GameApp::StartStep(C_CampaignNode *step, int /*unused*/, bool coordinated)   // 0x006c1210
 {
-    if (IsCampaignMission() && (!step || step->GetType() != CAMPAIGN_NODE_PLAY ||
-        !GetCampaignMissionSnapshot() || GetCampaignMissionSnapshot()->m_Context.m_Phase != E_CampaignPhase::Loading))
-        return false; // COOP-010 owns synchronized step dispatch; no solo editor fallback
+    if (IsCampaignMission() && !coordinated &&
+        (!step || step->GetType() != CAMPAIGN_NODE_PLAY ||
+         GetCampaignMissionSnapshot()->m_Context.m_Phase != E_CampaignPhase::Loading))
+        return false;
     if (!step) {
         if (m_state) {
             m_state->Stop();
@@ -403,12 +404,20 @@ bool C_GameApp::UpdateClient(int timeDelta)             // 0x006c2410
 
     switch (m_state->GetState()) {
     case GAME_STATE_ENDED:
+#ifndef HD2_DEDICATED
+        if (IsLiveCampaignProgression())
+            return EndClientUpdate(true);
+#endif
         if (!m_resume)
             return StartNextStep(false);
         Close();
         return EndClientUpdate(false);
 
     case GAME_STATE_BACK:
+#ifndef HD2_DEDICATED
+        if (IsLiveCampaignProgression())
+            return EndClientUpdate(true);
+#endif
         if (!m_resume)
             return StartNextStep(true);
         Close();
@@ -436,6 +445,10 @@ bool C_GameApp::UpdateClient(int timeDelta)             // 0x006c2410
         break;
 
     case GAME_STATE_MAIN_MENU: {
+#ifndef HD2_DEDICATED
+        if (IsLiveCampaignProgression())
+            return EndClientUpdate(true);
+#endif
         m_state->Stop();
         delete m_state;
         auto *menu = new C_MainMenu();

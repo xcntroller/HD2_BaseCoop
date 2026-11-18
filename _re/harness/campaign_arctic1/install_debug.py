@@ -5,7 +5,7 @@ import shutil
 import subprocess
 
 
-def install(root):
+def install(root, progression_regressions=False):
     target = root / "src/game/campaign_dev.cpp"
     branch = subprocess.run(
         ["git", "-C", str(root), "symbolic-ref", "--quiet", "HEAD"],
@@ -30,6 +30,14 @@ def install(root):
         '    LogDevelopmentCampaign("host captured terminal mission outcome", result.m_Success, result.m_Soldiers.size());':
             '    ObserveArctic1TestResult(result);\n    LogDevelopmentCampaign("host captured terminal mission outcome", result.m_Success, result.m_Soldiers.size());',
     }
+    if progression_regressions:
+        anchors["void TickDevelopmentCampaign(C_GameApp &app)\n{\n    if (!app.m_state)\n        return;"] = (
+            "#include \"progression_regressions.inc\"\n\n"
+            "void TickDevelopmentCampaign(C_GameApp &app)\n{\n    if (!app.m_state)\n        return;\n"
+            "    TickProgressionRegression(app, [&](auto *step) { return app.StartStep(step, 0); });"
+        )
+        shutil.copyfile(Path(__file__).with_name("progression_regressions.inc"),
+                        target.with_name("progression_regressions.inc"))
     for old, new in anchors.items():
         if source.count(old) != 1:
             raise SystemExit(f"Expected exactly one insertion point for {old!r}.")
@@ -41,4 +49,6 @@ def install(root):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("worktree", type=Path)
-    install(parser.parse_args().worktree.resolve())
+    parser.add_argument("--progression-regressions", action="store_true")
+    args = parser.parse_args()
+    install(args.worktree.resolve(), args.progression_regressions)
