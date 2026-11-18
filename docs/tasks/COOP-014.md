@@ -203,6 +203,20 @@ for progression.
   Sicily2 LAN host and guest both reached the native Player Setup screen and
   listed both peers preparing. The private prefixes followed the build guide’s
   DirectPlay IPv4 setting. Captures are in `build/evidence/legacy/`.
+- The unmodified solo reference completed the original mission using its native
+  Single Mission mode, squad orders, weapons and quicksaves. After the guide
+  crossed the swamp, the squad approached from the east road, found the
+  underground entrance, and cleared the original garrison through the docks.
+  `build/evidence/original-solo/garrison-cleared-objectives.png` shows objectives
+  1 through 3 as Success and objective 4 open. The three survivors returned to
+  the entrance, and the original HUD showed **Mission Successful** and
+  **Squad assembled at the entrance** in `mission-successful.png`. The final
+  roster and health values were Czakowski 0, Smith 116, Wright 368, Saunby 13.
+- In `build/evidence/coordinated-road-paired/`, the guide objective succeeded on
+  both peers and all four soldiers regrouped on the east road. Host-owned AI
+  killed the three east gate sentries. Both players lost their soldiers inside
+  the factory before reaching the underground entrance, and one AI soldier
+  survived that attempt. The pair did not reach a terminal result.
 
 ## PR test instructions and delivery
 
@@ -215,11 +229,9 @@ for progression.
 
 - Completed: refreshed origin, verified COOP-010 merge `738b124d` is an ancestor of
   the base, checked for duplicate work, and established the canonical worktree.
-- Remaining: original solo and paired success,
-  guest door interaction and the live fence cut.
-- Next action: continue the southern approach with both peers and repeat the
-  factory approach on the solo reference from the private native quicksave.
-  Verify the native door and cut, enter the complex, clear the original
+- Remaining: paired success, guest door interaction and the live fence cut.
+- Next action: clear the hut patrol before the guest approaches its door.
+  Verify the native door and cut, approach the complex with cover, clear the original
   garrison, and gather the surviving squad at the underground entrance.
 - Blockers: none. Serialize live LAN tests with COOP-013 when the fixed provider port is occupied.
 - Decisions: Use the existing development launch and game data. Base the interaction scope on what the original Arctic1 route exercises.
