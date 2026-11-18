@@ -67,6 +67,7 @@ Full vehicle gameplay acceptance remains a later interaction gate.
 - Completed: high-level identity coupling identified in the campaign design.
 - Remaining: exact file split, adapters, handoff/input tests, legacy regression checks.
 - Next action: review merged dependencies and agree on overlapping-file edits with COOP-009.
-- Blockers: dependencies have not merged; runtime prerequisites tracked by COOP-001.
+- Blockers: COOP-004/006 have not merged. COOP-001 build/runtime baseline merged at
+  `15b572ff`; prerequisites and commands are in [the guide](../build_baseline.md).
 - Decisions: preserve soldier identity and explicit simulation authority.
 - Validation: none for this task.

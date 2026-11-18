@@ -2,15 +2,15 @@
 
 ## Coordination
 
-- Status: review
+- Status: done
 - Owner/session: Codex / user-assigned COOP-001, 2026-11-18
 - Canonical branch: `feature/coop-001-build-baseline`
 - Base commit: `7e033adde95881baad06c6877cbbd6eef8197d96`
 - Dependencies: none
-- Last checkpoint: tooling `23079565`; runtime game/engine source `ca28d52c`; final evidence/handoff is this subsequent commit
+- Last checkpoint: reviewed implementation `747d0590`; review metadata `949e54e6`; runtime game/engine source `ca28d52c`
 - Checkpoint location: `origin/feature/coop-001-build-baseline`; `.worktrees/COOP-001`
-- Review/integration: independent COOP-004 review passed at `747d0590`; implementation and bounded runtime baseline accepted; not merged
-- Pull request: https://github.com/xcntroller/HD2_BaseCoop/pull/2 (draft)
+- Review/integration: independent COOP-004 review passed at `747d0590`; PR #2 merged into main at `15b572ff2d86425e1e4a7d62d10b4813d0dafb24`
+- Pull request: https://github.com/xcntroller/HD2_BaseCoop/pull/2 (merged)
 
 ## Branch authority and completion PR
 
@@ -121,15 +121,16 @@ are excluded. This is wired into build guidance, not a new gameplay entry point.
   `configure_wine_msvc.py`, `build_check.py`; `ls3df/build.py` environment override only;
   root README, agent workflow, baseline guide and this record. No game/engine C++ edits,
   protocol/layout changes or generated tier1 edits. Scope acknowledged in coordinator ledger.
-- Remaining: publication as ready PR, integration and actual done/merge metadata.
-  Independent final tooling/document review passed; no missing compiler/game-data blocker remains.
-- Next action: mark PR #2 ready and integrate the reviewed diff; then record actual merge SHA.
+- Remaining: none for the bounded build/baseline scope. Independent final tooling/document
+  review passed; PR #2 integrated at `15b572ff2d86425e1e4a7d62d10b4813d0dafb24`.
+- Next action: downstream workers use the guide and retain their own runtime acceptance gates.
+  COOP-008/009 remain planned until their other component dependencies merge.
 - Known limits: partial runs and loopback only; unconfirmed firing/reload, mission completion,
   saves/healing/vehicles and future campaign gameplay retain their separate evidence gates.
-- Local state: own tree contains this final evidence update before checkpoint. Ignored
+- Local state: implementation branch clean and published. Ignored
   toolchain/download cache, private prefixes/runtime copies, logs/screenshots and detached
   cache-probe remain accessible; installed game/prefix were read-only sources.
-- Checkpoint publication: `origin/feature/coop-001-build-baseline`, draft PR #2. No work on
+- Checkpoint publication: `origin/feature/coop-001-build-baseline`, merged PR #2. No work on
   main; other task branches/worktrees preserved. Operational coordinator ledger is separate.
 
 ## Independent final review
