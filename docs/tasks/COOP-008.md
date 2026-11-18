@@ -2,15 +2,15 @@
 
 ## Coordination
 
-- Status: active
+- Status: review
 - Owner/session: Codex COOP-008 / thread `01a1ec1f-4589-7051-9994-2a236a14b49b`
 - Canonical branch: `feature/coop-008-controller-adapters`
 - Base commit: `0fcea78f85d0fe9348c3b8e13d1a0f23f50a482a`
 - Dependencies: COOP-001, COOP-004, COOP-006
-- Last checkpoint: none
+- Last checkpoint: source `a7aba640`; integrated-main sync `26303c03`
 - Checkpoint location: `.worktrees/COOP-008` / canonical branch on origin
-- Review/integration: none
-- Pull request: none
+- Review/integration: independent review requested; not merged
+- Pull request: https://github.com/xcntroller/HD2_BaseCoop/pull/17
 
 ## Branch authority and completion PR
 
@@ -64,46 +64,72 @@ Full vehicle gameplay acceptance remains a later interaction gate.
 
 ## Handoff
 
-- Completed: high-level identity coupling identified in the campaign design.
-- Remaining: exact file split, adapters, handoff/input tests, legacy regression checks.
-- Next action: obtain coordinator claim acknowledgment, review merged dependencies,
-  and agree on overlapping-file edits with COOP-009.
-- Blockers: none for the isolated adapter task. COOP-006 protocol merged at
-  `59cb8944`; COOP-004 session/ownership merged at `59a480c8`;
-  COOP-001 build/runtime baseline merged at
-  `15b572ff`; prerequisites and commands are in [the guide](../build_baseline.md).
-- Decisions: preserve soldier identity and explicit simulation authority.
-- Validation: none for this task.
+- Completed: dormant host/guest controller reconciliation, native engine sink,
+  exact-incarnation disconnect bridge and bounded tagged input queue composed with
+  the merged ownership/protocol models. Native ownership, scoring/class, damage,
+  progression, inventory/view and driver consumers are adapted behind an uninstalled
+  explicit campaign boundary. See [the coupling audit and composition guide](../coop_control_adapters.md).
+- Source checkpoint: `a7aba640`; `26303c03` merges finished main `577c04d8` with no
+  COOP-008 source changes. This documentation checkpoint records the final evidence.
+- Delivery: **Source-only**, inactive adapter component. No production context,
+  admission, opcode, transport dispatch or menu entry is enabled. Trial-linked
+  binaries and harness executables are local ignored artifacts, not distributed.
+- Remaining: independent source/evidence review and integration through PR #17.
+  COOP-010 supplies negotiated payload dispatch and tagged authoritative replication,
+  safe lifecycle composition with COOP-009, and actual two-instance campaign behavior.
+  Full vehicle/mission interaction remains a later runtime gate. These are the
+  existing task boundaries, not waived acceptance for an active playable mode.
+- Coordinator: COOP-009 accepted COOP-007 stopped-writer handoff at `9e051608`;
+  COOP-008 has not written the ledger since `bf838b1e`. Both claims/reserved file
+  scopes are acknowledged. Lifecycle/spawn/game_app/profile files remain untouched.
+- Next action: reviewer reads exact candidate and full diff, reproduces harnesses,
+  reviews native sink/authority fences and handoff integration contract, then handles
+  review findings before merger. No uncommitted implementation changes.
+- Decisions: preserve explicit simulation authority, soldier identity/state and all
+  original legacy routes; no production selection/readiness policy is newly chosen.
 
-## 2026-11-18 kickoff
+## Validation actually performed
 
-- Claim acknowledged on `coord/coop-work-queue`; accepted COOP-006 stopped-writer coordinator handoff and notified COOP-007/009.
-- Declared scope follows COOP-002 reservations above. COOP-009 alone edits lifecycle/spawn files and consumes explicit adapter helpers; no live attachment before COOP-010.
-- Next checkpoint: engine-independent committed controller plan and input queue boundary, with real ownership/protocol composition regressions; then legacy consumer adapters and target build checks.
+Commands below are run from this task's worktree. Unique output directories retain
+exact compiler/link commands and diagnostics. MSVC is 19.44.35230 x86 with SDK
+10.0.26100.0, Windows Python 3.13.9 via Wine and `/W4 /WX` for component suites;
+GCC/MinGW is 16.2.1. Only this worktree's private Wine prefix and outputs are used.
 
-## Implementation checkpoint (2026-11-18)
+| Check | Command / evidence | Result |
+| --- | --- | --- |
+| Ownership/protocol composition + actual native sink with instrumented engine | `python _re/harness/campaign_control/run.py --compiler gcc`; `build/campaign_control/gcc-o8sb_y2s/` | 1,266 model/control + 147 native sink checks PASS |
+| Intended x86 component execution | Same runner `--compiler msvc` using Windows Python; `build/campaign_control/msvc-81koetih/` | 1,266 + 147 checks PASS; zero compiler diagnostics |
+| Full hand-port target compile | Windows Python `_re/tools/build_isolated.py check`; `build/coop008/full-check-restored.log` | 279 translation units PASS, 0 errors/warnings |
+| Final native changes | Same isolated `check` for the 17 native consumers/sink; exact list in `build/coop008/final-native-check.log` and build command record | 17 files PASS, 0 errors/warnings |
+| Finished-main synchronization | Isolated `check src/game/campaign_preparation_screen.cpp`; `build/coop008/main-sync-check.log` | Integrated COOP-007 source compiled separately; no COOP-008 code changed by merge |
+| Whole-port trial link | Private `build/coop008/link-final.py` wraps tracked `link_check` using own isolated check objects and read-only COOP-009 engine import libraries; `build/coop008/link-final.log` | 279 objects, 0 unresolved symbols, 0 other linker messages, exit 0; main-sync extra object repeated separately |
+| Dormant human control regression | Existing `_re/harness/human/build_control.bat` translated to isolated Linux MinGW invocation; `build/coop008/legacy-control/commands.json` and `execute-isolated-dlls.log` | 149,953 original-executable comparisons, 0 failures |
+| Dormant native player/input regression | `python _re/harness/campaign_control/run_legacy.py --suite playernet ...`; `build/campaign_control_legacy/playernet-fjtjr35l/commands.json` and `execute.log` | 154,818 comparisons, 0 failures |
+| Dormant remote-controller regression | Same runner `--suite remote`; `build/campaign_control_legacy/remote-tr004q5f/` | 80,002 comparisons, 0 failures |
+| Diff/runner hygiene | `git diff --check`; Python `py_compile` of both runners | PASS |
 
-- Component checkpoint `978b3b8a`; subsequent native adapter checkpoint is this commit.
-  Branch/worktree remain canonical; no lifecycle/spawn/profile layout edits.
-- Implemented dormant committed controller planning, ordered drain/apply/presentation
-  barrier, guarded bounded input queue with real ownership checks at enqueue/apply,
-  exact-incarnation disconnect helper, explicit authenticated slot mapping and native
-  engine sink. Native consumers now resolve local ownership and preserve campaign
-  profile names/skills; native class/scoring and untagged control paths are guarded.
-- Validation actually run: `python _re/harness/campaign_control/run.py --compiler gcc`
-  PASS 963 checks (`build/campaign_control/gcc-_wzqi6w6`); Windows Python/MSVC x86
-  `/W4 /WX` same suite PASS (`msvc-erdcovau`, earlier component checkpoint).
-  Isolated target compile of 18 changed/new translation units PASS, 0 errors/warnings.
-  One earlier compile invocation used shell-stripped backslashes and failed to locate
-  sources; corrected with forward-slash paths. First real compile caught C_Actor driver
-  cast; fixed and repeated successfully. Latest edits require repeat target checks.
-- Outputs are isolated under this worktree `build/isolated/check/default/temp` and
-  `build/campaign_control`; COOP-007 tooling borrowed read-only with private Wine prefix.
-- Not complete: guest committed-snapshot reconciler, full script/death events and
-  native queue/presentation regressions, remaining damage/inventory/vehicle/dispatch
-  audit, full game build and dormant solo/native evidence. No gameplay/runtime claim.
-- Next action: finish these adapters and regressions; run final GCC/MSVC/sanitizer and
-  full source build checks; publish draft PR with exact evidence until gates pass.
-- Coordination correction: COOP-007 had accepted coordination concurrently with kickoff;
-  008 stopped ledger writes at `bf838b1e`, 007 reconciled/accepted both 008/009 claims
-  and retains coordinator role. 008 does not own the live ledger.
+The native sink test compiles the actual adapter implementation against instrumented
+engine interfaces; it is not a running engine or host/guest mission. The differential
+suites use the local unpacked reference executable and isolated original DLLs plus
+installed Proton d3d8. One unresolved unused reference import is reported; every
+selected comparison completes successfully. Reproduction prerequisites and commands
+are in [the harness guide](../../_re/harness/campaign_control/README.md).
+
+Intermediate failures were corrected and checks repeated: a shell backslash quoting
+mistake; a vehicle C_Actor/C_Human cast; a legacy activity path whose extra validity
+guard changed original behavior; missing DLL prerequisites for original comparison;
+and a GCC-16 standard attribute-order issue in the historical harness. The corrected
+activity adapter preserves the exact legacy branch and bounds only campaign mapping.
+
+A full compile was also interrupted when the entire borrowed COOP-007 worktree and
+its ignored compiler resources disappeared externally. Its owner confirms they did
+not remove them. Historical passing checks remain valid; those paths are unavailable.
+COOP-009 restored its own pinned toolchain and authorized read-only borrowing; the
+complete successful target repeats above use that restored toolchain. No resources
+were removed or changed by COOP-008. Optional ASan/UBSan was attempted but could not
+link the missing system `libasan.so.8.0.0`; no sanitizer pass is claimed.
+
+No original-mission campaign launch, two-instance campaign movement/fire/reload,
+mission completion or full vehicle behavior has been tested by this task. Required
+live behavior is demonstrated jointly with lifecycle integration in COOP-010,
+consistent with the acceptance criteria above.
