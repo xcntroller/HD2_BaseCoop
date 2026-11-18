@@ -191,3 +191,5 @@ missing fields. COOP-006 was notified explicitly before this stopped-writer hand
 - COOP-010 owns the development launch, live admission and initial-world reconstruction, and the scoped legacy adapter changes required by the playable gate. Record any scope expansion here before editing shared files.
 
 - Transport scope: COOP-010 owns the new campaign network attachment and the narrow DirectPlay session and callback changes in `net_session.cpp`, `net_messages.cpp`, `net_game.cpp`, `net_game.h` and `dplay8.h`. Campaign traffic uses the provider's reliable ordered channel and its connection identity. Live campaign paths will bypass native UDP, GameSpy and voice; ordinary sessions retain their routes.
+
+- Integration scope: COOP-010 owns the narrow ownership admission change needed to commit the transport-assigned PlayerId after negotiation, with a focused ownership regression. It also owns the original campaign development launcher and any original mission lifecycle integration fixes required by its test fixture.
