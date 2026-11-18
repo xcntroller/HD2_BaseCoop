@@ -10,7 +10,7 @@ creating or updating the operational branch. Do not merge its WIP ledger into `m
 - Contact/shared channel: this published ledger and active COOP-007 conversation; notifying prior coordinator and available reviewers. Existing claims/scopes remain unchanged.
 - Integrator: Codex COOP-007, with independent review before integration. No COOP-007 merge approval yet.
 - Latest checkpoint: `HEAD`; ordinary push to `origin/coord/coop-work-queue`.
-- Next action: finish/review COOP-007 native component evidence. COOP-008/009 remain ready/unclaimed; no new claims issued.
+- Next action: finish/review COOP-007 native component evidence. COOP-008/009 have accepted user claims in the reserved scopes below.
 
 ## Accepted task claims
 
@@ -23,9 +23,9 @@ creating or updating the operational branch. Do not merge its WIP ledger into `m
 | COOP-005 | Codex COOP-005 / thread `01a1ebf9-90e7-7ca2-8a1d-987711a3d8fe`, user assignment | `feature/coop-005-preparation-model` | done | PR #8 merge `06d999d7`; done metadata PR #15 `5f561496`; `.worktrees/COOP-005` | Atomic preparation model/harness/own record; audit actual legacy rules. Native rule parity remains acceptance, injected generic fake does not satisfy it. |
 | COOP-006 | Codex COOP-006 / thread `01a1ec01-a68f-7170-9f75-7536a079675b`, user assignment | `feature/coop-006-protocol` | done | PR #13 merge `59cb8944`; completion PR #16 merge `0fcea78f`; `.worktrees/COOP-006` | `src/net/campaign_protocol.{h,cpp}`, protocol harness and own record. Native dispatch audit read-only; no shared header or live hooks. |
 | COOP-007 | Codex COOP-007 / thread `01a1ec02-1d0b-7791-8a57-e16ee680b905`, user assignment | `feature/coop-007-preparation-screen` | active; claim acknowledged by this commit | Checkpoint `be6aea95`; draft PR #12; `.worktrees/COOP-007` | Native `campaign_preparation_screen.{h,cpp}`, UI harness and own record. Consume merged header/layout; no legacy panel edits or production entry. Required native rendering/input evidence remains gate. |
+| COOP-009 | Codex COOP-009 / thread `01a1ec1f-ea8d-77f3-b0e9-7c683f367ec3`, user assignment | `feature/coop-009-campaign-adapters` | active; claim acknowledged | Base `0fcea78f`; `.worktrees/COOP-009` | Reserved adapter/lifecycle harness and game.cpp/game_app.cpp/game_rounds.cpp/spawn_point.cpp; narrow profile/script/AI hooks. Agree 008 API; final integration after 008 merge. |
 | COOP-001 | Codex / 2026-11-18 user assignment | `feature/coop-001-build-baseline` | done | PR #2 merge `15b572ff`; completion metadata PR #11 merge `1b9b307f` | Build/solo/native host-guest baseline and isolation accepted; guide/evidence integrated. Firing/reload/completion remain unverified downstream gates. |
 
-| COOP-009 | Codex COOP-009 / thread `01a1ec1f-ea8d-77f3-b0e9-7c683f367ec3`, user assignment | `feature/coop-009-campaign-adapters` | active; claim acknowledged | Base `0fcea78f`; `.worktrees/COOP-009` | Reserved adapter/lifecycle harness and game.cpp/game_app.cpp/game_rounds.cpp/spawn_point.cpp; narrow profile/script/AI hooks. Agree 008 API; final integration after 008 merge. |
 
 Only the coordinator adds or reassigns claims. A missing row is not sufficient evidence
 of availability: check worktrees and existing task branches as well. Task records carry
