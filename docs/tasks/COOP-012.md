@@ -2,14 +2,14 @@
 
 ## Coordination
 
-- Status: review
+- Status: done
 - Owner/session: Codex COOP-012, user assignment 2026-11-18, thread `01a1ed7a-8dcb-7ee1-8de0-23710cb94c81`
 - Canonical branch: `feature/coop-012-session-setup`
 - Base commit: `9ec7fe48bb21c38f9d95976b99198c6fb1576e74`
 - Dependencies: [COOP-010](COOP-010.md) live admission and development session
 - Last checkpoint: final tested source `994d034e`; live acceptance and regression evidence recorded
 - Checkpoint location: `.worktrees/COOP-012` and canonical remote branch
-- Review/integration: claim acknowledged at ledger `63b4ac3f`; parallel scope agreed with COOP-014 at `75131f7a`
+- Review/integration: reviewed head `3e47dfdaeb1541ba215d72d6ad7442644e4323bc` merged as `4ef8b814ee8673168f62a87c95b2286569f35094`. The merged tree matches the review rehearsal.
 - Pull request: [#26](https://github.com/xcntroller/HD2_BaseCoop/pull/26)
 
 ## Branch authority and completion PR
@@ -89,7 +89,7 @@ Local evidence is under the root checkout's ignored `build/coop-012-evidence/`.
 | Overlapping admissions | The actual host ran `2c660342`. A test-only guest delayed its acknowledgment by four seconds. The ordinary guest negotiated PlayerId 3 while PlayerId 2 still held its acknowledgment. The host committed both in order (2, 3) after the delay. Captures `ordered-*`, result `ordered-admission-result.log`, and local fixture build script `build-delayed-ack-fixture.py`. |
 | Teardown and new session | Host End returned guests to setup with the host disconnected state. The same host and ordinary guest processes opened and joined a second session. Its SessionId differed, the guest received PlayerId 2 afresh, and ending it closed both sides normally. |
 | Gate and original solo modes | With the variable unset, the picker displayed its original controls at `2c660342`. With the variable set, Campaign, Lone Wolf and Carnage retained their native squad selection at `6bcb163b`. Automatic Selection filled one slot in Lone Wolf and four in Campaign/Carnage. Campaign continued to the original Tutorial loading briefing. The later source change was confined to multiplayer admission order. |
-| Native LAN | Actual native Sicily2 host and guest at `2c660342` using the build guide's `-cmd` LAN commands. Both reached the original Player Setup screen and showed both peers preparing. Logs/captures `final-native-*`. |
+| Native LAN | Actual native Sicily2 host and guest at `2c660342` using the build guide's `-cmd` LAN commands. Both reached the original Player Setup screen and showed both peers preparing. The `994d034e` repeat also reached Player Setup for both peers. Captures `final-native-*` and `fence-native-*`. |
 | COOP-010 launch | Actual two-client `-window -campaign-coop host` / `-window -campaign-coop join 127.0.0.1` at `2c660342`. Both loaded original Arctic1, matched 37646 bytes and CRC32 989510138, crossed generation 1/snapshot 1, and exchanged the first live mission state for all four squad actors. The `994d034e` repeat crossed the same barrier and applied the first live state. Logs `host-final-dev.log`, `guest-final-dev.log` and `*-fence-dev.log`. |
 
 The initial five-process menu matrix used normal local LAN loopback. The exact
@@ -138,6 +138,6 @@ fence repeats used the private veth namespace.
 - Review: the COOP-014 writer is occupied with its separate mission acceptance.
   The coordinator performed a separate source, lifecycle, runtime-evidence and
   integration pass. Deployment and preparation remain assigned to COOP-013.
-- Next action: integrate the verified candidate through PR #26 and record the
-  merged commit. Private build outputs and evidence are available under ignored
-  `build/`.
+- Next action: COOP-013 can claim the live preparation integration using the
+  setup contract above. Private build outputs and evidence are available under
+  ignored `build/coop-012-evidence/` in the root checkout.
