@@ -115,7 +115,7 @@ std::vector<int> GetInitialCampaignRoster()
         return {};
     std::vector<int> profiles;
     for (int i = 0; i < roster.GetCount() && profiles.size() < CampaignProtocol::kMaxParticipants; ++i)
-        if (GetSoldierProfile(i))
+        if (roster.Get(i))
             profiles.push_back(i);
     return profiles;
 }
