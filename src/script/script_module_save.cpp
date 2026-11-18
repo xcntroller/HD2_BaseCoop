@@ -12,13 +12,17 @@
 #include "game/geffects.h"
 #include "game/human.h"
 #include "game/human_movement.h"
+#include "game/interface.h"
 #include "game/lightmap_groups.h"
 #include "game/particles.h"
 #include "game/pending.h"
 #include "game/resource_cache.h"
+#include "game/sound_module.h"
 #include "game/team.h"
+#include "game/track.h"
 #include "ls3d/i3d.h"
 #include "net/bitstream.h"
+#include "net/campaign_protocol.h"
 #include "script/script.h"
 #include "script/script_module.h"
 
@@ -525,9 +529,12 @@ void C_ScriptModule::HandleFrameSetOn(C_BitStream *msg)
     char name[0x100];
     msg->ReadString(name, 0xFE);
     const bool on = msg->ReadBits(1) != 0;
-    if (!GetGame()->GetScene())
-        return;
-    I3D_frame *frame = FindFrameAnywhere(name);
+    if (GetGame()->GetScene())
+        SetScriptFrameOn(FindFrameAnywhere(name), on);
+}
+
+void C_ScriptModule::SetScriptFrameOn(I3D_frame *frame, bool on)
+{
     if (!frame)
         return;
     const int type = frame->GetType();
@@ -579,6 +586,102 @@ void C_ScriptModule::HandleFrameSetOn(C_BitStream *msg)
             team->UpdateCameraTarget();
     }
     frame->Update();
+}
+
+void C_ScriptModule::ApplyCampaignPresentation(const CampaignProtocol::S_MissionPresentation &event)
+{
+    using Action = CampaignProtocol::E_MissionPresentation;
+    auto *game = GetGame();
+    auto *scene = game->GetScene();
+    auto *frame = event.m_Frame.empty() ? nullptr : FindFrameAnywhere(event.m_Frame.c_str());
+    const auto [value, second, third] = event.m_Args;
+    switch (event.m_Action) {
+    case Action::FrameOn:
+        SetScriptFrameOn(frame, value != 0);
+        break;
+    case Action::Speech:
+        if (frame)
+            C_HumanMovement::PlayDubbing(value, frame, nullptr, static_cast<float>(second), static_cast<float>(third));
+        break;
+    case Action::SubtitlesOn:
+        game->GetQuickMessages()->ShowSubtitles(value != 0);
+        break;
+    case Action::Subtitle:
+        game->GetQuickMessages()->SetSubtitle(value);
+        break;
+    case Action::ClearHints:
+#ifndef HD2_DEDICATED
+        game->GetInterface()->ClearHints();
+#endif
+        break;
+    case Action::Hint:
+#ifndef HD2_DEDICATED
+        game->GetInterface()->AddHint(value);
+#endif
+        break;
+    case Action::Animation: {
+        if (!frame || frame->GetType() != FRAME_MODEL)
+            break;
+        I3D_animation_set *anim = nullptr;
+        if (g_animationCache.Get(event.m_Resource.c_str(), &anim) != I3D_OK)
+            break;
+        auto *model = static_cast<I3D_model *>(frame);
+        anim->SetPlayMode(second ? I3DANIM_PLAY_ONCE : I3DANIM_LOOP);
+        model->SetAnimation(anim, value, 1.0f, 0);
+        anim->Release();
+        model->SetAnimTime(value, 0);
+        RememberFrame(model, SCRIPT_FRAME_ANIMATION);
+        RegisterAnimatedModel(model);
+        model->Update();
+        break;
+    }
+    case Action::StopAnimation:
+        if (frame && frame->GetType() == FRAME_MODEL) {
+            auto *model = static_cast<I3D_model *>(frame);
+            if (second)
+                model->SetAnimTime(value, 0);
+            model->StopAnimation(value);
+            if (second)
+                model->SetAnimation(nullptr, value, 1.0f, 0);
+            UnregisterAnimatedModel(model);
+        }
+        break;
+    case Action::Track:
+        if (frame && frame->GetType() != FRAME_CAMERA) {
+            auto *parent = event.m_Parent.empty() ? nullptr : FindFrameAnywhere(event.m_Parent.c_str());
+            if (parent || event.m_Parent.empty())
+                g_trackModule.CreatePlayer(event.m_Resource.c_str(), frame, parent);
+        }
+        break;
+    case Action::Sound:
+        if (frame) {
+            S_SoundRequest request;
+            const auto &matrix = frame->GetMatrix();
+            request.pos = matrix(3);
+            request.posW = matrix.m[3][3];
+            request.flags = SOUND_SILENT_TO_AI;
+            request.chapter = value;
+            request.group = second;
+            GetSoundModule()->Play(request);
+        }
+        break;
+    case Action::CutsceneMusic:
+        GetSoundModule()->CrossfadeMusic(value, 4000, 0);
+        if (value == -1)
+            game->RestoreMusic(game->IsAlarmMusic());
+        break;
+    case Action::WeatherOn:
+        scene->SetWeather(WEATHER_ON, value != 0);
+        GetGEffects()->SetRain(value != 0);
+        break;
+    case Action::WeatherMode:
+        scene->SetWeather(WEATHER_MODE, value != 0);
+        GetGEffects()->SetRain(value == 0);
+        break;
+    case Action::Clouds:
+        GetGEffects()->SetCloudsOn(value != 0);
+        break;
+    }
 }
 
 void C_ScriptModule::HandleClientMessage(int type, C_BitStream *msg)

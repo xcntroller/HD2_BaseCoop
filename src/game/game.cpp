@@ -258,9 +258,7 @@ bool C_game::Start(void *arg)                       // 0x00698c80 (DS 0x006d99e0
 
 bool C_game::Stop()                                 // 0x00699250 (DS 0x006d9f50)
 {
-    if (IsCampaignMission()) {
-        CommitCampaignMissionSoldiers();
-    } else if (IsLocalGame()) {
+    if (IsLocalGame() && !IsCampaignMission()) {
         // The squad's soldiers go back to the campaign's records (the players have the
         // first actor ids).
         for (int id = 0;; ++id) {
@@ -275,7 +273,7 @@ bool C_game::Stop()                                 // 0x00699250 (DS 0x006d9f50
                 UpdateSoldierLoad(state);
             }
         }
-    } else {
+    } else if (!IsCampaignMission()) {
         std::vector<S_SquadSoldier *> &squad = g_missionSquad->states;
         while (!squad.empty()) {
             delete squad.back();
@@ -353,18 +351,30 @@ void C_game::FreeMission()                          // 0x0069a6a0 (DS 0x006db660
 
 void C_game::EndMission(int)                        // 0x0069a7d0
 {
+    if (IsCampaignMission()) {
+        if (PublishCampaignMissionResult())
+            PresentCampaignMissionResult(GetCampaignMissionResult()->m_Success);
+        return;
+    }
     if (m_state == GAME_STATE_ENDING)
         return;
     m_state = GAME_STATE_ENDING;
     m_fadeTime = 500;
     m_endDelay = 1000;
-    if (IsCampaignMission()) {
-        PublishCampaignMissionResult(!m_missionFailed && AreObjectivesDecided());
-    } else if (!IsLocalGame()) {
+    if (!IsLocalGame()) {
         g_netGame.Close(false);
         if (IsServer())
             GetGameApp()->SendGameMessage(GAME_MSG_GAME_ENDED, 0, 0, 0, false);
     }
+}
+
+void C_game::PresentCampaignMissionResult(bool success)
+{
+    m_missionFailed = !success;
+    SetPlayerInputEnabled(false);
+#ifndef HD2_DEDICATED
+    m_interface->ShowMessage(success ? TEXT_MISSION_COMPLETED : TEXT_MISSION_FAILED);
+#endif
 }
 
 void C_game::ApplyFade()                            // 0x0069b0e0

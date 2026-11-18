@@ -5,6 +5,7 @@
 //  * a few commands stall the script (return without advancing) on bad input;
 //  * some debug commands advance but report "not handled" (derived script classes
 //    then run their own handler, which may advance a second time).
+#include "game/campaign_dev.h"
 #include "game/campaign_mission_adapter.h"
 #include <cstdio>
 #include <cstdlib>
@@ -21,6 +22,7 @@
 #include "game/world.h"
 #include "ls3d/i3d.h"
 #include "net/bitstream.h"
+#include "net/campaign_protocol.h"
 #include "script/script.h"
 #include "script/script_expression.h"
 #include "script/script_module.h"
@@ -64,6 +66,22 @@ C_TeamBase *GetPlayerTeamForMode()
     if (g_gameProfile.IsCooperativeGame())
         return g_teamManager.GetCoopTeam();
     return g_teamManager.GetPlayerTeam();
+}
+
+using Presentation = CampaignProtocol::E_MissionPresentation;
+
+void ReplicatePresentation(CampaignProtocol::S_MissionPresentation event)
+{
+    QueueDevelopmentCampaignPresentation(std::move(event));
+}
+
+bool PresentCampaign(CampaignProtocol::S_MissionPresentation event)
+{
+    if (!IsCampaignSimulationAuthority())
+        return false;
+    g_scriptModule.ApplyCampaignPresentation(event);
+    ReplicatePresentation(std::move(event));
+    return true;
 }
 
 // Sends a one-value script message to the clients.
@@ -565,6 +583,8 @@ bool C_Script::ExecuteCommand(const S_ScriptCommand &cmd)
         if (frame->GetType() == FRAME_SOUND)
             g_scriptModule.RegisterSoundFrame(frame);
         frame->Update();
+        if (PresentCampaign({Presentation::FrameOn, frame->GetName(), {}, {}, {on}}))
+            break;
         // The clients (including the local one) switch the frame.
         if (C_BitStream *out = BeginScriptNetMessage(SCRIPT_MSG_FRAME_SET_ON, true)) {
             out->WriteString(frame->GetName());
@@ -599,6 +619,12 @@ bool C_Script::ExecuteCommand(const S_ScriptCommand &cmd)
             model->Update();
             started = true;
         }
+        if (IsCampaignSimulationAuthority())
+            ReplicatePresentation(started
+                ? CampaignProtocol::S_MissionPresentation{Presentation::Animation, model->GetName(),
+                    animName.c_str(), {}, {stage, cmd.opcode == OP_FRM_SetAnimationDelayed}}
+                : CampaignProtocol::S_MissionPresentation{Presentation::StopAnimation, model->GetName(),
+                    {}, {}, {stage, 1}});
         if (started && cmd.opcode != OP_FRM_SetAnimation) {
             // Delayed: Tick() advances when the animation ends.
             m_waitAnimModel = model;
@@ -618,6 +644,8 @@ bool C_Script::ExecuteCommand(const S_ScriptCommand &cmd)
         model->StopAnimation(stage);
         model->SetAnimation(nullptr, stage, 1.0f, 0);
         g_scriptModule.UnregisterAnimatedModel(model);
+        if (IsCampaignSimulationAuthority())
+            ReplicatePresentation({Presentation::StopAnimation, model->GetName(), {}, {}, {stage, 1}});
         break;
     }
 
@@ -629,6 +657,8 @@ bool C_Script::ExecuteCommand(const S_ScriptCommand &cmd)
             break;
         model->StopAnimation(numberArg(1));
         g_scriptModule.UnregisterAnimatedModel(model);
+        if (IsCampaignSimulationAuthority())
+            ReplicatePresentation({Presentation::StopAnimation, model->GetName(), {}, {}, {numberArg(1)}});
         break;
     }
 
@@ -783,8 +813,12 @@ bool C_Script::ExecuteCommand(const S_ScriptCommand &cmd)
         I3D_frame *frame = frameArg(0);
         const char *track = stringArg(1);
         if (cmd.opcode == OP_FRM_WatchTrackWithParent) {
-            if (frame)
-                g_trackModule.CreatePlayer(track, frame, frameArg(2));
+            if (frame) {
+                auto *parent = frameArg(2);
+                g_trackModule.CreatePlayer(track, frame, parent);
+                if (IsCampaignSimulationAuthority() && frame->GetType() != FRAME_CAMERA)
+                    ReplicatePresentation({Presentation::Track, frame->GetName(), track, parent ? parent->GetName() : ""});
+            }
             break;
         }
         C_Actor *actor = GetFrameActor(frame);
@@ -793,8 +827,11 @@ bool C_Script::ExecuteCommand(const S_ScriptCommand &cmd)
             static_cast<C_Train *>(actor)->SetTrack(track[0] != '\0', track);
             break;
         }
-        if (frame)
+        if (frame) {
             g_trackModule.CreatePlayer(track, frame, nullptr);
+            if (IsCampaignSimulationAuthority() && frame->GetType() != FRAME_CAMERA)
+                ReplicatePresentation({Presentation::Track, frame->GetName(), track, {}});
+        }
         break;
     }
 
@@ -838,7 +875,8 @@ bool C_Script::ExecuteCommand(const S_ScriptCommand &cmd)
     case OP_FRM_MorphSpeech:
     case OP_FRM_MorphSpeechDelayed: {
         I3D_frame *frame = frameArg(0);
-        if (frame) {
+        if (frame && !PresentCampaign({Presentation::Speech, frame->GetName(), {}, {},
+                {numberArg(1), numberArg(2), numberArg(3)}})) {
             if (C_BitStream *out = BeginScriptNetMessage(SCRIPT_MSG_MORPH_SPEECH, true)) {
                 out->WriteString(frame->GetName());
                 out->WriteBits(numberArg(1), 32);              // phrase
@@ -1008,6 +1046,8 @@ bool C_Script::ExecuteCommand(const S_ScriptCommand &cmd)
         request.chapter = numberArg(0);
         request.group = numberArg(1);
         GetSoundModule()->Play(request);
+        if (IsCampaignSimulationAuthority())
+            ReplicatePresentation({Presentation::Sound, m_frame->GetName(), {}, {}, {numberArg(0), numberArg(1)}});
         break;
     }
 
@@ -1021,6 +1061,8 @@ bool C_Script::ExecuteCommand(const S_ScriptCommand &cmd)
         // -1 goes back to the mission's music.
         if (index == -1)
             GetGame()->RestoreMusic(GetGame()->IsAlarmMusic());
+        if (IsCampaignSimulationAuthority())
+            ReplicatePresentation({Presentation::CutsceneMusic, {}, {}, {}, {index}});
         break;
     }
 
@@ -1074,11 +1116,13 @@ bool C_Script::ExecuteCommand(const S_ScriptCommand &cmd)
         break;
 
     case OP_SUBTITLES_SetOn:
-        SendScriptValue(SCRIPT_MSG_SUBTITLES_ON, boolArg(0), 1);
+        if (!PresentCampaign({Presentation::SubtitlesOn, {}, {}, {}, {boolArg(0)}}))
+            SendScriptValue(SCRIPT_MSG_SUBTITLES_ON, boolArg(0), 1);
         break;
 
     case OP_SUBTITLES_SetText:
-        SendScriptValue(SCRIPT_MSG_SUBTITLES_TEXT, numberArg(0), 32);
+        if (!PresentCampaign({Presentation::Subtitle, {}, {}, {}, {numberArg(0)}}))
+            SendScriptValue(SCRIPT_MSG_SUBTITLES_TEXT, numberArg(0), 32);
         break;
 
     case OP_Mission_SetUniformDisguise:
@@ -1092,12 +1136,16 @@ bool C_Script::ExecuteCommand(const S_ScriptCommand &cmd)
     case OP_HINT_ClearAll:
 #ifndef HD2_DEDICATED   // the server's hint commands only advance (DS 0x00436f9b)
         GetGame()->GetInterface()->ClearHints();
+        if (IsCampaignSimulationAuthority())
+            ReplicatePresentation({Presentation::ClearHints, {}, {}, {}, {}});
 #endif
         break;
 
     case OP_HINT_Add:
 #ifndef HD2_DEDICATED
         GetGame()->GetInterface()->AddHint(numberArg(0));
+        if (IsCampaignSimulationAuthority())
+            ReplicatePresentation({Presentation::Hint, {}, {}, {}, {numberArg(0)}});
 #endif
         break;
 
@@ -1161,6 +1209,8 @@ bool C_Script::ExecuteCommand(const S_ScriptCommand &cmd)
 
     case OP_CSC_RunCLouder:
         GetGEffects()->SetCloudsOn(boolArg(0));
+        if (IsCampaignSimulationAuthority())
+            ReplicatePresentation({Presentation::Clouds, {}, {}, {}, {boolArg(0)}});
         break;
 
     case OP_CSC_GetPlayerNum:
@@ -1290,7 +1340,8 @@ bool C_Script::ExecuteCommand(const S_ScriptCommand &cmd)
     // ------------------------------------------------------------------ weather
     case OP_WEATHER_SetOn: {
         const bool on = boolArg(0);
-        SendScriptValue(SCRIPT_MSG_WEATHER_ON, on, 1);
+        if (!PresentCampaign({Presentation::WeatherOn, {}, {}, {}, {on}}))
+            SendScriptValue(SCRIPT_MSG_WEATHER_ON, on, 1);
         if (!(g_gameRole & GAME_ROLE_CLIENT))
             GetGame()->GetScene()->SetWeather(WEATHER_ON, on);
         break;
@@ -1370,7 +1421,8 @@ bool C_Script::ExecuteCommand(const S_ScriptCommand &cmd)
 
     case OP_WEATHER_SetMode: {
         const int mode = numberArg(0);
-        SendScriptValue(SCRIPT_MSG_WEATHER_MODE, mode == 1, 1);
+        if (!PresentCampaign({Presentation::WeatherMode, {}, {}, {}, {mode == 1}}))
+            SendScriptValue(SCRIPT_MSG_WEATHER_MODE, mode == 1, 1);
         if (!(g_gameRole & GAME_ROLE_CLIENT))
             GetGame()->GetScene()->SetWeather(WEATHER_MODE, mode);
         break;

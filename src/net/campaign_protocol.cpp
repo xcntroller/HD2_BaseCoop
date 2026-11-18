@@ -84,6 +84,8 @@ template<> struct S_EnumMax<E_CampaignFindingSeverity> { static constexpr auto v
 template<> struct S_EnumMax<E_CampaignRequestFamily> { static constexpr auto value = E_CampaignRequestFamily::Deploy; };
 template<> struct S_EnumMax<E_CampaignRequestOutcome> { static constexpr auto value = E_CampaignRequestOutcome::ResyncRequired; };
 template<> struct S_EnumMax<E_InputKind> { static constexpr auto value = E_InputKind::VehicleAction; };
+template<> struct S_EnumMax<E_MissionPresentation> { static constexpr auto value = E_MissionPresentation::Clouds; };
+template<> struct S_EnumMax<E_MissionOutcome> { static constexpr auto value = E_MissionOutcome::Failure; };
 template<> struct S_EnumMax<E_WeaponEvent> { static constexpr auto value = E_WeaponEvent::Reload; };
 template<class A> bool Fields(A &a, ActorRef &x);
 template<class A> bool Fields(A &a, S_CampaignContentDescriptor &x);
@@ -141,6 +143,8 @@ template<class A> bool Fields(A &a, S_WorldChunk &x);
 template<class A> bool Fields(A &a, S_SquadActorState &x);
 template<class A> bool Fields(A &a, S_MissionCamera &x);
 template<class A> bool Fields(A &a, S_MissionUpdate &x);
+template<class A> bool Fields(A &a, S_AmbientHumanState &x);
+template<class A> bool Fields(A &a, S_MissionPresentation &x);
 template<class A> bool Fields(A &a, S_WeaponEvent &x);
 template<class A> bool Fields(A &a, S_ItemMove &x);
 template<class A> bool Fields(A &a, S_InventoryEvent &x);
@@ -183,6 +187,12 @@ private:
     bool Value(std::uint16_t &x) { return Unsigned(x); }
     bool Value(std::uint32_t &x) { return Unsigned(x); }
     bool Value(std::uint64_t &x) { return Unsigned(x); }
+    bool Value(std::int32_t &x) {
+        auto bits = static_cast<std::uint32_t>(x);
+        if (!Unsigned(bits)) return false;
+        if (!m_Out) x = bits <= INT32_MAX ? static_cast<std::int32_t>(bits) : -1 - static_cast<std::int32_t>(~bits);
+        return true;
+    }
     bool Value(std::int64_t &x) {
         auto bits = static_cast<std::uint64_t>(x);
         if (!Unsigned(bits)) return false;
@@ -367,9 +377,15 @@ template<class A> bool Fields(A &a, S_SquadActorState &x) {
 template<class A> bool Fields(A &a, S_MissionCamera &x) {
     return a(x.m_Position, x.m_Direction, x.m_Up, x.m_Fov);
 }
+template<class A> bool Fields(A &a, S_MissionPresentation &x) {
+    return a(x.m_Action, x.m_Frame, x.m_Resource, x.m_Parent, x.m_Args);
+}
+template<class A> bool Fields(A &a, S_AmbientHumanState &x) {
+    return a(x.m_Pose, x.m_Visible);
+}
 template<class A> bool Fields(A &a, S_MissionUpdate &x) {
     return a(x.m_Session, x.m_Generation, x.m_Snapshot, x.m_OwnershipRevision, x.m_Sequence,
-             x.m_MissionTime, x.m_PlayerInputEnabled, x.m_CutsceneCamera, x.m_Squad, x.m_Objectives) && Valid(x);
+             x.m_MissionTime, x.m_PlayerInputEnabled, x.m_Outcome, x.m_CutsceneCamera, x.m_Squad, x.m_Objectives, x.m_Presentation, x.m_Ambient) && Valid(x);
 }
 
 template<class A> bool Fields(A &a, S_ItemMove &x) {
@@ -604,12 +620,50 @@ bool ValidControls(const S_PlayerControls &input) {
     constexpr std::uint16_t pressed = kFire | kCrouch | kProne | kReload | kPaceUp | kPaceDown;
     return !(input.m_Held & ~held) && !(input.m_Pressed & ~pressed) && IsDirection(input.m_ViewDirection);
 }
+bool ValidPresentation(const S_MissionPresentation &event) {
+    using Action = E_MissionPresentation;
+    const auto [value, second, third] = event.m_Args;
+    const bool frame = !event.m_Frame.empty();
+    const bool resource = !event.m_Resource.empty();
+    const bool parent = !event.m_Parent.empty();
+    const bool flag = value == 0 || value == 1;
+    if (event.m_Action != Action::Track && parent) return false;
+    if (event.m_Action != Action::Animation && event.m_Action != Action::Track && resource) return false;
+    switch (event.m_Action) {
+    case Action::FrameOn: return frame && flag && !second && !third;
+    case Action::Speech: return frame && value >= 0 && second >= 0 && second <= third && third <= 255;
+    case Action::Animation: return frame && resource && value >= 0 && value < 7 && (second == 0 || second == 1) && !third;
+    case Action::StopAnimation: return frame && value >= 0 && value < 7 && (second == 0 || second == 1) && !third;
+    case Action::Track: return frame && !value && !second && !third;
+    case Action::Sound: return frame && value >= 0 && second >= 0 && !third;
+    case Action::ClearHints: return !frame && !value && !second && !third;
+    case Action::Subtitle:
+    case Action::Hint: return !frame && value >= 0 && !second && !third;
+    case Action::CutsceneMusic: return !frame && value >= -1 && !second && !third;
+    case Action::SubtitlesOn:
+    case Action::WeatherOn:
+    case Action::WeatherMode:
+    case Action::Clouds: return !frame && flag && !second && !third;
+    }
+    return false;
+}
+
 bool Valid(const S_MissionUpdate &x) {
     if (!Id(x.m_Session) || !Id(x.m_Generation) || !Id(x.m_Snapshot) || !Id(x.m_OwnershipRevision) ||
         !x.m_Sequence || x.m_Squad.empty() || x.m_Squad.size() > kMaxSoldiers ||
-        x.m_Objectives.size() > kMaxCollection ||
+        x.m_Objectives.size() > kMaxCollection || x.m_Presentation.size() > 64 ||
+        !std::all_of(x.m_Presentation.begin(), x.m_Presentation.end(), ValidPresentation) ||
         !Unique(x.m_Squad, [](const auto &record) { return record.m_Actor.m_Actor.Value(); }))
         return false;
+    if (x.m_Outcome != E_MissionOutcome::Running) {
+        if (x.m_PlayerInputEnabled || x.m_CutsceneCamera ||
+            std::find(x.m_Objectives.begin(), x.m_Objectives.end(), 0) != x.m_Objectives.end())
+            return false;
+        if (x.m_Outcome == E_MissionOutcome::Success &&
+            (std::find(x.m_Objectives.begin(), x.m_Objectives.end(), 1) == x.m_Objectives.end() ||
+             std::find(x.m_Objectives.begin(), x.m_Objectives.end(), 3) != x.m_Objectives.end()))
+            return false;
+    }
     if (x.m_CutsceneCamera) {
         const auto &camera = *x.m_CutsceneCamera;
         if (x.m_PlayerInputEnabled || camera.m_Fov <= 0 || camera.m_Fov >= 3.142f ||
@@ -617,9 +671,19 @@ bool Valid(const S_MissionUpdate &x) {
             std::fabs(Dot(camera.m_Direction, camera.m_Up)) > 0.02f)
             return false;
     }
-    for (const auto &actor : x.m_Squad) {
-        if (actor.m_Actor.m_Session != x.m_Session || actor.m_Actor.m_Generation != x.m_Generation ||
-            actor.m_Stance > 2 || !IsDirection(actor.m_Facing) || !IsDirection(actor.m_ViewDirection))
+    const auto poseInGeneration = [&](const S_SquadActorState &actor) {
+        return actor.m_Actor.m_Session == x.m_Session && actor.m_Actor.m_Generation == x.m_Generation &&
+            actor.m_Stance <= 2 && IsDirection(actor.m_Facing) && IsDirection(actor.m_ViewDirection);
+    };
+    if (!std::all_of(x.m_Squad.begin(), x.m_Squad.end(), poseInGeneration) ||
+        !Unique(x.m_Ambient, [](const auto &record) { return record.m_Pose.m_Actor.m_Actor.Value(); }))
+        return false;
+    for (const auto &ambient : x.m_Ambient) {
+        const auto &pose = ambient.m_Pose;
+        if (pose.m_Actor.m_SlotUse.Value() != 0 || !poseInGeneration(pose) ||
+            std::any_of(x.m_Squad.begin(), x.m_Squad.end(), [&](const auto &soldier) {
+                return soldier.m_Actor.m_Actor == pose.m_Actor.m_Actor;
+            }))
             return false;
     }
     return std::all_of(x.m_Objectives.begin(), x.m_Objectives.end(), [](auto status) { return status <= 4; });

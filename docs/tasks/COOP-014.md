@@ -7,7 +7,7 @@
 - Canonical branch: `feature/coop-014-arctic1-completion`
 - Base commit: `9ec7fe48bb21c38f9d95976b99198c6fb1576e74`
 - Dependencies: [COOP-010](COOP-010.md) two-player Arctic1 development path
-- Last checkpoint: claim accepted and canonical worktree created
+- Last checkpoint: original script audit, result capture and initial presentation implementation
 - Checkpoint location: `.worktrees/COOP-014` and the canonical branch on origin
 - Review/integration: COOP-012 coordinator accepted the claim in ledger `75131f7a`.
 - Pull request: [draft #25](https://github.com/xcntroller/HD2_BaseCoop/pull/25)
@@ -62,7 +62,10 @@ Two private Wine instances on displays :102 and :103 ran that build with Sabre S
 aircraft intro in both windows. The host rendered the cabin and seated squad while
 the guest showed a dark view with the in-mission HUD. The build and process logs are
 in ignored `build/evidence/`; per-peer `campaign-dev.log` files are in
-`build/runtime/{host,guest}/`. The base solo process reached the original main menu.
+`build/runtime/{host,guest}/`. The base solo process reached the original main menu and Single Mission list.
+A private profile copy now selects Arctic1 directly via the original Single Mission
+menu by setting its best-progress field to 1. This changes menu availability only
+and uses the installed mission scripts and assets.
 
 ## Original mission audit
 
@@ -89,19 +92,36 @@ success. COOP-014 will make the original outcome and the captured terminal squad
 available at the native lifecycle boundary, with COOP-015 consuming that result
 for progression.
 
+### Implementation checkpoint
+
+- The first Running result/presentation build linked in pinned MSVC x86 with zero
+  diagnostics. The isolated incremental command was `_re/tools/build_isolated.py game`.
+  The test executable SHA-256 was
+  `a61d7fe67bb58d5a1d2bed8bbe38cac04183a65be716901f5b66dda6061287b1`.
+- GCC protocol (12 suites), mission adapter/native-source, and controller
+  composition suites passed. Logs are in `build/evidence/first-component-gcc.log`.
+  The protocol fixture update changes only the live mission update frame.
+- Running updates now carry original mission objective outcomes, static ambient
+  humans, and selected host-evaluated presentation events. The campaign result
+  snapshots the original objective statuses and four native squad states before
+  allowing the session to leave Running. No branch or profile advancement is
+  performed at mission teardown. Terminal and presentation runtime testing is pending.
+
 ## PR test instructions and delivery
 
 - Delivery: Integrated gameplay; specify runnable artifact or Source-only at review.
 - Prerequisites and reproduction steps: record build, game setup, player count, actions
   and expected results before review.
-- Validation actually run: none for this planned work.
+- Validation actually run: see the base and implementation checkpoints above.
 
 ## Handoff
 
 - Completed: refreshed origin, verified COOP-010 merge `738b124d` is an ancestor of
   the base, checked for duplicate work, and established the canonical worktree.
-- Remaining: implementation or verification and the acceptance evidence above.
-- Next action: Reproduce the last verified route and capture a solo reference beyond the forest patrol to identify the first missing live behavior.
+- Remaining: original solo and paired completion, failure and terminal state evidence,
+  guest interactions, full cutscene parity and the applicable legacy regressions.
+- Next action: launch the verified single-mission reference and repeat the updated
+  paired Running path on private displays after the current COOP-012 LAN window.
 - Blockers: none. Serialize live LAN tests with COOP-012 if the fixed provider port
   is occupied.
 - Decisions: Use the existing development launch and game data. Base the interaction scope on what the original Arctic1 route exercises.

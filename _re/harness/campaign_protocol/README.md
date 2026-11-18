@@ -210,8 +210,12 @@ IDs and CRCs are freshness/integrity data, **not cryptographic authentication**.
 
 MissionUpdate names the committed session, mission generation, world snapshot
 and ownership revision. The body adds a sequence, the host mission clock, a
-player input flag, an optional cutscene camera, up to 64 uniquely bound squad
-actors and the original ordered objective statuses. Positions, direction axes,
+player input flag, an outcome (Running, Success or Failure), an optional cutscene
+camera, up to 64 uniquely bound squad actors and the original ordered objective
+statuses. This layout requires feature bit 6. The original live update used bit 3,
+which is reserved. Terminal updates disable input, omit the cutscene camera and
+report final objective statuses. Critical objective failure cannot encode as
+success. Positions, direction axes,
 velocity and the camera FOV are finite IEEE binary32 values. The receiver checks
 the negotiated feature and host direction before handing the typed state to the
 mission adapter. The mission adapter must check its installed baseline and

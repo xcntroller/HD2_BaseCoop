@@ -344,7 +344,7 @@ void C_game::Update(int timeDelta)                  // 0x0069b500 (DS 0x006dc3b0
             if ((IsCampaignMission() && IsCampaignSimulationAuthority()) ||
                 (!IsCampaignMission() && !g_playMode->singleMission && !m_missionFailed)) {
                 EndMission(100);
-                if (g_teamManager.GetPlayerTeam()->GetActivePlayer())
+                if (!IsCampaignMission() && g_teamManager.GetPlayerTeam()->GetActivePlayer())
                     ::GetCameraModule()->SetSpecialMode(2, true, nullptr);
                 return;
             }

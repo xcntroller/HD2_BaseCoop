@@ -98,8 +98,8 @@ S_CampaignMissionManifest Manifest() {
 S_WorldChunk Chunk() { return {Baseline(), 3, 0, 1, Crc32({1,2,3}), {1,2,3}}; }
 S_MissionUpdate MissionUpdate() {
     S_MissionUpdate state{Context().m_Session, MissionGeneration(3), SnapshotId(13), OwnershipRevision(6),
-        25, 7500, false, S_MissionCamera{{10, 20, -30}, {0, 0, 1}, {0, 1, 0}, 1.3f},
-        {{*Soldier().m_Actor, {1, 2, -3}, {0, 0, 1}, {1, 0, 0}, {2, 0, 0}, 740, 2}}, {0, 1, 4}};
+        25, 7500, false, E_MissionOutcome::Running, S_MissionCamera{{10, 20, -30}, {0, 0, 1}, {0, 1, 0}, 1.3f},
+        {{*Soldier().m_Actor, {1, 2, -3}, {0, 0, 1}, {1, 0, 0}, {2, 0, 0}, 740, 2}}, {0, 1, 4}, {}, {}};
     return state;
 }
 
@@ -359,6 +359,27 @@ void MissionUpdates() {
     CHECK(Encode(state, encoded) == R::Malformed);
     state = MissionUpdate();
     state.m_Objectives[0] = 5;
+    CHECK(Encode(state, encoded) == R::Malformed);
+
+    state = MissionUpdate();
+    state.m_PlayerInputEnabled = false;
+    state.m_CutsceneCamera.reset();
+    state.m_Outcome = E_MissionOutcome::Success;
+    state.m_Objectives = {1, 1, 4};
+    CHECK(Encode(state, encoded) == R::None);
+    T_Message terminal;
+    CHECK(Decode(encoded, terminal) == R::None);
+    CHECK(std::get<S_MissionUpdate>(terminal).m_Outcome == E_MissionOutcome::Success);
+    state.m_Objectives[0] = 3;
+    CHECK(Encode(state, encoded) == R::Malformed);
+    state.m_Outcome = E_MissionOutcome::Failure;
+    CHECK(Encode(state, encoded) == R::None);
+    CHECK(Decode(encoded, terminal) == R::None);
+    CHECK(std::get<S_MissionUpdate>(terminal).m_Outcome == E_MissionOutcome::Failure);
+    state.m_Objectives[1] = 0;
+    CHECK(Encode(state, encoded) == R::Malformed);
+    state.m_Objectives[1] = 2;
+    state.m_PlayerInputEnabled = true;
     CHECK(Encode(state, encoded) == R::Malformed);
 }
 void WeaponEvents() {

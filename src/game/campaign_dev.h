@@ -9,6 +9,7 @@ class I3D_scene;
 namespace CampaignProtocol {
 enum class E_WeaponEvent : std::uint8_t;
 struct S_PlayerControls;
+struct S_MissionPresentation;
 }
 
 // Returns true when the explicit development launch switch was handled.
@@ -16,6 +17,8 @@ bool StartDevelopmentCampaign(C_GameApp &app);
 void TickDevelopmentCampaign(C_GameApp &app);
 void ReleaseDevelopmentCampaign();
 bool RenderDevelopmentCampaignCutscene(I3D_scene &scene);
+bool IsDevelopmentCampaignCutscene();
+void QueueDevelopmentCampaignPresentation(CampaignProtocol::S_MissionPresentation event);
 void PublishDevelopmentCampaignWeapon(int actor, CampaignProtocol::E_WeaponEvent action,
     int weaponUid, std::uint16_t rounds, std::uint16_t reloadMs, int consumedAmmo);
 void SendDevelopmentCampaignControls(int actor, const CampaignProtocol::S_PlayerControls &controls);
