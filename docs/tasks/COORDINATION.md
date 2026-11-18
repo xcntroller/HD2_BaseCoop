@@ -6,11 +6,11 @@ creating or updating the operational branch. Do not merge its WIP ledger into `m
 
 ## Coordinator
 
-- Owner/session: Codex COOP-012, user assignment on 2026-11-18, thread `01a1ed7a-8dcb-7ee1-8de0-23710cb94c81`.
-- Contact/shared channel: this published ledger and the COOP-012 task branch/PR.
-- Integrator: Codex COOP-012 for this session, subject to the review and runtime acceptance gates.
+- Owner/session: Codex COOP-013, explicit user assignment on 2026-11-18.
+- Contact/shared channel: this ledger and the canonical COOP-013 task branch/PR.
+- Integrator: Codex COOP-013 for its own task, subject to the review and runtime acceptance gates.
 - Latest checkpoint: `HEAD` on `origin/coord/coop-work-queue`.
-- Next action: COOP-014 retains its active claim. COOP-013 is ready for a claim. The next coordinator can accept the stopped-writer handoff below.
+- Next action: COOP-013 wires live preparation into the admitted menu session. COOP-014 retains its active mission-completion claim.
 
 ## Accepted task claims
 
@@ -30,6 +30,7 @@ creating or updating the operational branch. Do not merge its WIP ledger into `m
 | COOP-010 | Codex COOP-010 (2026-11-18), user assignment | `feature/coop-010-two-player-mission` | done | PR #22 merged `738b124d`, completion PR #23 merged `dc41c6b7`, `.worktrees/COOP-010` | Arctic1 playable gate and original mode regressions recorded. |
 | COOP-012 | Codex COOP-012 (2026-11-18), user assignment | `feature/coop-012-session-setup` | done | PR #26 merged `4ef8b814`; completion PR #27 merged `fd5ad4c3` | Five-instance setup matrix, concurrent admission, route isolation, original-mode regressions and COOP-013 contract recorded. |
 | COOP-014 | Codex COOP-014, user assignment, thread `01a1ed7a-ddd9-7000-bbec-e292bd129d25` | `feature/coop-014-arctic1-completion` | active | PR #25 draft, base `9ec7fe48` | Arctic1 solo/dev reference, interactions, objectives and Running replication. |
+| COOP-013 | Codex COOP-013, explicit user assignment on 2026-11-18 | `feature/coop-013-live-preparation` | active | `.worktrees/COOP-013`, base `fd5ad4c3` | Live preparation authority, screen and first loading transition. |
 
 
 Only the coordinator adds or reassigns claims. A missing row is not sufficient evidence
@@ -235,3 +236,8 @@ missing fields. COOP-006 was notified explicitly before this stopped-writer hand
 - PR #26 merged exact reviewed head `3e47dfdaeb1541ba215d72d6ad7442644e4323bc` as `4ef8b814ee8673168f62a87c95b2286569f35094`. The merged tree matched the rehearsal. Source `994d034e` passed the final runnable x86 route repeats. The five-instance cap/refusal/retry/teardown matrix and controlled overlapping acknowledgments passed at its admission parent. Both native Sicily2 and the original Arctic1 development launch passed on the final executable.
 - Completion PR #27 merged as `fd5ad4c3e997be8a6d4a7211e04dd3319677e9a2`; it records actual done and makes COOP-013 ready after its three merged dependencies. Main and the canonical COOP-012 branch point to this completion checkpoint. Durable local evidence and private test scripts are under ignored `build/coop-012-evidence/`.
 - COOP-014 retains its active independent claim and draft PR #25. No other task owner is changed. COOP-013 is ready and unclaimed. Its task record points to the admitted setup session and preparation contract. COOP-012 stops task and coordination writes after this ordinary push. A successor can accept this recorded handoff before writing the ledger.
+
+## COOP-013 coordinator acceptance
+
+- COOP-013 accepts the stopped COOP-012 coordination handoff at `204fbbb6` and acknowledges the user's assignment. The current main at `fd5ad4c3` contains the COOP-005, COOP-007 and COOP-012 merges. No competing COOP-013 branch, worktree or PR was found before creating the canonical task worktree.
+- COOP-013 owns preparation rule/catalog import, the live presenter and model adapter, setup handoff, preparation-family dispatch and the bounded first deployment/loading transition. COOP-014 retains Running behavior and mission completion. Keep preparation dispatch and first-load changes in separate functions or focused commits where the task touches shared files. Use private build and runtime outputs.
