@@ -71,8 +71,12 @@ bool MakeSetupConfig(bool host, S_CampaignNetConfig &config, MissionKey &mission
 
 bool CampaignSetupMenuEnabled()
 {
+#ifdef HD2_DEDICATED
+    return false;
+#else
     const char *value = std::getenv("HD2_CAMPAIGN_COOP_MENU");
-    return value && std::strcmp(value, "1") == 0;
+    return !value || std::strcmp(value, "0") != 0;
+#endif
 }
 
 std::optional<std::uint32_t> ParseCampaignLanAddress(const char *text)
@@ -196,6 +200,8 @@ R C_CampaignSetupSession::Join(std::uint32_t address)
     config.m_Departed = [this](PlayerId player, R reason) {
         if ((m_State == State::Joining || m_State == State::Guest) && m_JoinFailure == R::None) {
             m_JoinFailure = reason;
+            if (m_Preparation)
+                m_Preparation->Disconnect(reason);
             if (m_MissionDeparture)
                 m_MissionDeparture(player, reason);
             LogSetup("guest connection ended", player.Value(), static_cast<std::uint64_t>(reason));

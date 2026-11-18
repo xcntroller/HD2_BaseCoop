@@ -58,6 +58,15 @@ S_CampaignDeployEvaluation C_CampaignPreparationLive::C_DeploymentPolicy::Evalua
         else if (evaluation.m_Reason == R::None && participant.m_ReadyAt != state.m_PreparationRevision)
             evaluation.m_Reason = R::PendingTransaction;
     }
+    if (m_Uniform) {
+        for (const auto &loadout : state.m_Loadouts) {
+            const bool dressed = std::any_of(loadout.m_Items.begin(), loadout.m_Items.end(), [&](const auto &item) {
+                return item.m_Placement.m_Slot == *m_Uniform;
+            });
+            if (!dressed)
+                evaluation.m_Reason = R::RequiredItemsMissing;
+        }
+    }
     if (evaluation.m_RequiredParticipants.empty())
         evaluation.m_Reason = R::NotAdmitted;
     return evaluation;
@@ -70,6 +79,9 @@ R C_CampaignPreparationLive::OpenHost(C_CampaignOwnership &ownership, C_Campaign
         initial.m_Context.m_Session != m_Session || initial.m_Context.m_HostPlayer != m_Local)
         return R::InvalidPhase;
 
+    for (const auto &placement : catalog.m_Placements)
+        if (placement.m_Container == E_CampaignEquipmentContainer::Uniform)
+            m_DeploymentPolicy.m_Uniform = placement.m_Key;
     try {
         auto rules = std::make_unique<C_CampaignEquipmentRules>(std::move(catalog));
         auto authority = std::make_unique<C_CampaignPreparation>(std::move(initial), ownership, *rules,

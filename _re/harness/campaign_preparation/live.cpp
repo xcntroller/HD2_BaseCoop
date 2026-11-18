@@ -71,7 +71,8 @@ int main()
     C_CampaignRequestJournal journal(kSession);
     C_CampaignOwnership ownership(C_CampaignSession(setup, {0, 1, 2, 3}), policy, journal);
     assert(ownership.AdmitTransportPlayer(kGuest, "Guest") == R::None);
-    for (const auto &soldier : ownership.GetSession().GetRoster())
+    const auto roster = ownership.GetSession().GetRoster();
+    for (const auto &soldier : roster)
         assert(ownership.SetAvailability(soldier.m_Soldier, true, true) == R::None);
     assert(ownership.StartPreparation() == R::None);
 

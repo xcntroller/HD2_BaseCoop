@@ -38,6 +38,7 @@ private:
     class C_DeploymentPolicy final : public I_CampaignDeploymentPolicy {
     public:
         S_CampaignDeployEvaluation Evaluate(const S_CampaignPreparationSnapshot &state) const override;
+        std::optional<PlacementKey> m_Uniform;
     };
 
     T_CampaignSubmission Submit(const S_CampaignRequestContext &context, E_CampaignRequestFamily family,

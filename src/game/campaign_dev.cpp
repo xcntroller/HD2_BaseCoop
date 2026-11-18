@@ -1015,10 +1015,17 @@ void RestoreMenuProfile()
 
 void ReturnFromMenuDeployment(C_GameApp &app, R reason, bool keepSession)
 {
-    if (GetGame() && GetGame()->IsMissionLoaded())
+    if (GetGame() && GetGame()->IsMissionLoaded()) {
+        if (g_netReplication) {
+            if (g_control)
+                g_control->RetireBeforeReconstruction();
+            else if (g_guest && g_guest->m_Control)
+                g_guest->m_Control->RetireBeforeReconstruction();
+        }
         app.m_state->Stop();
-    else if (app.m_state->GetTypeId() != GAME_STATE_TYPE_GAME)
+    } else if (app.m_state->GetTypeId() != GAME_STATE_TYPE_GAME) {
         app.m_state->Stop();
+    }
     delete app.m_state;
     app.m_state = nullptr;
 

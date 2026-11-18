@@ -360,7 +360,8 @@ R ImportInitialCampaignPreparation(const C_CampaignSession &session, int mission
 R FreezeDevelopmentCampaign(C_CampaignOwnership &ownership, C_CampaignRequestJournal &journal,
     int missionNumber, PlayerId guest, S_CampaignNativeCatalog &native, S_CampaignMissionManifest &manifest)
 {
-    for (const auto &record : ownership.GetSession().GetRoster()) {
+    const auto roster = ownership.GetSession().GetRoster();
+    for (const auto &record : roster) {
         const auto reason = ownership.SetAvailability(record.m_Soldier, true, true);
         if (reason != R::None)
             return reason;
