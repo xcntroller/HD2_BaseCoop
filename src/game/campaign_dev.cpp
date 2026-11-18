@@ -777,6 +777,8 @@ R PrepareFrozenMission(const S_CampaignMissionManifest &frozen, const std::map<P
             soldier = g_missionSquad->AddSoldier();
         *soldier = spawn.m_State;
         soldier->MergeItems();
+        soldier->unknown34 = -1;
+        soldier->unknown38 = -1;
         soldier->autoEquip = false;
     }
     g_missionStartSquad.clear();
