@@ -7,10 +7,10 @@
 - Canonical branch: `feature/coop-006-protocol`
 - Base commit: `dbc9a85a7161d8844f2907dbaf6586c7f3b67d19`
 - Dependencies: COOP-002, COOP-011 (merged shared declarations)
-- Last checkpoint: `12625f6c` claim; implementation checkpoint follows below
+- Last checkpoint: `08a2f5e2` implementation; `5bcdae38` sync with integrated main; final evidence follows
 - Checkpoint location: `.worktrees/COOP-006`, `origin/feature/coop-006-protocol` (after push)
-- Review/integration: none
-- Pull request: none
+- Review/integration: independent review requested from coordinator; component validation passed; no integration yet
+- Pull request: [#13](https://github.com/xcntroller/HD2_BaseCoop/pull/13) (draft pending independent review)
 
 ## Branch authority and completion PR
 
@@ -79,17 +79,36 @@ adapters merge. Tests must reject pre-admission mutation without claiming a live
   native quantity cap32767 (stricter than wire1e6); live composition must configure
   <=256 collection entries or review a larger/chunked protocol after catalog audit.
   Codec never commits/retries/deduplicates model requests. No product policy chosen.
-- Validation so far (2026-11-18): first 7 suites, 71,322 checks passed GCC16.2.1,
-  MSVC19.44.35230 x86 /W4 /WX with SDK10.0.26100.0 and ASan/UBSan. Final bit bridge
-  added eighth suite: 512,891 checks passed GCC; nested truncation expansion and
-  final GCC/MSVC/sanitizer repeats pending before review. Logs under ignored
-  `build/campaign_protocol/`; target runner uses own `build/wine-prefix` and
-  read-only COOP-007 portable compiler/Python launcher, with owner acknowledgment.
-- Remaining: final checks, separate review, published PR/review handoff. Ordinary
+- Validation (2026-11-18), implementation `08a2f5e2`: final **8 suites,
+  541,790 checks passed** separately on GCC16.2.1, MSVC19.44.35230 **x86** /W4 /WX
+  with SDK10.0.26100.0 and GCC ASan+UBSan (leak detection, fail-fast UB). Standalone
+  header and independent Python scalar golden fixtures pass. No runtime diagnostics.
+  Source/fixtures unchanged by main sync `5bcdae38`.
+- Reproduce portable target: `python3 _re/harness/campaign_protocol/run.py --compiler gcc`
+  (`build/campaign_protocol/gcc-d_6v167o/` logs/argv/environment). Required Windows
+  command: `python _re\harness\campaign_protocol\run.py --compiler msvc` with
+  VS2022 x86/SDK setup or `HD2_VCVARS32`. Actual local run:
+  `env -u WAYLAND_DISPLAY DISPLAY=:99 WINEPREFIX="$PWD/build/wine-prefix" WINEDEBUG=-all wine64 cmd /c 'Z:\home\control\Documents\Projects\HD2SS\HD2_BaseCoop\.worktrees\COOP-007\build\tooling\run-python.bat' 'Z:\home\control\Documents\Projects\HD2SS\HD2_BaseCoop\.worktrees\COOP-006\_re\harness\campaign_protocol\run.py' --compiler msvc`.
+  Read-only compiler borrowing acknowledged by COOP-007; own prefix and newly unique
+  outputs `build/campaign_protocol/msvc-nauerudj/`; no shared global temp paths.
+- Sanitizer check: normal hosts use `python3 _re/harness/campaign_protocol/run.py --compiler gcc --sanitize`.
+  This Fedora image lacked GCC sanitizer shared objects. Downloaded/extracted only
+  local matching libasan/libubsan16.2.1-3.fc44 RPMs under ignored `build/tooling/`;
+  no system packages/settings changed. Actual compile:
+  `g++ -std=c++17 -Wall -Wextra -Werror -pedantic -g -O1 -fsanitize=address,undefined -fno-omit-frame-pointer -L build/tooling/sanitizers/usr/lib64 src/net/campaign_protocol.cpp _re/harness/campaign_protocol/conformance.cpp -o build/campaign_protocol/sanitized`.
+  Actual execution:
+  `env LD_LIBRARY_PATH="$PWD/build/tooling/sanitizers/usr/lib64" ASAN_OPTIONS=detect_leaks=1 UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1 build/campaign_protocol/sanitized _re/harness/campaign_protocol/fixtures`.
+  Passed same 541,790 checks, no sanitizer findings. Earlier seven-suite checks also
+  passed GCC/MSVCx86/sanitizers; final evidence supersedes them.
+- `git diff --check` passed; complete diff scope reviewed, no legacy/generated code,
+  data, artifacts or shared declaration edits. Own separate review pass checked
+  bounds/UTF8/float/counter schemas, early decode whitelist, role/sender direction,
+  authority tuple, exact-base immutable installation and chunk integrity/timeout.
+- Remaining: independent review, resolve any findings, mark PR ready and coordinator integration handoff. Ordinary
   runtime/game build not claimed; this independently testable component does not
   attach a live campaign handshake or world synchronization.
-- Next action: rerun final eight-suite GCC, MSVCx86 and ASan/UBSan checks; inspect
-  complete diff, commit/push checkpoint, request independent review and PR to main.
+- Next action: independent COOP-004 review through coordinator; resolve findings,
+  publish final review/evidence and request integration of PR #13.
 - Blockers: none. COOP-010 installs the exact live admission/dispatch/replication
   and reconstruction hooks described in harness README after downstream adapters.
 - Source-only: no runnable game/engine artifact, installed data, compiler or build

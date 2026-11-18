@@ -123,6 +123,13 @@ is copied onto the wire. The encodings are:
   a directly dispatched legacy command. Input ordering is scoped to the complete
   control tuple and verified transport incarnation.
 
+SessionContext role/local-player fields are serialized logical publication data,
+not commands to change local authority. Receivers must derive process role and
+local PlayerId from their own session/transport adapter, never assign global
+`g_gameRole`, profile/network settings or server permissions from a remote
+snapshot. Host-side input guards consume the host's current authoritative context,
+not an incoming client's context.
+
 The decoder enforces structural validity and transport limits, unique roster,
 loadout, stock and participant IDs, exclusive human ownership, declared participant
 membership, matching loadout roster, valid slot membership and actor/session
