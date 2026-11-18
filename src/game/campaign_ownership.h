@@ -22,6 +22,9 @@ public:
         const S_CampaignOwnershipRequest &request);
 
     E_CampaignReason Admit(const std::string &displayName, PlayerId &admitted);
+    // Commit the exact transport incarnation after successful negotiation.
+    // The transport can consume identities while quarantining rejected peers.
+    E_CampaignReason AdmitTransportPlayer(PlayerId player, const std::string &displayName);
     E_CampaignReason OnDisconnected(PlayerId player);
     E_CampaignReason OnDeath(SoldierId soldier);
     E_CampaignReason SetAvailability(SoldierId soldier, bool eligible, bool deployed);

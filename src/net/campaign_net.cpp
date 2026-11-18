@@ -76,10 +76,16 @@ bool Send(C_NetGame &net, std::uint32_t connection, const T_Message &message)
         return false;
     DPN_BUFFER_DESC buffer{static_cast<DWORD>(packet.size()), packet.data()};
     DPNHANDLE operation = 0;
-    constexpr DWORD flags = DPN_CAMPAIGN_SEND_GUARANTEED | DPN_CAMPAIGN_SEND_NOCOMPLETE;
-    if (g_host)
-        return net.m_server && SUCCEEDED(net.m_server->SendTo(connection, &buffer, 1, 0, nullptr, &operation, flags));
-    return net.m_client && SUCCEEDED(net.m_client->Send(&buffer, 1, 0, nullptr, &operation, flags));
+    // DirectPlay owns a copy of the bytes after Send returns.
+    // Guaranteed delivery cannot be combined with DPNSEND_NOCOMPLETE.
+    HRESULT result = E_FAIL;
+    if (g_host && net.m_server)
+        result = net.m_server->SendTo(connection, &buffer, 1, 0, nullptr, &operation, DPN_CAMPAIGN_SEND_GUARANTEED);
+    else if (!g_host && net.m_client)
+        result = net.m_client->Send(&buffer, 1, 0, nullptr, &operation, DPN_CAMPAIGN_SEND_GUARANTEED);
+    if (FAILED(result))
+        net.m_lastError = result;
+    return SUCCEEDED(result);
 }
 
 PlayerId AdmittedPlayer(const S_Peer &peer)

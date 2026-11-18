@@ -238,6 +238,20 @@ void AdmissionAndRestrictions() {
     CHECK(f.m_Model.ApplyRequest(f.m_Guest, forged).m_Reason == R::NotAdmitted);
     Invariants(f.m_Model);
 
+    // Quarantine consumed several provider identities before a peer passed negotiation.
+    C_Fixture transport;
+    CHECK(transport.m_Model.AdmitTransportPlayer(PlayerId(8), "Negotiated") == R::None);
+    CHECK(transport.Claim(PlayerId(8), transport.m_C).m_Outcome == O::Accepted);
+    CHECK(transport.m_Model.OnDisconnected(PlayerId(8)) == R::None);
+    CHECK(transport.m_Model.AdmitTransportPlayer(PlayerId(8), "Reused") == R::WrongGeneration);
+    CHECK(transport.m_Model.AdmitTransportPlayer(PlayerId(6), "Delayed") == R::WrongGeneration);
+    CHECK(transport.m_Model.AdmitTransportPlayer(PlayerId(10), "Reconnect") == R::None);
+    CHECK(transport.m_Model.FindOwner(transport.m_C) == std::nullopt);
+    PlayerId following;
+    CHECK(transport.m_Model.Admit("Next", following) == R::None);
+    CHECK(following == PlayerId(11));
+    Invariants(transport.m_Model);
+
     C_Policy policy;
     C_CampaignRequestJournal journal(SessionId(901));
     C_CampaignOwnership restricted(C_CampaignSession(Setup(), {1, 2, 3}), policy, journal, 1);

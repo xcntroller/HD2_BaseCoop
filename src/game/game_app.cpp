@@ -1,3 +1,4 @@
+#include "game/campaign_dev.h"
 #include "game/campaign_mission_adapter.h"
 #include "game/game_app.h"
 
@@ -140,6 +141,10 @@ bool C_GameApp::StartFromCommandLine()                  // 0x006c0e10
     static const char SCRIPT_SWITCH[] = " -c";
     const char *commandLine = GetCommandLineA();
     m_state = nullptr;
+#ifndef HD2_DEDICATED
+    if (StartDevelopmentCampaign(*this))
+        return true;
+#endif
     if (const char *command = std::strstr(commandLine, CMD_SWITCH)) {
         // (The console state copies at most 0x204 chars; nothing limits the command here.)
         auto *console = new C_ConsoleState(command + std::strlen(CMD_SWITCH));

@@ -7,10 +7,10 @@
 - Canonical branch: `feature/coop-010-two-player-mission`
 - Base commit: `6f1bdd96075b074a6a7b958257af5f56f8374fb5`
 - Dependencies: COOP-008, COOP-009 and their transitive merged dependencies
-- Last checkpoint: campaign command framing and DirectPlay attachment (this commit)
+- Last checkpoint: Arctic1 development launch and live two-instance admission (this commit)
 - Checkpoint location: `.worktrees/COOP-010` and the canonical branch on origin
 - Review/integration: claim acknowledged by coordination ledger commit `69cb6361`
-- Pull request: none
+- Pull request: [#22](https://github.com/xcntroller/HD2_BaseCoop/pull/22) (draft)
 
 ## Branch authority and completion PR
 
@@ -73,12 +73,18 @@ roster/loadouts/policies as fixtures, not approved production menu behavior.
   and the explicit campaign DirectPlay attachment. It carries exact connection
   incarnations through the callback queue, negotiates before forwarding payloads
   to the launch adapter, and gates legacy game commands, UDP and replication
-  when campaign mode is active.
+  when campaign mode is active. Added explicit `-campaign-coop host` and
+  `-campaign-coop join <IPv4>` launch paths. The launcher selects the original
+  campaign PLAY step for **Arctic1** (mission index 1, seven objectives), builds
+  the canonical compatibility descriptors from installed content, and commits
+  the same never-reused guest PlayerId assigned by transport.
 - Remaining: live attachment, startup synchronization, host/guest verification and fixes.
-- Next action: bind admission to the authority ownership model and run two
-  actual instances through the DirectPlay attachment. Audit the original
-  Tutorial's spawn points and startup script as a fixture candidate. Keep
-  native Sicily2 as a separate regression route.
+- Next action: import the Arctic1 mission equipment presets and four initial
+  roster profiles into a fixed development manifest. Install the merged lifecycle
+  and controller adapters and validate the host load with the Loading barrier
+  closed. Then implement guest world capture/reconstruction and tagged replication.
+  The first operation mission was selected for the four-soldier fixture. The
+  original Tutorial and native Sicily2 remain separate regression routes.
 - Blockers: no adapter dependency blocker. COOP-008 merged at `d34b6900` and
   COOP-009 at `ce306626`, with their transitive prerequisites integrated. This task
   still requires actual runnable host/guest instances, a complete initial-world
@@ -99,5 +105,16 @@ roster/loadouts/policies as fixtures, not approved production menu behavior.
     zero diagnostics. Isolated `game --all` built 283 units with zero
     diagnostics, linked successfully and set LAA. Build log is
     `build/transport-game.log`; this executable is local.
-  - No campaign launcher is wired yet. Live handshake, the world/barrier,
-    gameplay acceptance and original-mode runtime regressions remain pending.
+  - Ownership suite passed GCC and MSVC x86 with 10,721 checks each, including
+    a skipped quarantine ID, exact admission, departure, and refusal to reuse
+    or roll back an incarnation. Logs are in `build/campaign_ownership/`.
+  - The launcher linked successfully with MSVC x86. Two actual Sabre Squadron
+    1.12 game instances ran with private Wine prefixes and game copies on
+    displays `:100` and `:101`. Host used `-window -campaign-coop host`.
+    Guest used `-window -campaign-coop join 127.0.0.1`. Both logged Arctic1 and
+    matching SessionId and PlayerId 2 (provider slot 1) in
+    `build/runtime/{host,guest}/campaign-dev.log`.
+  - Both instances remained before mission load. Loading barrier, input,
+    AI transfer, objective progress and original-mode regressions remain pending.
+    Closing the guest window exited its process. No host ownership departure was
+    recorded in that run, so a graceful network close still needs verification.
