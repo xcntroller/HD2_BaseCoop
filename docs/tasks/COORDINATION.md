@@ -6,7 +6,7 @@ creating or updating the operational branch. Do not merge its WIP ledger into `m
 
 ## Coordinator
 
-- Owner/session: handoff available. Codex COOP-007 / thread `01a1ec02-1d0b-7791-8a57-e16ee680b905` explicitly STOPS ledger writes after publishing this completed-task checkpoint.
+- Owner/session: Codex COOP-009 / thread `01a1ec1f-ea8d-77f3-b0e9-7c683f367ec3`, accepted COOP-007 stopped-writer handoff `20310e2a` (2026-11-18). Previous handoff: Codex COOP-007 / thread `01a1ec02-1d0b-7791-8a57-e16ee680b905` explicitly STOPS ledger writes after publishing this completed-task checkpoint.
 - Contact/shared channel: this published ledger and active COOP-008/009 threads below. Next coordinator must explicitly accept the stopped-writer handoff and notify active workers before edits/claims.
 - Integrator: transferable. COOP-007 and independently reviewed completion metadata are merged; no COOP-008/009 integration approval is implied.
 - Latest checkpoint: `HEAD`; ordinary push to `origin/coord/coop-work-queue`. Preserve operational history; never merge this branch wholesale into main.
@@ -144,3 +144,10 @@ missing fields. COOP-006 was notified explicitly before this stopped-writer hand
 - Coordination race correction: 008 appended a kickoff after 007 accepted coordination, then explicitly stopped and declined transfer; 007 retained the role through this completion. Neither 008 nor 009 is automatically the new coordinator. Any stale task prose saying coordination already transferred to 008 must be corrected by that task owner. Next coordinator explicitly accepts this stopped-writer handoff and notifies both workers.
 - Required resource preservation: `.worktrees/COOP-007/build/tooling/run-python.bat` and `vcvars-x86.bat` configure pinned MSVC14.44.35207/SDK10.0.26100.0/WinPython3.13.9; native import libraries/DLLs remain under 007 `ls3df/build/msvc` and `rw_data/build/msvc`. Read-only borrowing with each worker's private prefix/output is authorized. Preserve the 007 worktree and ignored tools/runtime/captures while active workers depend on them. No cleanup or global environment changes.
 - Transfer: COOP-007 explicitly STOPS all ledger writes after this ordinary push. No successor has accepted yet. User-assigned tasks remain active; future claims/integration require the workflow gates and a confirmed coordinator.
+
+## COOP-009 coordinator acceptance
+
+- COOP-007 explicitly stopped ledger writes at `20310e2a`; COOP-009 accepts the role and notifies COOP-008/007 before this update. No task writer/scopes are reassigned.
+- COOP-007 is done at main `577c04d8` (feature `8067b471`); resources and evidence remain preserved. COOP-008 is active in draft PR #17; its latest API checkpoint is `e18835b3`, with final review/validation pending. COOP-009 owns only its acknowledged lifecycle scope, initial published claim `429ae489`; implementation/harness evidence is being prepared.
+- No integration approval is implied. Final COOP-009 combined adapter integration follows COOP-008 merge and affected regressions. COOP-010 owns live attachment and actual two-instance campaign acceptance.
+- COOP-009 runtime resources: private Xvfb :101 (later :102 guest), own Wine prefixes and build output; preserve other workers displays/resources. Pinned COOP-007 compiler/SDK/Python and engine imports are borrowed read-only, imports copied into ignored 009 directories.
