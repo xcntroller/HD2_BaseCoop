@@ -2,13 +2,13 @@
 
 ## Coordination
 
-- Status: planned
-- Owner/session: unassigned
+- Status: planned (user assigned; coordinator acknowledgment pending)
+- Owner/session: Codex COOP-004 / thread `01a1ebf9-60c7-74d0-9d39-cd09295875b0`, 2026-11-18
 - Canonical branch: `feature/coop-004-ownership`
-- Base commit: not started
+- Base commit: `0f367ed62af337633941bca0d22d3ff1932129ba`
 - Dependencies: COOP-002, COOP-011 (merged shared declarations)
-- Last checkpoint: none
-- Checkpoint location: none
+- Last checkpoint: branch/worktree preparation (this commit)
+- Checkpoint location: `.worktrees/COOP-004`; `origin/feature/coop-004-ownership`
 - Review/integration: none
 - Pull request: none
 
@@ -59,9 +59,16 @@ No legacy controller/profile layout edits.
 
 ## Handoff
 
-- Completed: task scope only.
-- Remaining: implementation and tests after contract merge.
-- Next action: inspect the merged COOP-002 contract and agree on the exact implementation files.
-- Blockers: COOP-002 and COOP-011 have not merged.
+- Completed: read design/workflow/contracts; fetched origin, checked claims/branches/PRs;
+  created canonical branch and isolated worktree at merged COOP-011 foundation.
+- Remaining: session/catalog/ownership implementation, bounded request journal, model tests,
+  intended MSVC x86 compile/execution, separate review and completion PR.
+- Next action: obtain coordinator ledger acknowledgment before substantial implementation.
+  Requested from coordinator thread `01a1ebd1-3990-7553-920e-7cfee0148527`.
+- Dependencies: COOP-002 merged `9f59ff47`; COOP-011 merged `0f367ed6`.
+- Coordination: waiting for claim acknowledgment; coordinator ledger remains single-writer.
+  COOP-005 agreed an injected request-journal boundary for cross-family sequences;
+  shared declarations and legacy adapter files remain untouched.
 - Decisions: model follows confirmed campaign behavior and the reviewed contracts.
-- Validation: none for this task.
+- Validation: `git diff --check` passed for this preparation checkpoint; no implementation
+  build or behavioral checks yet.
