@@ -1110,7 +1110,7 @@ void C_SquadController::Engage(bool on, const S_vector4 &pos)
     UpdateModeIcon();
 }
 
-void C_SquadController::SetCombatOrder(int order)
+void C_SquadController::SetCombatOrder(int order, bool selectEquipment)
 {
     bool firing = false;
     bool coverStance = true;
@@ -1159,7 +1159,7 @@ void C_SquadController::SetCombatOrder(int order)
     if (coverStance)
         CoverStance(firing);
     // A weapon to suit the order (silent: a silenced one).
-    if (!m_silentMode || !m_handsItem || !IsSilencedType(m_handsItem->GetDef()->GetId()))
+    if (selectEquipment && (!m_silentMode || !m_handsItem || !IsSilencedType(m_handsItem->GetDef()->GetId())))
         UpdateWeaponChoice();
 }
 

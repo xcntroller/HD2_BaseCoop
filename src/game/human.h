@@ -496,6 +496,7 @@ public:
     // Played by the local player: controller type 1 in single player, the local player
     // slot in a network game.
     bool IsLocalPlayer() const;                         // 0x005a0890
+    bool UsesPlayerLocomotion() const;
     // Simulated by this machine as a server (not a player).
     bool IsServerSimulated() const;                     // 0x005aa790
     // E_HumanTeam (multiplayer: the network player's team; `pending` asks for the team

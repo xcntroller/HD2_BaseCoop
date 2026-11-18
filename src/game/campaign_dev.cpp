@@ -326,7 +326,8 @@ void ObserveSquadMotion(const Wire::S_MissionUpdate &update, const char *event)
             motion.m_Origin = current;
             continue;
         }
-        const float distance = (current - *motion.m_Origin).Magnitude();
+        const auto delta = current - *motion.m_Origin;
+        const float distance = S_vector(delta.x, 0.0f, delta.z).Magnitude();
         if (!(distance >= 0.25f) || distance >= 10000.0f)
             continue;
         const auto cm = static_cast<unsigned>(distance * 100.0f);
@@ -344,6 +345,7 @@ struct S_ReceivedControls {
 };
 std::optional<S_ReceivedControls> g_receivedControls;
 bool g_loggedInput = false;
+std::uint16_t g_lastGuestMovement = 0;
 
 bool ApplyInventoryMove(const S_CampaignControlToken &token, Wire::S_ItemMove move);
 
@@ -363,6 +365,12 @@ void StoreDevelopmentControls(const Wire::S_Input &input)
         g_receivedControls->m_Token.m_Player == input.m_Control.m_Player)
         controls.m_Pressed |= g_receivedControls->m_Controls.m_Pressed;
     g_receivedControls = S_ReceivedControls{input.m_Control, controls, Clock::now()};
+    constexpr auto movement = Wire::kMoveForward | Wire::kMoveBack | Wire::kMoveLeft | Wire::kMoveRight;
+    const auto heldMovement = static_cast<std::uint16_t>(controls.m_Held & movement);
+    if (heldMovement != g_lastGuestMovement) {
+        g_lastGuestMovement = heldMovement;
+        LogDevelopmentCampaign("host accepted guest movement controls", input.m_Control.m_Actor.m_Actor.Value(), heldMovement);
+    }
     if (!g_loggedInput && (controls.m_Held || controls.m_Pressed)) {
         LogDevelopmentCampaign("host accepted tagged guest controls", input.m_Control.m_Player.Value(),
                                input.m_Control.m_Actor.m_Actor.Value());
@@ -829,11 +837,21 @@ bool PublishMissionUpdate(Clock::time_point now)
 
 R ReconcileGuestDeparture(PlayerId player)
 {
-    const auto token = g_ownership->GetControlToken(player);
+    const auto state = g_ownership->GetSnapshot();
+    const auto soldier = std::find_if(state->m_Soldiers.begin(), state->m_Soldiers.end(),
+        [&](const auto &record) { return record.m_Owner == player && record.m_Actor; });
+    std::optional<S_CampaignControlToken> token;
+    if (soldier != state->m_Soldiers.end())
+        token = S_CampaignControlToken{state->m_Context.m_Session, state->m_Context.m_MissionGeneration,
+                                      player, soldier->m_Soldier, *soldier->m_Actor, soldier->m_ControlRevision};
     const auto before = token ? CaptureDevelopmentSoldier(token->m_Actor) : std::nullopt;
     const auto reason = HandleCampaignDisconnect(player);
-    if (reason != R::None || !token)
+    if (reason != R::None)
         return reason;
+    if (!token) {
+        LogDevelopmentCampaign("host departure had no bound owner", player.Value());
+        return R::None;
+    }
     const auto stale = g_ownership->ValidateInput(player, *token);
     if (stale == R::None)
         return R::NotOwner;
@@ -845,10 +863,16 @@ R ReconcileGuestDeparture(PlayerId player)
     const auto actor = static_cast<int>(token->m_Actor.m_Actor.Value());
     const auto record = FindCampaignActorControl(actor);
     const auto *human = static_cast<const C_Human *>(after ? after->m_Actor : nullptr);
-    if (!after || before->m_Actor != after->m_Actor || before->m_State != after->m_State ||
-        !record || record->m_Owner || human->GetControllerType() != HUMAN_CONTROLLER_SQUAD) {
-        LogDevelopmentCampaign("host guest soldier handoff differed", actor, static_cast<std::uint64_t>(reason));
+    if (!after || before->m_Actor != after->m_Actor || !record || record->m_Owner ||
+        human->GetControllerType() != HUMAN_CONTROLLER_SQUAD) {
+        LogDevelopmentCampaign("host guest soldier binding differed after handoff", actor);
         return R::ActorUnavailable;
+    }
+    if (before->m_State != after->m_State) {
+        const auto mismatch = std::mismatch(before->m_State.begin(), before->m_State.end(),
+                                            after->m_State.begin(), after->m_State.end());
+        LogDevelopmentCampaign("host handoff state differed at byte", mismatch.first - before->m_State.begin(), actor);
+        return R::ContentMismatch;
     }
     LogDevelopmentCampaign("host preserved same guest soldier for squad AI", actor, Wire::Crc32(after->m_State));
     return R::None;
@@ -1073,6 +1097,7 @@ void ReleaseDevelopmentCampaign()
     g_squadMotion = {};
     g_receivedControls.reset();
     g_loggedInput = false;
+    g_lastGuestMovement = 0;
     g_guest.reset();
     g_pendingGuest.reset();
     g_control.reset();

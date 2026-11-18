@@ -1001,7 +1001,7 @@ public:
     virtual int GetCombatOrder();                       // 0x148 0x005385f0
 
     // --- the command module's squad commands (squad_actions.cpp) -------------------------
-    void SetCombatOrder(int order);                     // 0x005380c0
+    void SetCombatOrder(int order, bool selectEquipment = true); // 0x005380c0
     // Follows the leader (`follow`), else stays; `quiet`: sneaking and whispering.
     void SetFollow(bool follow, bool quiet);            // 0x005377f0
     // Stays where it is in cover (`notify`: tells the module when idle).

@@ -99,7 +99,7 @@ bool C_CampaignNativeControlSink::Apply(const S_CampaignControllerPlan &plan) {
             object->SetStateHandlers(NetReadControlBits, NetWriteControlBits, human->m_controller);
         }
     }
-    human->m_body.SetPlayerControlled(plan.m_LocalView);
+    human->m_body.SetPlayerControlled(plan.m_LocalView || plan.m_Controller == E_CampaignController::RemotePlayer);
     m_AppliedBindings[plan.m_Record.m_Soldier] = *plan.m_Record.m_Actor;
     return true;
 }

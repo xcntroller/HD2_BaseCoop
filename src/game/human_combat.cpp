@@ -724,6 +724,12 @@ bool C_Human::IsLocalPlayer() const
     return m_netId == g_localPlayerSlot;
 }
 
+bool C_Human::UsesPlayerLocomotion() const
+{
+    return IsLocalPlayer() || (IsServer() && m_controller &&
+        m_controller->GetType() == HUMAN_CONTROLLER_PLAYER && CampaignControlsActive());
+}
+
 bool C_Human::IsServerSimulated() const
 {
     if (CampaignControlsActive())

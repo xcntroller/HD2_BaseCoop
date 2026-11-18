@@ -7,7 +7,7 @@
 - Canonical branch: `feature/coop-010-two-player-mission`
 - Base commit: `6f1bdd96075b074a6a7b958257af5f56f8374fb5`
 - Dependencies: COOP-008, COOP-009 and their transitive merged dependencies
-- Last checkpoint: initial-world entry and live host publication at source checkpoint `e206fce9`
+- Last checkpoint: host-authoritative terrain movement and changed-kit AI handoff
 - Checkpoint location: `.worktrees/COOP-010` and the canonical branch on origin
 - Review/integration: claim acknowledged by coordination ledger commit `69cb6361`
 - Pull request: [#22](https://github.com/xcntroller/HD2_BaseCoop/pull/22) (draft)
@@ -113,14 +113,20 @@ roster/loadouts/policies as fixtures, not approved production menu behavior.
   native inventory and weapon selector. Requests to move or swap items stay
   within the owned soldier's containers and pass the original capacity and
   placement rules at the host.
-- Remaining: verify displacement of the guest soldier after the host body
-  integration fix. Repeat the disconnect with changed gear after preventing
-  equipment selection during the native squad AI controller attach. The intro
-  still differs on the guest in scripted props, audio and HUD. Verify a bounded
-  original objective route and in-mission Tutorial and native Sicily2 regressions.
-- Next action: run the paired movement and changed-equipment disconnect test
-  with the pinned MSVC x86 build. The ignored Win32 SendInput helper under
-  `build/initial-world/native-keys.py` drives the original windows.
+- Both controlled soldiers now use the native player locomotion path on the
+  host, including terrain contacts when the guest is outside the host view.
+  The host updates native model and collision transforms from the simulated
+  bodies. The guest renders those published model positions.
+- Native squad controller attachment preserves the departing player's current
+  equipment through the ownership transfer. The host verifies the same
+  native actor, recorded pose, stats and entire inventory at the handoff.
+- Remaining: verify a bounded original objective route and the native Sicily2
+  gameplay regression. The intro still differs on the guest in scripted
+  props, audio and HUD.
+- Next action: use the trace-free MSVC x86 build to exercise the opening
+  Arctic1 route with the original objectives visible on both instances. The
+  ignored Win32 SendInput helper under `build/initial-world/native-keys.py`
+  drives the original windows.
 - Blockers: none. COOP-008 merged at `d34b6900` and COOP-009 at `ce306626`.
 - Local prerequisites: root-checkout ignored `build/coop-shared-tooling/run-python.bat`
   configures preserved MSVC 14.44.35207 / SDK 10.0.26100.0 / Windows Python 3.13.9.
@@ -264,3 +270,28 @@ roster/loadouts/policies as fixtures, not approved production menu behavior.
     units with zero diagnostics, linked and set LAA. The final single-unit
     trace link also passed. Logs and captures are preserved under
     `build/coop-010-evidence/initial-world/` in the root checkout.
+
+- Terrain movement and changed-kit handoff validation
+  - In `terrain-driven`, both actual game instances crossed the loading
+    barrier at generation 1 / snapshot 1 with a 37,646-byte world cut and
+    CRC32 `2919427009`. After the intro, native input moved actor 0 at least
+    1,335 cm and actor 1 at least 1,216 cm in the horizontal plane from their
+    starting positions. Both logs contain matching host and guest samples.
+    The host's trace records intact health and model and body coordinates
+    on the ground for both controlled actors.
+  - The guest moved the Enfield .38, item UID 271, into his hands through the
+    original equipment selector. The host committed the swap and the guest
+    applied it. Terminating the guest process caused the host to attach
+    squad AI to that same displaced actor. Before and after ownership
+    transfer, the exact serialized native pose, stats and inventory bytes
+    matched (CRC32 `2922004808`). The original process's token returned
+    `NotAdmitted` (4).
+  - The instrumented x86 executable had SHA-256
+    `436e122168bfadabd7d1e62f9cd29b1658eb24e0cd2d56b37f61b261be05dbef`.
+    The detailed diagnostic was local to this run. Build log, paired logs,
+    trace and screenshots are in
+    `build/coop-010-evidence/initial-world/terrain-driven/`.
+  - The original singleplayer path used source `e206fce9`. The original
+    campaign menus reached Tutorial, and native W and D moved Pte. Jenkins
+    away from the starting watchtower once the briefing ended. Captures are
+    under the `original-solo` evidence directory.
