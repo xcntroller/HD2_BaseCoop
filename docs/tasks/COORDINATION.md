@@ -27,7 +27,7 @@ creating or updating the operational branch. Do not merge its WIP ledger into `m
 | COOP-009 | Codex COOP-009 / thread `01a1ec1f-ea8d-77f3-b0e9-7c683f367ec3`, user assignment | `feature/coop-009-campaign-adapters` | done | PR #19 merge `ce306626`; completion PR #21 merge `6f1bdd96`; canonical branch pushed to `6f1bdd96` | Dormant lifecycle/world-barrier/native rules complete; COOP-010 owns live attachment and actual two-instance evidence. |
 | COOP-001 | Codex / 2026-11-18 user assignment | `feature/coop-001-build-baseline` | done | PR #2 merge `15b572ff`; completion metadata PR #11 merge `1b9b307f` | Build/solo/native host-guest baseline and isolation accepted; guide/evidence integrated. Firing/reload/completion remain unverified downstream gates. |
 
-| COOP-010 | Codex COOP-010 (2026-11-18), user assignment | `feature/coop-010-two-player-mission` | active | Draft PR #22, source `055daf08`, handoff `28e0d6fd`, `.worktrees/COOP-010` | Wire live input and authoritative squad, script presentation and objectives. Verify gameplay and disconnect with both clients. |
+| COOP-010 | Codex COOP-010 (2026-11-18), user assignment | `feature/coop-010-two-player-mission` | active | Draft PR #22, source `2cb0509e`, handoff `b316a31c`, `.worktrees/COOP-010` | Verify tagged gameplay input and implement inventory and weapon state replication. Document the objective route and disconnect handoff. |
 
 
 Only the coordinator adds or reassigns claims. A missing row is not sufficient evidence
@@ -205,3 +205,6 @@ missing fields. COOP-006 was notified explicitly before this stopped-writer hand
 
 - Two actual instances reconstructed original Arctic1 and acknowledged generation 1 / snapshot 1 before starting. The guest dog animation initialization fix held during the paired run. Source `055daf08`, handoff `28e0d6fd` and draft PR #22 carry this checkpoint.
 - Live gameplay scope covers the bounded campaign protocol format and conformance harness, the development launcher/session, ownership and native control adapters, and the necessary player/controller, mission/objective and camera presentation hooks. The guest receives host state and sends typed, ownership-tagged controls. The native multiplayer replication lane stays gated in campaign mode. COOP-010 is the only active writer in these files.
+
+
+- Running update checkpoint `2cb0509e` with handoff `b316a31c` publishes the host's four squad actor records and original objective statuses. Both instances entered, the guest applied the objective activation and camera state, and live re-admission was rejected after a guest departure. Full playable acceptance and original-mode regressions remain open.
