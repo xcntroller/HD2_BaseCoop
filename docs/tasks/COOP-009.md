@@ -10,7 +10,7 @@
 - Last checkpoint: lifecycle/native adapter implementation (this commit)
 - Checkpoint location: `.worktrees/COOP-009`, canonical branch on origin
 - Review/integration: active component; final combined integration waits for COOP-008 merge
-- Pull request: none
+- Pull request: https://github.com/xcntroller/HD2_BaseCoop/pull/19 (draft)
 
 ## Branch authority and completion PR
 
@@ -71,30 +71,30 @@ and repeats affected checks; do not merge an unfinished dependency branch.
   No live attachment/menu or two-player campaign gameplay claim; COOP-010 owns those.
 - Next action: repeat target/sanitizer checks on the final source; add the agreed
   COOP-008 progress setter call after its merge and review the combined native paths.
-- Validation run: GCC7 lifecycle suites/274 checks and3 extracted native source
-  regression suites/75 checks PASS; MSVC19.44.35230 x86 `/W4 /WX` same PASS in
+- Validation run: GCC 7 lifecycle suites/274 checks and 3 extracted native source
+  regression suites/75 checks PASS; MSVC 19.44.35230 x86 `/W4 /WX` same PASS in
   `build/campaign_mission/msvc-_sn7paat` before tooling disappearance. Source has
   subsequently gained safe-tick reconciliation, atomic profile writeback and bounds;
   refreshed target/sanitizer checks are in progress, not yet claimed.
-- Build evidence: full MSVC x86/x87 game build compiled278 units,0 compiler messages,
-  link0/LAA yes (`build/full-game-build.log`). Later source refresh (`build/game-restored.log`)
-  compiled1 changed unit and linked successfully after private toolchain restoration.
+- Build evidence: full MSVC x86/x87 game build compiled 278 units, 0 compiler messages,
+  link 0/LAA yes (`build/full-game-build.log`). Later source refresh (`build/game-restored.log`)
+  compiled 1 changed unit and linked successfully after private toolchain restoration.
   The build predates the final source changes; final combined build remains required.
-- Runtime evidence: a private copied1.12 installation launched intro/main menu on
+- Runtime evidence: a private copied 1.12 installation launched intro/main menu on
   Xvfb :101, original campaign flow was attempted but no mission-play acceptance is
   claimed. Focused source regressions establish dormant solo/native settings and
   departure behavior; full live campaign acceptance remains COOP-010.
 - Resources: original COOP-007 toolchain/worktree disappeared externally after its
-  completion;007/008/009 confirmed absence, none reports deleting it. Historical
-  passing evidence remains accurate. Restored private009 compiler/SDK/WinPython
-  is `build/tooling/run-python.bat` (same14.44.35207/10.0.26100.0/3.13.9), with own
-  Wine prefix and isolated outputs. Read-only borrowing authorized for008.
-  Native imports/DLLs copied before deletion are preserved in ignored009 directories.
-- API: native callback hooks bind008 `SynchronizeCommitted`,
+  completion;007/008/009 confirmed absence; none reports deleting it. Historical
+  passing evidence remains accurate. Restored private 009 compiler/SDK/WinPython
+  is `build/tooling/run-python.bat` (same 14.44.35207/10.0.26100.0/3.13.9), with own
+  Wine prefix and isolated outputs. Read-only borrowing authorized for 008.
+  Native imports/DLLs copied before deletion are preserved in ignored 009 directories.
+- API: native callback hooks bind 008 `SynchronizeCommitted`,
   `FindCampaignTransportPlayer(int slot)`, `HandleCampaignDisconnect(PlayerId)`;
   resolve authenticated incarnation before connection cleanup. All world/snapshot
   and input dispatch obligations are in the [harness guide](../../_re/harness/campaign_mission/README.md).
-- Scope: sole lifecycle writer;008 retains all human/controller/actor consumers.
+- Scope: sole lifecycle writer; 008 retains all human/controller/actor consumers.
   No shared DTO/legacy layout/wire changes or generated tier1 edits.
-- Prerequisites:001 `15b572ff`,004 `59a480c8`,005 `06d999d7`,006 `59cb8944` are merged.
-  Final009 combined adapter integration follows008 merge; no draft branch is stacked.
+- Prerequisites: 001 `15b572ff`, 004 `59a480c8`, 005 `06d999d7`, 006 `59cb8944` are merged.
+  Final 009 combined adapter integration follows 008 merge; no draft branch is stacked.
