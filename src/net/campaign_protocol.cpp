@@ -83,8 +83,8 @@ template<> struct S_EnumMax<E_CampaignPolicyState> { static constexpr auto value
 template<> struct S_EnumMax<E_CampaignFindingSeverity> { static constexpr auto value = E_CampaignFindingSeverity::DeploymentBlocker; };
 template<> struct S_EnumMax<E_CampaignRequestFamily> { static constexpr auto value = E_CampaignRequestFamily::Deploy; };
 template<> struct S_EnumMax<E_CampaignRequestOutcome> { static constexpr auto value = E_CampaignRequestOutcome::ResyncRequired; };
-template<> struct S_EnumMax<E_InputKind> { static constexpr auto value = E_InputKind::DoorAction; };
-template<> struct S_EnumMax<E_MissionPresentation> { static constexpr auto value = E_MissionPresentation::ReleaseClone; };
+template<> struct S_EnumMax<E_InputKind> { static constexpr auto value = E_InputKind::WireCut; };
+template<> struct S_EnumMax<E_MissionPresentation> { static constexpr auto value = E_MissionPresentation::WireCut; };
 template<> struct S_EnumMax<E_MissionOutcome> { static constexpr auto value = E_MissionOutcome::Failure; };
 template<> struct S_EnumMax<E_DoorAction> { static constexpr auto value = E_DoorAction::PickLock; };
 template<> struct S_EnumMax<E_WeaponEvent> { static constexpr auto value = E_WeaponEvent::Reload; };
@@ -644,6 +644,8 @@ bool ValidPresentation(const S_MissionPresentation &event) {
     case Action::ReleaseClone: return frame && !value && !second && !third;
     case Action::Sound: return frame && value >= 0 && second >= 0 && !third;
     case Action::Door: return !frame && value >= 0 && second >= 0 && second <= 5 && !third;
+    case Action::WireCut: return frame && value >= -31416 && value <= 31416
+        && (second == 0 || second == 1) && !third;
     case Action::ClearHints: return !frame && !value && !second && !third;
     case Action::Subtitle:
     case Action::Hint: return !frame && value >= 0 && !second && !third;
@@ -989,6 +991,27 @@ E_CampaignReason DecodeDoorAction(const T_Bytes &bytes, S_DoorAction &out) {
         version != 1 || candidate.m_Door > INT32_MAX)
         return E_CampaignReason::Malformed;
     out = candidate;
+    return E_CampaignReason::None;
+}
+
+E_CampaignReason EncodeWireCut(const std::string &frame, T_Bytes &out) {
+    auto name = frame;
+    std::uint8_t version = 1;
+    T_Bytes bytes;
+    C_Archive archive(bytes);
+    if (name.empty() || !archive(version, name))
+        return E_CampaignReason::Malformed;
+    out = std::move(bytes);
+    return E_CampaignReason::None;
+}
+
+E_CampaignReason DecodeWireCut(const T_Bytes &bytes, std::string &frame) {
+    std::string name;
+    std::uint8_t version = 0;
+    C_Archive archive(bytes.data(), bytes.size());
+    if (!archive(version, name) || !archive.Done() || version != 1 || name.empty())
+        return E_CampaignReason::Malformed;
+    frame = std::move(name);
     return E_CampaignReason::None;
 }
 

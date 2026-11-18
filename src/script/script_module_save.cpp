@@ -1,6 +1,7 @@
 // C_ScriptModule's saved games, its state for a joining client and its network messages (part 11a; the rest of the module is
 // script_module.cpp). See script_module.h.
 #include <algorithm>
+#include <cmath>
 #include <cstdio>
 #include <cstring>
 #include <new>
@@ -22,6 +23,7 @@
 #include "game/resource_cache.h"
 #include "game/sound_module.h"
 #include "game/team.h"
+#include "game/wire_cut.h"
 #include "ls3d/i3d.h"
 #include "net/bitstream.h"
 #include "net/campaign_protocol.h"
@@ -753,6 +755,12 @@ void C_ScriptModule::ApplyCampaignPresentation(const CampaignProtocol::S_Mission
     case Action::Door:
         if (auto *actor = g_actorsModule.GetActorById(value); actor && actor->GetType() == ACTOR_DOOR)
             static_cast<C_Door *>(actor)->PresentDoorEvent(second);
+        break;
+    case Action::WireCut:
+        if (auto *fence = GetFrameActorAs<C_WireCut>(frame, ACTOR_WIRE_CUT)) {
+            const float heading = static_cast<float>(value) / 10000.0f;
+            fence->PresentCampaignCut(S_vector(std::sin(heading), 0.0f, std::cos(heading)), second != 0);
+        }
         break;
     case Action::Clone:
         if (frame && !FindFrameAnywhere(event.m_Resource.c_str())) {

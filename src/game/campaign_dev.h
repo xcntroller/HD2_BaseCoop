@@ -27,7 +27,7 @@ void PublishDevelopmentCampaignWeapon(int actor, CampaignProtocol::E_WeaponEvent
 void SendDevelopmentCampaignControls(int actor, const CampaignProtocol::S_PlayerControls &controls);
 bool RequestDevelopmentCampaignInventoryMove(int actor, int itemUid, int fromActor,
                                              int fromContainer, int toContainer, int slot, int replacedUid = -1);
-bool RequestDevelopmentCampaignDoorAction(int actor, const S_HumanCommand &command);
+bool RequestDevelopmentCampaignWorldAction(int actor, const S_HumanCommand &command);
 void ApplyDevelopmentCampaignControls(int actor,
     const std::function<void(const CampaignProtocol::S_PlayerControls *)> &apply);
 void LogDevelopmentCampaign(const char *event, std::uint64_t first = 0, std::uint64_t second = 0);

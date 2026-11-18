@@ -243,7 +243,11 @@ The DoorAction payload uses version byte 1, a u32 static door actor ID and an
 action enumeration (open, close, lock, unlock, pick). The host resolves the
 exact ownership token and checks the door's reach, lock and motion before
 starting the corresponding native command. Realized effects go out with the
-next host mission update.
+next host mission update. The WireCut
+payload uses version byte 1 and the authored fence frame name. The host looks
+up its native temporary actor and checks ownership, cutter inventory and
+interaction reach. The guest applies the committed WireCut presentation to
+the same authored frame using the quantized horizontal direction.
 
 The development ControlBits payload uses version byte 1, two little-endian
 u16 held and pressed masks, and the unit view direction as three IEEE binary32

@@ -27,6 +27,7 @@ public:
     int GetPoint(int side) const { return m_points[side]; }
 
     // A client: the server's cut (its direction).
+    void PresentCampaignCut(const S_vector &dir, bool hideBrokenPart);
     void OnMessage(C_BitStream *msg) override;          // 0x1C 0x005e25f0
     // (Slot 0x20 0x005e2620 is empty, as the base's; SetFrame 0x005e2250 is the base's.)
     void CopyFrom(const C_Actor *source) override { C_Actor::CopyFrom(source); }   // 0x38 0x005e2200

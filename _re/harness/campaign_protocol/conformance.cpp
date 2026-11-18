@@ -415,6 +415,19 @@ void MissionUpdates() {
     encoded.back() = 255;
     CHECK(DecodeDoorAction(encoded, decodedDoor) == R::Malformed);
     CHECK(decodedDoor.m_Action == E_DoorAction::Unlock);
+
+    std::string fence;
+    CHECK(EncodeWireCut("fence_panel", encoded) == R::None);
+    CHECK(DecodeWireCut(encoded, fence) == R::None && fence == "fence_panel");
+    CHECK(EncodeWireCut("", encoded) == R::Malformed);
+    encoded.push_back(0);
+    CHECK(DecodeWireCut(encoded, fence) == R::Malformed && fence == "fence_panel");
+
+    state.m_FramePoses.clear();
+    state.m_Presentation.push_back({E_MissionPresentation::WireCut, "fence_panel", {}, {-31416, 0}});
+    CHECK(Encode(state, encoded) == R::None);
+    state.m_Presentation.back().m_Args[0] = 31417;
+    CHECK(Encode(state, encoded) == R::Malformed);
 }
 void WeaponEvents() {
     auto local = Hello();

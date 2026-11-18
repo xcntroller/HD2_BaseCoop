@@ -538,7 +538,7 @@ void C_PlayerController::RequestAction(int action, const S_vector4 *pos, const S
 void C_PlayerController::IssueCommand(const S_HumanCommand &command)
 {
     if (CampaignControlsActive()) {
-        RequestDevelopmentCampaignDoorAction(m_human->GetNetId(), command);
+        RequestDevelopmentCampaignWorldAction(m_human->GetNetId(), command);
         return;
     }
     // The server carries it out (OnMessage2).

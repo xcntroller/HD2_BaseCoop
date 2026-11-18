@@ -52,7 +52,7 @@ struct S_PreparationDelta {
     ViewRevision m_Base;
     S_CampaignPreparationSnapshot m_Replacement;
 };
-enum class E_InputKind { ControlBits, ActorAction, VehicleAction, DoorAction };
+enum class E_InputKind { ControlBits, ActorAction, VehicleAction, DoorAction, WireCut };
 struct S_Input {
     S_CampaignControlToken m_Control;
     std::uint64_t m_Sequence = 0; // strictly increasing per control token and connection
@@ -104,7 +104,7 @@ enum class E_MissionOutcome : std::uint8_t { Running, Success, Failure };
 
 enum class E_MissionPresentation : std::uint8_t {
     FrameOn, Speech, SubtitlesOn, Subtitle, ClearHints, Hint,
-    Animation, StopAnimation, Sound, CutsceneMusic, WeatherOn, WeatherMode, Clouds, Door, Clone, Attach, ReleaseClone
+    Animation, StopAnimation, Sound, CutsceneMusic, WeatherOn, WeatherMode, Clouds, Door, Clone, Attach, ReleaseClone, WireCut
 };
 
 // Commands already evaluated by the host VM. A guest executes only the
@@ -171,6 +171,8 @@ struct S_DoorAction {
 };
 E_CampaignReason EncodeDoorAction(const S_DoorAction &action, T_Bytes &out);
 E_CampaignReason DecodeDoorAction(const T_Bytes &bytes, S_DoorAction &out);
+E_CampaignReason EncodeWireCut(const std::string &frame, T_Bytes &out);
+E_CampaignReason DecodeWireCut(const T_Bytes &bytes, std::string &frame);
 
 struct S_InventoryEvent {
     ActorRef m_Actor;
