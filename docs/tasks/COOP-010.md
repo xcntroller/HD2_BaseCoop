@@ -2,15 +2,15 @@
 
 ## Coordination
 
-- Status: active
+- Status: review
 - Owner/session: Codex COOP-010, user assignment on 2026-11-18
 - Canonical branch: `feature/coop-010-two-player-mission`
 - Base commit: `6f1bdd96075b074a6a7b958257af5f56f8374fb5`
 - Dependencies: COOP-008, COOP-009 and their transitive merged dependencies
-- Last checkpoint: host-authoritative terrain movement and changed-kit AI handoff
+- Last checkpoint: Arctic1 playable gate and native mode regressions
 - Checkpoint location: `.worktrees/COOP-010` and the canonical branch on origin
 - Review/integration: claim acknowledged by coordination ledger commit `69cb6361`
-- Pull request: [#22](https://github.com/xcntroller/HD2_BaseCoop/pull/22) (draft)
+- Pull request: [#22](https://github.com/xcntroller/HD2_BaseCoop/pull/22)
 
 ## Branch authority and completion PR
 
@@ -124,11 +124,13 @@ roster/loadouts/policies as fixtures, not approved production menu behavior.
   text and status. Campaign mode leaves the native multiplayer score,
   loadout and respawn routes inactive. Use the window close control to
   leave the development session. Escape still skips the host's intro.
-- Remaining: verify the bounded original route on the latest build.
-  The intro still differs on the guest in scripted props, audio and HUD.
-- Next action: continue the paired route east of the Arctic1 drop zone.
-  The ignored Win32 SendInput helper under `build/initial-world/native-keys.py`
-  drives the original windows.
+- The recorded objective route starts at the original Arctic1 drop zone,
+  activates the opening objectives and ends at the forest patrol. The guide
+  rendezvous and mission completion remain unverified. The guest intro
+  differs in scripted props, audio and HUD. The live state covers the squad
+  and objectives. Ambient patrol movement remains host-side.
+- Next action: review the exact completion PR head and integrate according to
+  the repository workflow.
 - Blockers: none. COOP-008 merged at `d34b6900` and COOP-009 at `ce306626`.
 - Local prerequisites: root-checkout ignored `build/coop-shared-tooling/run-python.bat`
   configures preserved MSVC 14.44.35207 / SDK 10.0.26100.0 / Windows Python 3.13.9.
@@ -331,3 +333,63 @@ roster/loadouts/policies as fixtures, not approved production menu behavior.
     Stopping the host caused the guest to exit without a fault report.
     The tested executable SHA-256 was
     `134903191e4a566bc5665526c41e537c5f47b79735bff9d6fb6f6d15b096cece`.
+
+## Playable gate evidence
+
+The development path is source-only. The following tests used licensed Sabre
+Squadron 1.12 data and separate Wine prefixes on one machine. Local process
+logs and captures are under `build/coop-010-evidence/initial-world/` in the
+root checkout.
+
+1. **Entry and opening objectives.** The host and guest at source `eaee9cc5`
+   both started generation 1 / snapshot 1 in `guide-traverse` with CRC32
+   `631251518` over the 37,646-byte world cut. Start followed the guest's
+   reconstruction acknowledgment. All seven objectives were initially
+   inactive. Host and guest recorded the original script opening objectives
+   2, 3 and 1 in that order. The paired objective-screen captures from
+   `patrol-objectives` show finding the guide, finding the underground
+   entrance and clearing the complex all open.
+2. **Bounded route.** In `patrol-objectives` the host skipped the aircraft
+   intro with Escape. Each player stepped back from the drop zone to see the
+   original squad, then held forward toward the tree line. The host reached
+   137.04 m of horizontal displacement and the guest reached 134.06 m.
+   The encounter ended with the host resolving both controlled soldiers'
+   casualties, with the guide objective still open. At source `eaee9cc5`,
+   `guide-traverse` repeated the forest approach with forward and right
+   input and reproduced the casualty and objective results at 65.24 m and
+   71.74 m respectively. Each peer opened the original map after losing its
+   soldier. There were no crash reports or replacement soldiers.
+3. **Controls and equipment.** In `acceptance-arctic1` at `5269c8bf`, the
+   host and guest logged the same 13 realized weapon events. The Sten fired
+   from 32 to 26 and reloaded to 32. The Springfield fired from 5 to 0 and
+   reloaded to 5. Both native weapon-selector moves were verified in
+   `inventory-swap`. At `eaee9cc5` the `crawl-corridor` guest moved 8.91 m
+   and swapped to the Enfield .38 (UID 271) through the same native selector.
+   Captures show Czakowski and Bennett in the guest scene after the host's
+   casualty, when only the two squad AI remained beside the guest. In
+   `final-squad` the host backed away from the drop zone and captured the
+   guest and both AI soldiers in the same view. Both peers also recorded
+   the host and guest inventory swaps (UIDs 251 and 271) in that run.
+4. **Ownership and departure.** Closing the `crawl-corridor` guest preserved
+   actor 1 through squad AI takeover. The current pose, stats and inventory
+   bytes agreed exactly (CRC32 `636762`), and PlayerId 2's token returned
+   `NotAdmitted` (4). The same provider slot next got PlayerId 3, which was
+   rejected during Running with `JoinNotSupported` (39). Existing controller
+   conformance also verified stale generation and revision rejection. The
+   `final-squad` guest exited through the native window close message.
+   The host again preserved actor 1 and the exact transfer state
+   (CRC32 `1402296891`) and rejected the retired token.
+5. **Original mode regressions.** The campaign menus loaded original
+   Tutorial, where Pte. Jenkins walked. Two original native LAN players
+   spawned in Sicily2, saw each other move, and opened their original
+   inventories. See the `original-solo` and `native-sicily2` evidence
+   directories and the checkpoints above for source and executable hashes.
+
+The final game build compiled 287 units in pinned MSVC x86 with zero compiler
+diagnostics and linked with LAA. The last map edit at `eaee9cc5` compiled and
+linked with zero compiler diagnostics. Its tested executable SHA-256 was
+`658de080fd7c6ba0b803380956ac15155c83b3b1ccaf375174f3eea4ee5a3552`.
+GCC and MSVC x86 passed protocol (12 suites, 567,370 checks each), mission
+(409 lifecycle and 108 native-source checks each), ownership (10,721 each),
+and controller composition (1,272 controller, 237 native sink and 36 team
+checks each).
