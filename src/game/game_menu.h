@@ -35,7 +35,7 @@ class C_GameMenu : public C_EquipmentMenuBase {
 public:
     // The presets loaded (the original's presets constructor); single player: the missions' items
     // set up.
-    C_GameMenu();                                       // 0x0067eb40
+    explicit C_GameMenu(bool campaignMenu = false);                                       // 0x0067eb40
     // (The game behind is not deleted; the members' destructors.)
     ~C_GameMenu() override;                             // 0x0067f4a0 (0x0067f480)
 
@@ -260,6 +260,7 @@ private:
     bool m_unknown4D8 = false;                          // +0x4D8
     bool m_unknown4D9 = false;                          // +0x4D9
     bool m_hasPlayerSlotMember = false;                 // +0x4DA (OnStart's)
+    bool m_campaignMenu = false;                        // +0x4DB (port's campaign menu mode)
     C_EquipmentPanel m_panel;                           // +0x4DC
     C_StoreList m_storeList;                            // +0x580
     C_GameState *m_game = nullptr;                      // +0x5B8 the game behind the menu

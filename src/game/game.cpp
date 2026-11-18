@@ -394,7 +394,8 @@ void C_game::ApplyFade()                            // 0x0069b0e0
 C_GameState *C_game::OpenGameMenu(int arg)         // 0x0069e8f0
 {
     C_GameState *current = this;
-    C_GameMenu *menu = new C_GameMenu();
+    const bool campaignMenu = IsCampaignNet(E_CampaignLanRoute::CampaignSession) && IsCampaignMission();
+    C_GameMenu *menu = new C_GameMenu(campaignMenu);
     if (menu) {
         SetState(GAME_STATE_RUNNING);
         menu->SetGame(this);

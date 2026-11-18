@@ -571,9 +571,6 @@ void C_CampaignPreparationScreen::Render(I_CampaignPreparationPainter &p) {
     else if (m_Snapshot && m_Snapshot->m_Context.m_Phase != E_CampaignPhase::Preparation) status = Label("COOP_PREP_FROZEN");
     else if (m_Pending) status = Label("COOP_PREP_PENDING");
     else if (m_Notice != E_CampaignReason::None) status = m_Presentation.Reason(m_Notice);
-    else if (m_Focus < m_Controls.size() && !m_Controls[m_Focus].m_Enabled &&
-        m_Controls[m_Focus].m_Reason != E_CampaignReason::None)
-        status = m_Presentation.Reason(m_Controls[m_Focus].m_Reason);
     else if (m_Snapshot && !HasLocalSoldier()) status = Label("COOP_OWNER_NO_SOLDIER");
     else if (m_Snapshot && !m_Snapshot->m_DeployBlockers.empty()) status = m_Presentation.Reason(m_Snapshot->m_DeployBlockers.front().m_Reason);
     else status = Label("COOP_PREP_COMMITTED");
