@@ -488,6 +488,51 @@ can identify each other's pings and tell when a sighting has gone stale.
   transport. The [current networking baseline](tasks/COOP-010.md#handoff) records
   DirectPlay and sequenced state updates.
 
+### Enemy and friendly AI
+
+Treat smarter AI as a longer-term co-op workstream. Aim for characters that make
+believable decisions and give players opportunities to read and respond to them.
+Use the same weapon accuracy, damage, and health during the first playtests so the
+comparison measures behavior.
+
+- **Enemy perception and investigation.** Build on the
+  [existing sight and hearing systems](../src/game/ai_senses.cpp). A guard who
+  notices a disturbance can orient, check the approximate source, ask for help,
+  or resume patrol if the evidence goes stale. Distinguish uncertain reports from
+  confirmed contact. Limit each guard's knowledge to what they observed and what
+  other guards communicated. Carry the age and uncertainty of a report forward.
+  Reuse the [stealth feedback ideas](#casualties-stealth-and-disguise) to make
+  these decisions visible or audible to players.
+- **Enemy coordination and cover.** Give a small group complementary actions.
+  One guard can check a disturbance while another continues watching the route.
+  During confirmed contact, have them choose reachable cover and avoid crowding
+  the same position. Let them reconsider when a route becomes blocked or a
+  sighting goes stale.
+- **Believable mistakes.** Let imperfect information produce occasional late
+  reactions, false alarms, or checks of the wrong nearby spot. Make those outcomes
+  understandable from the guard's point of view and reproducible in a test run.
+- **Friendly AI and pathfinding.** Improve how squadmates follow, hold, keep
+  formation, and make room for players in tight spaces. Respect explicit orders,
+  including hold fire. Start from the existing
+  [squad movement and formation logic](../src/game/squad_movement.cpp),
+  [path failure handling](../src/game/squad_controller.cpp), and
+  [cover selection](../src/game/squad_combat.cpp). Try replanning around a blocked
+  route, then falling back to a reachable position and reporting the problem
+  after bounded retries. Diagnose whether failures come from navigation data,
+  dynamic obstacles, or conflicting squad goals before replacing the pathfinder.
+
+Keep AI decisions on the host and preserve the priority of mission scripts,
+scripted actors, and human control. Use a co-op test setting to compare these
+behaviors with the campaign baseline. Log the stimulus, decision, and path
+failure or result on the host so divergent behavior can be reproduced.
+
+**First prototypes.** Use one Arctic1 patrol to test hearing a noise, reacting
+to it, investigating, sharing a report, and returning to patrol. Separately,
+test two AI squadmates following players past a blocked doorway or narrow
+passage, including a hold and regroup order. Compare order completion, time
+spent stuck, script outcomes, and what the host and guest see. Expand to more
+encounters after those behaviors are readable and repeatable.
+
 ## Validation requirements
 
 The upstream [build instructions](../README.md#building) use MSVC x86 and x87 floating-point
