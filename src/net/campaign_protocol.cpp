@@ -136,6 +136,7 @@ template<class A> bool Fields(A &a, S_Accept &x);
 template<class A> bool Fields(A &a, S_NegotiationAck &x);
 template<class A> bool Fields(A &a, S_Reject &x);
 template<class A> bool Fields(A &a, S_PreparationDelta &x);
+template<class A> bool Fields(A &a, S_PreparationResync &x);
 template<class A> bool Fields(A &a, S_Input &x);
 template<class A> bool Fields(A &a, S_WorldChunk &x);
 template<class A> bool Fields(A &a, S_SquadActorState &x);
@@ -359,6 +360,9 @@ template<class A> bool Fields(A &a, S_Accept &x) { return a(x.m_Major, x.m_Minor
 template<class A> bool Fields(A &a, S_NegotiationAck &x) { return a(x.m_Major, x.m_Minor, x.m_Features, x.m_Session, x.m_Player) && Valid(x); }
 template<class A> bool Fields(A &a, S_Reject &x) { return a(x.m_Reason) && Valid(x); }
 template<class A> bool Fields(A &a, S_PreparationDelta &x) { return a(x.m_Base, x.m_Replacement) && Valid(x); }
+template<class A> bool Fields(A &a, S_PreparationResync &x) {
+    return a(x.m_Session, x.m_PlayerEcho) && x.m_Session.IsValid() && x.m_PlayerEcho.IsValid();
+}
 template<class A> bool Fields(A &a, S_Input &x) { return a(x.m_Control, x.m_Sequence, x.m_Kind, x.m_Payload) && Valid(x); }
 template<class A> bool Fields(A &a, S_WorldChunk &x) { return a(x.m_Baseline, x.m_TotalBytes, x.m_Index, x.m_Count, x.m_Crc32, x.m_Bytes) && Valid(x); }
 template<class A> bool Fields(A &a, S_SquadActorState &x) {
@@ -693,6 +697,9 @@ bool BoundPayload(const T_Message &message, bool server, const S_Accept &agreeme
             return !server && x.m_Context.m_Session == session;
         else if constexpr (std::is_same<T, S_PreparationDelta>::value)
             return !server && x.m_Replacement.m_Context.m_Session == session;
+        else if constexpr (std::is_same<T, S_PreparationResync>::value)
+            return server && (agreement.m_Features & kLivePreparation) &&
+                x.m_Session == session && x.m_PlayerEcho == player;
         else if constexpr (std::is_same<T, S_CampaignStartSimulation>::value)
             return !server && x.m_Session == session;
         else if constexpr (std::is_same<T, S_WorldChunk>::value)
@@ -904,7 +911,8 @@ E_Route Route(E_CampaignSessionKind kind, E_Traffic traffic) {
     if (kind != E_CampaignSessionKind::CampaignCoop) return traffic == E_Traffic::Extension ? E_Route::Drop : E_Route::Legacy;
     return traffic == E_Traffic::Extension ? E_Route::Campaign : E_Route::Drop;
 }
-constexpr std::uint64_t kSupportedFeatures = kFeatures | kMissionUpdates | kWeaponEvents | kInventoryMoves;
+constexpr std::uint64_t kSupportedFeatures = kFeatures | kMissionUpdates | kWeaponEvents | kInventoryMoves |
+    kLivePreparation;
 
 C_Admission::C_Admission(E_CampaignSessionKind kind, bool server, S_Hello local,
     SessionId session, PlayerId assignedPlayer, std::uint64_t nowMs)

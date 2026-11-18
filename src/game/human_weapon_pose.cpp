@@ -481,7 +481,7 @@ void C_HumanWeaponPose::BindSkeleton(int mode)
     for (S_PoseBone &bone : m_bones)
         bone.frame->SetScale(S_vector(1.0f, 1.0f, 1.0f));
     m_model->SetScale(S_vector(1.0f, 1.0f, 1.0f));
-    if (IsLocalGame() && g_gameProfile.GetDetailSettings()->IsEnabled(DETAIL_STAINS)) {
+    if (m_owner && IsLocalGame() && g_gameProfile.GetDetailSettings()->IsEnabled(DETAIL_STAINS)) {
         if (!m_stains)
             m_stains = new C_HumanStains(this);
         m_stains->Bind(static_cast<char>(mode));

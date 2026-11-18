@@ -296,7 +296,7 @@ void C_CampaignPreparationScreen::Activate(std::size_t index) {
             m_Destination = (++it == d->m_Placements.end()) ? d->m_Placements.front() : *it;
         } break;
     }
-    case A::Leave: m_ConfirmLeave = true; break;
+    case A::Leave: m_ConfirmLeave = true; m_Focus = 1; break;
     case A::CancelLeave: m_ConfirmLeave = false; break;
     case A::ConfirmLeave: m_LeaveRequested = true; Close(); return;
     default: {
@@ -341,7 +341,12 @@ bool C_CampaignPreparationScreen::Click(float x, float y) {
 bool C_CampaignPreparationScreen::Key(E_CampaignPreparationKey key) {
     Tick(); if (!m_Open || m_Controls.empty()) return false;
     using K = E_CampaignPreparationKey;
-    if (key == K::Escape) { m_ConfirmLeave = !m_ConfirmLeave; BuildControls(); return true; }
+    if (key == K::Escape) {
+        m_ConfirmLeave = !m_ConfirmLeave;
+        if (m_ConfirmLeave) m_Focus = 1; // Enter keeps the session until the player selects confirmation.
+        BuildControls();
+        return true;
+    }
     if (key == K::Enter || key == K::Space) { Activate(m_Focus); return true; }
     if (key == K::Left || key == K::Right || key == K::Up || key == K::Down) {
         auto &c = m_Controls[m_Focus];
@@ -415,13 +420,16 @@ void C_CampaignPreparationScreen::Render(I_CampaignPreparationPainter &p) {
                 if (l && m_Inventory) for (const auto &entry : l->m_Items) if (entry.m_Entry == *m_Inventory)
                     detail += ItemState(entry.m_State) + "\n" + m_Presentation.ItemDescription(entry.m_State.m_Item) + "\n";
             }
-            const S_CampaignPreparationRect document{52, 306, 900, 230};
+            const bool showImage = m_Briefing && m_Snapshot->m_Briefing.m_Image.IsValid();
+            const S_CampaignPreparationRect document{52, 306, showImage ? 650.0f : 900.0f, 230};
             auto pages = p.Paginate(document, detail);
             if (pages.empty()) pages.emplace_back();
             m_TextPages = pages.size();
             m_BriefingPage = std::min(m_BriefingPage, m_TextPages - 1);
             p.Panel({40, 290, 938, 304}, false);
             p.Text(document, pages[m_BriefingPage]);
+            if (showImage)
+                p.Asset({710, 306, 248, 186}, m_Snapshot->m_Briefing.m_Image);
             text(430, 554, 174, 32, std::to_string(m_BriefingPage + 1) + "/" + std::to_string(m_TextPages));
             BuildControls();
         } else {
@@ -476,7 +484,8 @@ void C_CampaignPreparationScreen::Render(I_CampaignPreparationPainter &p) {
         auto caption = c.m_Rect;
         if (c.m_Action == E_CampaignPreparationAction::Slot && m_Snapshot) {
             const auto id = m_Snapshot->m_Slots[static_cast<std::size_t>(c.m_Key)].m_Soldier;
-            if (id) for (const auto &candidate : m_Snapshot->m_Soldiers) if (candidate.m_Soldier == *id && candidate.m_CanView.m_Allowed) {
+            if (id) for (const auto &candidate : m_Snapshot->m_Soldiers) if (candidate.m_Soldier == *id &&
+                candidate.m_CanView.m_Allowed && candidate.m_Portrait.IsValid()) {
                 p.Asset({caption.m_X+168,caption.m_Y+10,46,68}, candidate.m_Portrait); caption.m_Width = 164;
             }
         }

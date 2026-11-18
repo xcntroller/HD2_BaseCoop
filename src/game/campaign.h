@@ -422,8 +422,10 @@ public:
     int CountMissions(int campaign);                    // 0x006b9350
     int CountOperationMissions(int campaign, int operation);   // 0x006b93c0
     int GetOperationId(int campaign, int operation);    // 0x006b8f60
+    int GetMissionOperationId(int campaign, int missionNumber);
     const C_str &GetOperationName(int campaign, int operation);   // 0x006b8fa0
     const C_MissionDef *GetMissionDefinition(int campaign, int missionNumber);
+    const C_CampaignScreen *GetInitialEquipmentScreen(int campaign, int missionNumber);
     int GetMissionId(int campaign, int missionNumber);  // 0x006b9040
     const C_str &GetMissionImage(int campaign, int missionNumber);   // 0x006b90e0
     int GetMissionText(int campaign, int missionNumber, int index);  // 0x006b9420

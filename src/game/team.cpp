@@ -1,4 +1,5 @@
 #include "game/campaign_control_runtime.h"
+#include "game/campaign_mission_adapter.h"
 // Teams, formations and the team manager (see team.h).
 #include "game/first_person_view.h"
 #include "game/interface.h"
@@ -1034,7 +1035,9 @@ void C_TeamManager::StopMission(bool server)            // 0x00460b30 (DS 0x0047
 {
     if (!server) {
 #ifndef HD2_DEDICATED   // the server has only the server's side
-        if (IsClient())
+        if (IsCampaignMission())
+            m_playerTeam.Clear();
+        else if (IsClient())
             m_playerTeam.RestartMission(false);
 #endif
         m_clientRunning = false;

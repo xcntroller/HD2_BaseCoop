@@ -11,6 +11,7 @@
 #include <windows.h>
 
 #include "common/c_str.h"
+#include "game/campaign_preparation_native_ui.h"
 #include "game/campaign_setup_session.h"
 #include "game/menu_state.h"
 
@@ -91,6 +92,13 @@ public:
     bool OnStart(void *arg) override;                   // 0x40 0x006264c0 (DS 0x00655950)
     // The date shown again (when known).
     void OnUpdate(int timeDelta) override;              // 0x48 0x00626b30
+#ifndef HD2_DEDICATED
+    bool HandleInput(float *held, float *pressed) override;
+    void Update(int timeDelta) override;
+    bool OnRender() override;
+    std::unique_ptr<C_CampaignSetupSession> TakeCampaignDeployment();
+    void RestoreCampaignPreparation(std::unique_ptr<C_CampaignSetupSession> session, E_CampaignReason reason);
+#endif
 
     // The movie MAIN_MSG_PLAY_MOVIE plays (empty: the credits).
     const C_str &GetMovie() const { return m_movie; }
@@ -133,6 +141,9 @@ protected:
     void DescribeCampaignPicker(S_ScreenDesc *desc, I3D_frame *model);
     void DescribeCampaignSetup(S_ScreenDesc *desc, I3D_frame *model);
     void RefreshCampaignSetup();
+#ifndef HD2_DEDICATED
+    bool OpenCampaignPreparation();
+#endif
     static bool OnCampaignPicker(void *menu, void *, C_Control *, uint32_t, uint32_t);
     static bool OnCampaignSetup(void *menu, void *, C_Control *control, uint32_t notification, uint32_t);
     static bool OnCampaignSetupButton(void *menu, void *, C_Control *control, uint32_t notification, uint32_t);
@@ -461,6 +472,9 @@ protected:
     int unknown218 = 0;                                 // +0x218
     S_ServerEntry *m_server = nullptr;                  // +0x21C the browser's server picked
     std::unique_ptr<C_CampaignSetupSession> m_campaignSetup;
+#ifndef HD2_DEDICATED
+    std::unique_ptr<C_CampaignPreparationNativeUI> m_campaignPreparation;
+#endif
     C_str m_campaignSetupStatus;
     C_str m_campaignSetupError;
     E_CampaignSetupState m_campaignSetupState = E_CampaignSetupState::Idle;
