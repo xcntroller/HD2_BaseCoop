@@ -184,19 +184,24 @@ std::vector<std::string> g_trackedFrames;
 
 struct S_DevelopmentMotion {
     std::optional<S_vector> m_Origin;
+    std::optional<std::uint16_t> m_Health;
     unsigned m_RecordedCentimeters = 0;
 };
 std::array<S_DevelopmentMotion, 4> g_squadMotion;
 
-void ObserveSquadMotion(const Wire::S_MissionUpdate &update, const char *event)
+void ObserveSquadState(const Wire::S_MissionUpdate &update, const char *movement, const char *health)
 {
-    if (!update.m_PlayerInputEnabled)
-        return;
     for (const auto &actor : update.m_Squad) {
         const auto id = actor.m_Actor.m_Actor.Value();
         if (id >= g_squadMotion.size())
             continue;
         auto &motion = g_squadMotion[id];
+        if (motion.m_Health != actor.m_Health) {
+            motion.m_Health = actor.m_Health;
+            LogDevelopmentCampaign(health, id, actor.m_Health);
+        }
+        if (!update.m_PlayerInputEnabled)
+            continue;
         const auto &p = actor.m_Position;
         const S_vector current(p[0], p[1], p[2]);
         if (!motion.m_Origin) {
@@ -210,7 +215,7 @@ void ObserveSquadMotion(const Wire::S_MissionUpdate &update, const char *event)
         const auto cm = static_cast<unsigned>(distance * 100.0f);
         if (cm >= motion.m_RecordedCentimeters + 25) {
             motion.m_RecordedCentimeters = cm;
-            LogDevelopmentCampaign(event, id, cm);
+            LogDevelopmentCampaign(movement, id, cm);
         }
     }
 }
@@ -343,7 +348,8 @@ R ApplyMissionUpdate(S_GuestSession &guest, const Wire::S_MissionUpdate &update)
         return R::ContentMismatch;
     if (!g_sink.ApplySquadActors(update.m_Squad) || !g_sink.ApplyAmbientHumans(update.m_Ambient))
         return R::ActorUnavailable;
-    ObserveSquadMotion(update, "guest applied host squad movement cm");
+    ObserveSquadState(update, "guest applied host squad movement cm",
+                      "guest applied host squad health");
     for (const auto &event : update.m_Presentation)
         g_scriptModule.ApplyCampaignPresentation(event);
     for (const auto &pose : update.m_FramePoses) {
@@ -819,7 +825,8 @@ bool PublishMissionUpdate(Clock::time_point now, const S_CampaignOwnershipSnapsh
         }
         return false;
     }
-    ObserveSquadMotion(update, "host measured authoritative squad movement cm");
+    ObserveSquadState(update, "host measured authoritative squad movement cm",
+                      "host measured authoritative squad health");
     for (std::size_t index = 0; index < update.m_Objectives.size(); ++index) {
         if (index >= g_publishedObjectives.size() || g_publishedObjectives[index] != update.m_Objectives[index])
             LogDevelopmentCampaign("host published objective state", index + 1, update.m_Objectives[index]);
@@ -835,8 +842,26 @@ bool PublishMissionUpdate(Clock::time_point now, const S_CampaignOwnershipSnapsh
 void PublishTerminalMissionUpdate(const S_CampaignMissionResult &result, const S_CampaignOwnershipSnapshot &state)
 {
     LogDevelopmentCampaign("host captured terminal mission outcome", result.m_Success, result.m_Soldiers.size());
-    for (const auto &[id, soldier] : result.m_Soldiers)
-        LogDevelopmentCampaign("host captured terminal soldier health", id.Value(), soldier.health);
+    if (auto *log = std::fopen("campaign-dev.log", "a")) {
+        for (const auto &[id, soldier] : result.m_Soldiers) {
+            std::fprintf(log, "host captured terminal soldier %u health %d\n",
+                         static_cast<unsigned>(id.Value()), soldier.health);
+            const auto write = [log](const char *slot, const S_SoldierItem &item) {
+                if (item.typeId >= 0 && item.present > 0)
+                    std::fprintf(log, "  %s item %d quantity %d\n", slot, item.typeId, item.present);
+            };
+            write("head", soldier.head);
+            write("uniform", soldier.uniform);
+            write("hands", soldier.hands);
+            write("backpack", soldier.backpack);
+            write("long gun", soldier.longGun);
+            for (const auto &item : soldier.belt)
+                write("belt", item);
+            for (const auto &item : soldier.backpackContents)
+                write("backpack contents", item);
+        }
+        std::fclose(log);
+    }
     if (!PublishMissionUpdate(Clock::now(), state, &result)) {
         LogDevelopmentCampaign("host could not send terminal mission outcome", result.m_Generation.Value());
         g_netGame.Close(true);

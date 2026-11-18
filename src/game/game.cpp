@@ -456,7 +456,8 @@ bool C_game::HandleInput(float *held, float *pressed)   // 0x0069a830 (DS 0x006d
     if (!m_playerInputEnabled || !held || !pressed) {
         // A cutscene is skipped with the menu key.
         if (!m_playerInputEnabled || !held) {
-            if (pressed && pressed[INPUT_MENU] != 0.0f && g_scriptModule.IsCutsceneRunning()) {
+            if (pressed && pressed[INPUT_MENU] != 0.0f && g_scriptModule.IsCutsceneRunning() &&
+                (!IsCampaignMission() || IsCampaignSimulationAuthority())) {
                 g_scriptModule.EndCutscene();
                 return true;
             }
