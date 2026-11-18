@@ -39,6 +39,10 @@ def main():
     begin = team_source.index("void C_Team::OnMemberDied(")
     end = team_source.index("bool C_Team::HasItem(", begin)
     (output / "team_source.inc").write_text(team_source[begin:end])
+    human_source = (ROOT / "src/game/human_combat.cpp").read_text()
+    begin = human_source.index("int C_Human::GetTeam(")
+    end = human_source.index("// --------------------------------------------------------------------------- disguise", begin)
+    (output / "human_team_source.inc").write_text(human_source[begin:end])
     commands = []
     print("Output:", output, flush=True)
 

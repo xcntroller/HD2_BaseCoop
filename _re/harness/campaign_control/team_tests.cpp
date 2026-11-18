@@ -8,17 +8,22 @@ static bool g_Local, g_Campaign, g_Server;
 bool IsLocalGame() { return g_Local; }
 bool CampaignControlsActive() { return g_Campaign; }
 bool IsServer() { return g_Server; }
-constexpr int HUMAN_ROLE_PLAYER=0, HUMAN_ROLE_NPC_TEAM=3;
+using E_HumanRole = int;
+constexpr int HUMAN_ROLE_PLAYER=0, HUMAN_ROLE_ENEMY=1, HUMAN_ROLE_NPC_TEAM=3, HUMAN_ROLE_NPC_TEAM_5=5;
+constexpr int TEAM_AXIS=1,TEAM_ALLIES=2,TEAM_NONE=3;
 constexpr unsigned HUMAN_ENV_DEADLY=1, HUMAN_ENV_RESTRICTED=2;
 constexpr int TEXT_SQUAD_RESTRICTED_AREA=99;
 struct C_Human {
     bool m_Alive = false;
     unsigned m_Environment = 0;
-    int m_Role = HUMAN_ROLE_PLAYER;
+    E_HumanRole m_role = HUMAN_ROLE_PLAYER;
+    int m_netId = 17;
+    int GetTeam(bool pending) const;
+    void SetPlayerTeam(int team, bool pending);
     std::vector<C_Human *> m_Seen;
     bool IsAlive() const { return m_Alive; }
     unsigned GetEnvironmentFlags() const { return m_Environment; }
-    int GetRole() const { return m_Role; }
+    int GetRole() const { return m_role; }
     const char *GetFullName() const { return "fixture"; }
     const std::vector<C_Human *> &GetSeenEnemies() const { return m_Seen; }
 };
@@ -48,6 +53,13 @@ struct C_Team {
     void CheckEnvironment();
 };
 #include "team_source.inc"
+struct C_Profile { bool m_Coop=false; bool IsCooperativeGame() { return m_Coop; } } g_gameProfile;
+struct C_NetGame {
+    int m_Reads=0,m_Writes=0;
+    int GetPlayerTeam(int actor,bool) { ++m_Reads;return actor+100; }
+    void SetPlayerTeam(int,int,bool) { ++m_Writes; }
+} g_netGame;
+#include "human_team_source.inc"
 #define CHECK(x) do { ++checks; if (!(x)) { std::cerr << "FAIL team line " << __LINE__ << ": " #x "\n"; std::exit(1); } } while(false)
 int main() {
     int checks=0;
@@ -55,6 +67,14 @@ int main() {
         g_Local=mode==0; g_Campaign=mode>=2; g_Server=mode!=3;
         const bool authority=mode==0||mode==2;
         g_Game={};
+        g_netGame={};g_gameProfile.m_Coop=false;
+        C_Human soldier;
+        CHECK(soldier.GetTeam(false)==(mode==1?117:TEAM_ALLIES));
+        soldier.SetPlayerTeam(1,false);
+        CHECK(g_netGame.m_Writes==(g_Campaign?0:1));
+        soldier.m_role=HUMAN_ROLE_ENEMY;
+        CHECK(soldier.GetTeam(false)==(mode==1?117:TEAM_AXIS));
+        if(g_Campaign)CHECK(g_netGame.m_Reads==0);
         C_Human dead, ai;
         C_Team team;team.m_members={&dead,&ai};
         ai.m_Alive=true; // an unowned squad AI keeps the campaign alive

@@ -819,7 +819,7 @@ int C_Human::GetSide() const
 int C_Human::GetTeam(bool pending) const
 {
     E_HumanRole role;
-    if (IsLocalGame()) {
+    if (IsLocalGame() || CampaignControlsActive()) {
         role = m_role;
         if (role == HUMAN_ROLE_ENEMY)
             return TEAM_AXIS;
@@ -837,6 +837,7 @@ int C_Human::GetTeam(bool pending) const
 
 void C_Human::SetPlayerTeam(int team, bool pending)
 {
+    if (CampaignControlsActive()) return; // campaign sides come from soldier roles, never MP slots
     g_netGame.SetPlayerTeam(m_netId, team, pending);
 }
 

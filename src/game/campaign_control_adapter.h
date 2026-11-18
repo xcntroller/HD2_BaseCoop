@@ -33,6 +33,8 @@ class C_CampaignControlAdapter {
 public:
     static constexpr std::size_t kMaxQueuedInputs = 256;
     C_CampaignControlAdapter(C_CampaignOwnership &ownership, I_CampaignControlSink &sink);
+    C_CampaignControlAdapter(const C_CampaignControlAdapter &) = delete;
+    C_CampaignControlAdapter &operator=(const C_CampaignControlAdapter &) = delete;
     static S_CampaignControllerPlan Plan(const S_CampaignSessionContext &context,
         const S_CampaignOwnershipRecord &record);
     // Reconcile a committed ownership cut, drain every old binding before applying
@@ -62,6 +64,8 @@ class C_CampaignReplicaControlAdapter final : public I_CampaignOwnershipView {
 public:
     C_CampaignReplicaControlAdapter(SessionId session, PlayerId localPlayer, I_CampaignControlSink &sink)
         : m_Session(session), m_LocalPlayer(localPlayer), m_Sink(sink) {}
+    C_CampaignReplicaControlAdapter(const C_CampaignReplicaControlAdapter &) = delete;
+    C_CampaignReplicaControlAdapter &operator=(const C_CampaignReplicaControlAdapter &) = delete;
     T_CampaignOwnershipSnapshot GetSnapshot() const override { return m_View; }
     E_CampaignReason InstallCommitted(T_CampaignOwnershipSnapshot snapshot);
     E_CampaignReason RetireBeforeReconstruction();
