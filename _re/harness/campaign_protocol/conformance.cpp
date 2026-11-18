@@ -324,7 +324,7 @@ void CampaignProgression() {
     const S_ReportKey key{Context().m_Session, MissionGeneration(3), SnapshotId(13)};
     S_CampaignReport report{key, true,
         {{PlayerId(5), "Host", true, false}, {PlayerId(6), "Guest", false, true}},
-        {{SoldierId(101), 795, 84, {0, 0, 1.5f}, 1, 2, 3, {1, 2}}}, {101, 402}};
+        {{SoldierId(101), 795, 84, {0, 0, 1.5f}, 1, std::uint8_t{2}, std::uint8_t{3}, {1, 2}}}, {101, 402}};
     report.m_ScriptValues[1] = 7;
     const S_ReportReady ready{key};
     S_CampaignStep step{key, 1, E_CampaignStep::Video, MissionKey("Arctic2"), "BriefArctic1b.bik", 0};

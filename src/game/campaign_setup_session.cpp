@@ -297,8 +297,9 @@ R C_CampaignSetupSession::BeginContinuedPreparation(const C_CampaignScreen &equi
     const auto &session = m_Ownership->GetSession();
     const auto host = *previous->m_Context.m_HostPlayer;
     const bool single = index == 0 && (number == 2 || number == 15);
+    const auto roster = session.GetRoster();
     std::vector<S_CampaignRosterEntry> candidates;
-    for (const auto &entry : session.GetRoster())
+    for (const auto &entry : roster)
         if (const auto *profile = GetSoldierProfile(entry.m_ProfileIndex))
             if (!profile->dead && g_gameProfile.FindSoldierState(entry.m_ProfileIndex))
                 candidates.push_back(entry);
@@ -316,7 +317,7 @@ R C_CampaignSetupSession::BeginContinuedPreparation(const C_CampaignScreen &equi
         const auto lead = selected == candidates.end() ? candidates.front() : *selected;
         candidates.assign(1, lead);
     }
-    for (const auto &entry : session.GetRoster()) {
+    for (const auto &entry : roster) {
         const bool deploy = std::any_of(candidates.begin(), candidates.end(),
             [&](const auto &candidate) { return candidate.m_Soldier == entry.m_Soldier; });
         reason = m_Ownership->SetAvailability(entry.m_Soldier, deploy, deploy);
@@ -351,8 +352,10 @@ R C_CampaignSetupSession::BeginContinuedPreparation(const C_CampaignScreen &equi
     auto catalog = std::make_unique<S_CampaignNativeCatalog>();
     S_CampaignEquipmentRuleCatalog rules;
     reason = ImportContinuedCampaignPreparation(session, number, equipment, *catalog, rules, initial);
-    if (reason != R::None)
+    if (reason != R::None) {
+        LogSetup("campaign carryover equipment import failed", static_cast<std::uint64_t>(reason), number);
         return reason;
+    }
     reason = m_Preparation->OpenNextHost(std::move(initial), std::move(rules));
     if (reason != R::None)
         return reason;
