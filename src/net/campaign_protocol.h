@@ -11,7 +11,7 @@ namespace CampaignProtocol {
 constexpr std::uint32_t kCommand = 0x434f4f50;
 constexpr std::uint16_t kMajor = 1, kMinor = 0;
 constexpr std::uint64_t kFeatures = 7; // identities, atomic preparation, guarded input
-constexpr std::uint64_t kMissionUpdates = 8;
+constexpr std::uint64_t kMissionUpdates = 8, kWeaponEvents = 16;
 constexpr std::size_t kHeaderBytes = 16, kMaxFrameBytes = 24576;
 constexpr std::size_t kMaxStringBytes = 256, kMaxCollection = 256;
 constexpr std::size_t kMaxSoldiers = 64, kMaxParticipants = 4;
@@ -111,17 +111,29 @@ struct S_MissionUpdate {
     std::vector<S_SquadActorState> m_Squad;
     std::vector<std::uint8_t> m_Objectives;
 };
+enum class E_WeaponEvent : std::uint8_t { Fire, Reload };
+struct S_WeaponEvent {
+    ActorRef m_Actor;
+    SnapshotId m_Snapshot;
+    OwnershipRevision m_OwnershipRevision;
+    std::uint64_t m_Sequence = 0;
+    E_WeaponEvent m_Action = E_WeaponEvent::Fire;
+    std::uint32_t m_ItemUid = 0;
+    std::uint16_t m_Rounds = 0;
+    std::uint16_t m_ReloadTime = 0;
+    std::optional<std::uint32_t> m_ConsumedAmmo;
+};
 using T_Message = std::variant<S_Hello, S_Accept, S_NegotiationAck, S_Reject,
     S_CampaignOwnershipRequest, S_CampaignEditRequest, S_CampaignReadyRequest,
     S_CampaignDeployRequest, S_CampaignRequestResult, S_CampaignOwnershipSnapshot,
     S_CampaignPreparationSnapshot, S_PreparationDelta, S_CampaignMissionManifest,
-    S_CampaignSnapshotAck, S_CampaignStartSimulation, S_Input, S_WorldChunk, S_MissionUpdate>;
-// Stable explicit tags 1..18 in the above order; variant object layout is never wire.
+    S_CampaignSnapshotAck, S_CampaignStartSimulation, S_Input, S_WorldChunk, S_MissionUpdate, S_WeaponEvent>;
+// Stable explicit tags 1..19 in the above order; variant object layout is never wire.
 enum class E_Message : std::uint16_t {
     Hello = 1, Accept, NegotiationAck, Reject, OwnershipRequest, EditRequest,
     ReadyRequest, DeployRequest, RequestResult, OwnershipSnapshot,
     PreparationSnapshot, PreparationDelta, BeginMission, SnapshotAck,
-    StartSimulation, Input, WorldChunk, MissionUpdate
+    StartSimulation, Input, WorldChunk, MissionUpdate, WeaponEvent
 };
 struct S_FrameInfo { E_Message m_Type = E_Message::Reject; std::uint32_t m_BodyBytes = 0; };
 E_CampaignReason Inspect(const std::uint8_t *data, std::size_t size, S_FrameInfo &out);

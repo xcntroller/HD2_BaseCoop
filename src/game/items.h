@@ -400,6 +400,7 @@ public:
     float GetLoadedRounds() const { return m_rounds; }
     bool IsReloadPending() const { return (m_flags & WEAPON_RELOAD_PENDING) != 0; }
     void ClearReloadPending() { m_flags &= ~WEAPON_RELOAD_PENDING; }
+    void ApplyReplicaRounds(C_Actor *owner, std::uint16_t rounds, std::uint16_t reloadMs, bool reloading);
     // Mission time when the attack delay of the controls' last shot ends.
     uint32_t GetAttackTime() const { return m_attackTime; }
     void SetAttackTime(uint32_t time) { m_attackTime = time; }

@@ -15,6 +15,7 @@ public:
     void Execute(const CampaignProtocol::S_Input &input) override;
     bool CaptureSquadActor(CampaignProtocol::S_SquadActorState &state) const;
     bool ApplySquadActors(const std::vector<CampaignProtocol::S_SquadActorState> &squad) const;
+    bool ApplyWeaponEvent(const CampaignProtocol::S_WeaponEvent &event) const;
 private:
     T_Dispatch m_Dispatch;
     std::map<SoldierId, ActorRef> m_AppliedBindings;

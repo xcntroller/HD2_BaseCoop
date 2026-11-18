@@ -283,6 +283,7 @@ struct S_GuestSession {
     C_InitialGuestView m_InitialView;
     bool m_Aborted = false;
     std::uint64_t m_LastUpdate = 0;
+    std::uint64_t m_LastWeaponEvent = 0;
     std::uint32_t m_HostMissionTime = 0;
     std::uint64_t m_InputSequence = 0;
     std::uint16_t m_PendingButtons = 0;
@@ -297,6 +298,8 @@ struct S_GuestSession {
 std::unique_ptr<S_GuestSession> g_guest;
 std::optional<Clock::time_point> g_nextMissionUpdate;
 std::uint64_t g_missionUpdateSequence = 0;
+std::uint64_t g_weaponSequence = 0;
+bool g_liveSendFailed = false;
 OwnershipRevision g_publishedOwnership;
 
 struct S_ReceivedControls {
@@ -423,6 +426,24 @@ R ApplyMissionUpdate(S_GuestSession &guest, const Wire::S_MissionUpdate &update)
     return R::None;
 }
 
+void ReceiveWeaponEvent(S_GuestSession &guest, const Wire::S_WeaponEvent &event)
+{
+    const auto state = GetCampaignMissionSnapshot();
+    if (!state || !CanCampaignSimulate() || !guest.m_Manifest ||
+        event.m_Actor.m_Generation != state->m_Context.m_MissionGeneration ||
+        event.m_Snapshot != guest.m_Manifest->m_Snapshot ||
+        event.m_OwnershipRevision != state->m_Revision)
+        return FailGuest(R::SnapshotGap);
+    if (event.m_Sequence <= guest.m_LastWeaponEvent)
+        return;
+    if (event.m_Sequence != guest.m_LastWeaponEvent + 1 || !g_sink.ApplyWeaponEvent(event))
+        return FailGuest(R::ActorUnavailable);
+
+    guest.m_LastWeaponEvent = event.m_Sequence;
+    LogDevelopmentCampaign(event.m_Action == Wire::E_WeaponEvent::Fire ? "guest presented host shot" :
+                           "guest presented host reload", event.m_Actor.m_Actor.Value(), event.m_Rounds);
+}
+
 void ReceiveGuestWorld(PlayerId, Wire::T_Message message)
 {
     if (!g_guest || g_guest->m_Aborted)
@@ -468,6 +489,8 @@ void ReceiveGuestWorld(PlayerId, Wire::T_Message message)
         const auto reason = ApplyMissionUpdate(guest, *update);
         if (reason != R::None && reason != R::StaleRevision)
             FailGuest(reason);
+    } else if (const auto *event = std::get_if<Wire::S_WeaponEvent>(&message)) {
+        ReceiveWeaponEvent(guest, *event);
     }
 }
 
@@ -646,6 +669,16 @@ std::array<float, 3> VectorFields(const S_vector &value)
     return {value.x, value.y, value.z};
 }
 
+bool PublishLiveOwnership(const S_CampaignOwnershipSnapshot &state)
+{
+    if (g_publishedOwnership == state.m_Revision)
+        return true;
+    if (!SendCampaignMessage(g_netGame, g_transferPlayer, state))
+        return false;
+    g_publishedOwnership = state.m_Revision;
+    return true;
+}
+
 bool PublishMissionUpdate(Clock::time_point now)
 {
     if (!g_transferPlayer.Value() || !CanCampaignSimulate() ||
@@ -656,11 +689,8 @@ bool PublishMissionUpdate(Clock::time_point now)
     const auto manifest = g_mission->GetManifest();
     if (!game || !game->GetMission() || !manifest)
         return false;
-    if (g_publishedOwnership != state->m_Revision) {
-        if (!SendCampaignMessage(g_netGame, g_transferPlayer, *state))
-            return false;
-        g_publishedOwnership = state->m_Revision;
-    }
+    if (!PublishLiveOwnership(*state))
+        return false;
     Wire::S_MissionUpdate update;
     update.m_Session = state->m_Context.m_Session;
     update.m_Generation = state->m_Context.m_MissionGeneration;
@@ -732,8 +762,10 @@ bool Host(const C_MissionDef &mission, S_CampaignNetConfig config)
         } else {
             g_ownership->OnDisconnected(player);
         }
-        if (g_transferPlayer == player)
+        if (g_transferPlayer == player) {
             g_transferPlayer = {};
+            g_liveSendFailed = false;
+        }
         if (g_receivedControls && g_receivedControls->m_Token.m_Player == player)
             g_receivedControls.reset();
         LogDevelopmentCampaign("host observed guest departure", player.Value(), static_cast<std::uint64_t>(reason));
@@ -804,8 +836,8 @@ bool StartDevelopmentCampaign(C_GameApp &app)
         return true;
     }
 
-    config.m_Hello.m_Required |= Wire::kMissionUpdates;
-    config.m_Hello.m_Offered |= Wire::kMissionUpdates;
+    config.m_Hello.m_Required |= Wire::kMissionUpdates | Wire::kWeaponEvents;
+    config.m_Hello.m_Offered |= Wire::kMissionUpdates | Wire::kWeaponEvents;
     const bool started = host ? Host(*mission, std::move(config)) : Join(launch.m_Address, std::move(config));
     if (!started) {
         LogDevelopmentCampaign("campaign connection setup failed", static_cast<std::uint32_t>(g_netGame.m_lastError));
@@ -869,7 +901,7 @@ void TickDevelopmentCampaign(C_GameApp &app)
             if (reason != R::None)
                 LogDevelopmentCampaign("host discarded retired guest controls", static_cast<std::uint64_t>(reason));
         }
-        if (!PublishMissionUpdate(Clock::now())) {
+        if (g_liveSendFailed || !PublishMissionUpdate(Clock::now())) {
             LogDevelopmentCampaign("host failed to publish mission state", g_missionUpdateSequence);
             g_netGame.Close(true);
             app.m_state->SetState(GAME_STATE_QUIT);
@@ -908,6 +940,8 @@ void ReleaseDevelopmentCampaign()
     g_guestAcknowledged = false;
     g_nextMissionUpdate.reset();
     g_missionUpdateSequence = 0;
+    g_weaponSequence = 0;
+    g_liveSendFailed = false;
     g_publishedOwnership = {};
     g_receivedControls.reset();
     g_loggedInput = false;
@@ -1011,4 +1045,26 @@ void ApplyDevelopmentCampaignControls(int actor,
     }
     DispatchCampaignInput(input.m_Token, [&] { apply(&input.m_Controls); });
     input.m_Controls.m_Pressed = 0;
+}
+
+void PublishDevelopmentCampaignWeapon(int actor, Wire::E_WeaponEvent action, int weaponUid,
+                                      std::uint16_t rounds, std::uint16_t reloadMs, int consumedAmmo)
+{
+    if (!g_ownership || !CanCampaignSimulate() || weaponUid < 0)
+        return;
+    const auto state = g_ownership->GetSnapshot();
+    const auto record = FindCampaignActorControl(actor);
+    const auto manifest = g_mission->GetManifest();
+    if (!state || !record || !record->m_Actor || !manifest)
+        return;
+    LogDevelopmentCampaign(action == Wire::E_WeaponEvent::Fire ? "host fired weapon" : "host reloaded weapon",
+                           record->m_Actor->m_Actor.Value(), rounds);
+    if (!g_transferPlayer.Value() || g_liveSendFailed)
+        return;
+
+    Wire::S_WeaponEvent event{*record->m_Actor, manifest->m_Snapshot, state->m_Revision, ++g_weaponSequence,
+                              action, static_cast<std::uint32_t>(weaponUid), rounds, reloadMs, std::nullopt};
+    if (consumedAmmo >= 0)
+        event.m_ConsumedAmmo = static_cast<std::uint32_t>(consumedAmmo);
+    g_liveSendFailed = !PublishLiveOwnership(*state) || !SendCampaignMessage(g_netGame, g_transferPlayer, event);
 }

@@ -7,6 +7,7 @@
 #include "game/human_body.h"
 #include "game/human_controller.h"
 #include "game/human_movement.h"
+#include "game/controller_internal.h"
 #include "game/controller_net.h"
 #include "game/game.h"
 #include "game/team.h"
@@ -186,5 +187,34 @@ bool C_CampaignNativeControlSink::ApplySquadActors(
             visual.SetDirection(facing, 0.0f);
         }
     }
+    return true;
+}
+
+bool C_CampaignNativeControlSink::ApplyWeaponEvent(const CampaignProtocol::S_WeaponEvent &event) const {
+    auto *human = Resolve(event.m_Actor);
+    if (!human)
+        return false;
+    auto *weapon = human->GetHandsWeapon();
+    if (!weapon || weapon->GetUid() != static_cast<int>(event.m_ItemUid) ||
+        static_cast<float>(event.m_Rounds) > weapon->GetMaxAmount())
+        return false;
+
+    const bool reload = event.m_Action == CampaignProtocol::E_WeaponEvent::Reload;
+    if (event.m_ConsumedAmmo) {
+        auto *ammo = human->FindItemByUid(static_cast<int>(*event.m_ConsumedAmmo));
+        if (!ammo || ammo->GetKind() != ITEM_KIND_AMMO || ammo->GetTypeId() != weapon->GetDef()->GetAmmoItemId())
+            return false;
+        human->RemoveItem(ammo->GetUid(), true);
+    }
+    weapon->ApplyReplicaRounds(human, event.m_Rounds, event.m_ReloadTime, reload);
+    if (!reload)
+        weapon->PlayShotSound(human, ShotFrameOf(weapon), false);
+    human->ExecuteBodyCommand(MakeBodyCommand(BODY_COMMAND_ACTION, reload ? BODY_ACTION_RELOAD : BODY_ACTION_FIRE));
+#ifndef HD2_DEDICATED
+    if (IsCampaignLocalActor(human->GetNetId())) {
+        const int effect = reload ? FPV_EVENT_RELOAD : (event.m_Rounds ? FPV_EVENT_FIRE : FPV_EVENT_FIRE_LAST);
+        GetGame()->GetFirstPersonView()->OnInventoryEvent(effect, 0);
+    }
+#endif
     return true;
 }

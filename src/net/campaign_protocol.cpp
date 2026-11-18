@@ -69,6 +69,7 @@ bool Valid(const S_PreparationDelta &x);
 bool Valid(const S_Input &x);
 bool Valid(const S_WorldChunk &x);
 bool Valid(const S_MissionUpdate &x);
+bool Valid(const S_WeaponEvent &x);
 template<class T> struct S_EnumMax;
 template<> struct S_EnumMax<E_CampaignSessionKind> { static constexpr auto value = E_CampaignSessionKind::CampaignCoop; };
 template<> struct S_EnumMax<E_CampaignPhase> { static constexpr auto value = E_CampaignPhase::Closed; };
@@ -81,6 +82,7 @@ template<> struct S_EnumMax<E_CampaignFindingSeverity> { static constexpr auto v
 template<> struct S_EnumMax<E_CampaignRequestFamily> { static constexpr auto value = E_CampaignRequestFamily::Deploy; };
 template<> struct S_EnumMax<E_CampaignRequestOutcome> { static constexpr auto value = E_CampaignRequestOutcome::ResyncRequired; };
 template<> struct S_EnumMax<E_InputKind> { static constexpr auto value = E_InputKind::VehicleAction; };
+template<> struct S_EnumMax<E_WeaponEvent> { static constexpr auto value = E_WeaponEvent::Reload; };
 template<class A> bool Fields(A &a, ActorRef &x);
 template<class A> bool Fields(A &a, S_CampaignContentDescriptor &x);
 template<class A> bool Fields(A &a, S_CampaignRulesDescriptor &x);
@@ -137,6 +139,7 @@ template<class A> bool Fields(A &a, S_WorldChunk &x);
 template<class A> bool Fields(A &a, S_SquadActorState &x);
 template<class A> bool Fields(A &a, S_MissionCamera &x);
 template<class A> bool Fields(A &a, S_MissionUpdate &x);
+template<class A> bool Fields(A &a, S_WeaponEvent &x);
 
 class C_Archive {
 public:
@@ -369,6 +372,10 @@ template<class A> bool Fields(A &a, S_MissionUpdate &x) {
 // ownership/request replay decisions remain injected model/authority obligations.
 template<class T> bool Id(const T &x) { return x.IsValid(); }
 template<class T> bool OptionalId(const std::optional<T> &x) { return !x || Id(*x); }
+template<class A> bool Fields(A &a, S_WeaponEvent &x) {
+    return a(x.m_Actor, x.m_Snapshot, x.m_OwnershipRevision, x.m_Sequence,
+             x.m_Action, x.m_ItemUid, x.m_Rounds, x.m_ReloadTime, x.m_ConsumedAmmo) && Valid(x);
+}
 template<class T, class F> bool Unique(const std::vector<T> &x, F key) {
     std::set<decltype(key(std::declval<T>()))> keys;
     for (const auto &v : x) if (!keys.insert(key(v)).second) return false;
@@ -607,6 +614,14 @@ bool Valid(const S_MissionUpdate &x) {
     return std::all_of(x.m_Objectives.begin(), x.m_Objectives.end(), [](auto status) { return status <= 4; });
 }
 
+bool Valid(const S_WeaponEvent &x) {
+    return Id(x.m_Snapshot) && Id(x.m_OwnershipRevision) && x.m_Sequence &&
+        x.m_ItemUid <= INT32_MAX && (x.m_Action == E_WeaponEvent::Reload || !x.m_ReloadTime) &&
+        (!x.m_ConsumedAmmo ||
+            (x.m_Action == E_WeaponEvent::Reload && *x.m_ConsumedAmmo <= INT32_MAX &&
+             *x.m_ConsumedAmmo != x.m_ItemUid));
+}
+
 std::uint16_t Read16(const std::uint8_t *p) { return static_cast<std::uint16_t>(p[0] | (p[1] << 8)); }
 std::uint32_t Read32(const std::uint8_t *p) {
     return static_cast<std::uint32_t>(p[0]) | (static_cast<std::uint32_t>(p[1]) << 8) |
@@ -664,6 +679,8 @@ bool BoundPayload(const T_Message &message, bool server, const S_Accept &agreeme
             return !server && x.m_Baseline.m_Session == session && x.m_Baseline.m_PlayerEcho == player;
         else if constexpr (std::is_same<T, S_MissionUpdate>::value)
             return !server && (agreement.m_Features & kMissionUpdates) && x.m_Session == session;
+        else if constexpr (std::is_same<T, S_WeaponEvent>::value)
+            return !server && (agreement.m_Features & kWeaponEvents) && x.m_Actor.m_Session == session;
         else return false;
     }, message);
 }
@@ -846,7 +863,7 @@ E_Route Route(E_CampaignSessionKind kind, E_Traffic traffic) {
     if (kind != E_CampaignSessionKind::CampaignCoop) return traffic == E_Traffic::Extension ? E_Route::Drop : E_Route::Legacy;
     return traffic == E_Traffic::Extension ? E_Route::Campaign : E_Route::Drop;
 }
-constexpr std::uint64_t kSupportedFeatures = kFeatures | kMissionUpdates;
+constexpr std::uint64_t kSupportedFeatures = kFeatures | kMissionUpdates | kWeaponEvents;
 
 C_Admission::C_Admission(E_CampaignSessionKind kind, bool server, S_Hello local,
     SessionId session, PlayerId assignedPlayer, std::uint64_t nowMs)

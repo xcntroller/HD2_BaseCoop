@@ -1,4 +1,8 @@
 #include "game/campaign_control_runtime.h"
+#include "game/campaign_dev.h"
+#include "net/campaign_protocol.h"
+
+#include <algorithm>
 // The network side of C_PlayerController (original source 0x0053b370..0x0053b990 for the net
 // object's messages, the player's in 0x0053d340..0x005404f0 and 0x005406c0..0x00541cb0,
 // 0x00542920, 0x005441e0, 0x00544b40, 0x005470b0, 0x00547270).
@@ -497,6 +501,19 @@ void C_PlayerController::RequestAction(int action, const S_vector4 *pos, const S
         break;
     default:
         break;
+    }
+    if (CampaignControlsActive()) {
+        if (IsServer() && m_handsItem && m_handsItem->GetKind() == ITEM_KIND_WEAPON &&
+            (action == CONTROLLER_ACTION_FIRE || action == CONTROLLER_ACTION_RELOAD)) {
+            auto *weapon = static_cast<C_WeaponItem *>(m_handsItem);
+            const bool reload = action == CONTROLLER_ACTION_RELOAD;
+            const auto remaining = static_cast<int>(weapon->GetReadyTime() - GetGame()->GetMissionTime());
+            PublishDevelopmentCampaignWeapon(m_human->GetNetId(),
+                reload ? CampaignProtocol::E_WeaponEvent::Reload : CampaignProtocol::E_WeaponEvent::Fire,
+                weapon->GetUid(), static_cast<std::uint16_t>(std::clamp(static_cast<int>(weapon->GetLoadedRounds()), 0, 65535)),
+                reload ? static_cast<std::uint16_t>(std::clamp(remaining, 0, 65535)) : 0, reload ? ammoUid : -1);
+        }
+        return;
     }
     if (IsLocalGame())
         return;

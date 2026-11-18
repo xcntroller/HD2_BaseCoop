@@ -103,6 +103,9 @@ S_MissionUpdate MissionUpdate() {
     return state;
 }
 
+S_WeaponEvent WeaponEvent() {
+    return {*Soldier().m_Actor, SnapshotId(13), OwnershipRevision(6), 1, E_WeaponEvent::Reload, 21, 5, 650, 90};
+}
 T_Bytes Frame(const T_Message &m) { T_Bytes bytes; CHECK(Encode(m, bytes) == R::None); return bytes; }
 std::string Hex(const T_Bytes &bytes) {
     constexpr char digits[] = "0123456789abcdef";
@@ -140,6 +143,7 @@ std::vector<T_Message> Messages() {
     auto noActor = Ownership(); noActor.m_Soldiers[0].m_Actor.reset(); noActor.m_Soldiers[0].m_Owner.reset();
     noActor.m_Participants[0].m_ReadyAt.reset(); all.push_back(noActor);
     all.push_back(MissionUpdate());
+    all.push_back(WeaponEvent());
     return all;
 }
 void RoundTrips(const std::string &dir, bool write) {
@@ -352,6 +356,35 @@ void MissionUpdates() {
     state = MissionUpdate();
     state.m_Objectives[0] = 5;
     CHECK(Encode(state, encoded) == R::Malformed);
+}
+void WeaponEvents() {
+    auto local = Hello();
+    local.m_Offered |= kWeaponEvents;
+    local.m_Required |= kWeaponEvents;
+    auto server = C_Admission(E_CampaignSessionKind::CampaignCoop, true, local, Context().m_Session, PlayerId(5), 0);
+    auto client = C_Admission(E_CampaignSessionKind::CampaignCoop, false, local, {}, {}, 0);
+    Admit(server, client);
+    const auto event = WeaponEvent();
+    const auto got = client.Receive(Frame(event), 5);
+    CHECK(got.m_Payload && std::get_if<S_WeaponEvent>(&*got.m_Payload));
+    CHECK(server.Receive(Frame(event), 5).m_Reason == R::Malformed);
+    auto oldServer = Server();
+    auto oldClient = Client();
+    Admit(oldServer, oldClient);
+    CHECK(oldClient.Receive(Frame(event), 5).m_Reason == R::Malformed);
+    auto invalid = event;
+    T_Bytes output;
+    invalid.m_Action = E_WeaponEvent::Fire;
+    CHECK(Encode(invalid, output) == R::Malformed);
+    invalid.m_ReloadTime = 0;
+    CHECK(Encode(invalid, output) == R::Malformed);
+    invalid.m_ConsumedAmmo.reset();
+    CHECK(Encode(invalid, output) == R::None);
+    invalid.m_ItemUid = UINT32_MAX;
+    CHECK(Encode(invalid, output) == R::Malformed);
+    invalid = event;
+    invalid.m_ConsumedAmmo = invalid.m_ItemUid;
+    CHECK(Encode(invalid, output) == R::Malformed);
 }
 void Inputs() {
     const S_PlayerControls controls{kMoveForward | kLeanRight, kFire | kReload, {1, 0, 0}};
@@ -570,6 +603,6 @@ void Hostile() {
 int main(int argc, char **argv) {
     CHECK(argc >= 2);
     RoundTrips(argv[1], argc == 3 && std::string(argv[2]) == "--write-fixtures");
-    Malformed(); Negotiation(); MissionUpdates(); Inputs(); Replicas(); Chunks(); WorldSendSchedule(); TransportBits(); Hostile();
-    std::cout << "campaign protocol: 10 suites, " << g_Checks << " checks passed\n";
+    Malformed(); Negotiation(); MissionUpdates(); WeaponEvents(); Inputs(); Replicas(); Chunks(); WorldSendSchedule(); TransportBits(); Hostile();
+    std::cout << "campaign protocol: 11 suites, " << g_Checks << " checks passed\n";
 }
