@@ -7,7 +7,7 @@
 - Canonical branch: `feature/coop-010-two-player-mission`
 - Base commit: `6f1bdd96075b074a6a7b958257af5f56f8374fb5`
 - Dependencies: COOP-008, COOP-009 and their transitive merged dependencies
-- Last checkpoint: initial-world entry and live host publication at source checkpoint `2cb0509e`
+- Last checkpoint: initial-world entry and live host publication at source checkpoint `30b2d519`
 - Checkpoint location: `.worktrees/COOP-010` and the canonical branch on origin
 - Review/integration: claim acknowledged by coordination ledger commit `69cb6361`
 - Pull request: [#22](https://github.com/xcntroller/HD2_BaseCoop/pull/22) (draft)
@@ -102,16 +102,22 @@ roster/loadouts/policies as fixtures, not approved production menu behavior.
   four squad actor poses, view and movement state, health and stance, the native
   objective statuses, input availability and the host cutscene camera. The
   guest updates its native actor presentation and objective definitions.
-- Remaining: wire the guest's controls, inventory requests and authoritative
-  weapon effects and item state. The guest intro camera follows the host,
+- The guest encodes on-foot held controls, button edges and view direction
+  inside its exact ownership token. The host validates the payload and token
+  at enqueue and again at execution, expires held input, and applies controls
+  through native simulation and aiming from the guest soldier's actual muzzle.
+  The guest's native network controller sends no position or authority state.
+- Remaining: verify actual displacement, shot and reload transitions for both
+  soldiers, then wire inventory requests and authoritative weapon effects and
+  item state. The guest intro camera follows the host,
   with scripted scene props, audio and HUD transitions still pending. The
   preserved guest soldier's health, equipment and position on disconnect
   require explicit live evidence. Verify the Tutorial and native Sicily2
   in mission and record a bounded co-op objective route.
-- Next action: use the committed guest ownership view to build input envelopes.
-  Validate at enqueue and execution on the host and feed native movement and
-  weapon controls without accepting guest positions. Exercise host and guest
-  movement, firing and reload, then inventory and in-play disconnect.
+- Next action: route realized authoritative weapon and inventory events to
+  replica controllers and add live evidence for actor displacement, rounds,
+  inventory positions and same-actor handoff. Use the native Win32 SendInput
+  helper in ignored `build/initial-world/native-keys.py` to drive the windows.
 - Blockers: none. COOP-008 merged at `d34b6900` and COOP-009 at `ce306626`.
 - Local prerequisites: root-checkout ignored `build/coop-shared-tooling/run-python.bat`
   configures preserved MSVC 14.44.35207 / SDK 10.0.26100.0 / Windows Python 3.13.9.
@@ -211,3 +217,18 @@ roster/loadouts/policies as fixtures, not approved production menu behavior.
   - Logs and screenshots are preserved in root ignored
     `build/coop-010-evidence/initial-world/`. Player controls, completed
     objective progress and disconnect state preservation remain unverified.
+
+
+- Guest input validation at `30b2d519`
+  - The actual paired `tagged-controls` run entered Arctic1 and shared
+    generation 1 / snapshot 1 and initial world CRC32 `205429481`. Native
+    Win32 keyboard and mouse input was delivered to the guest window.
+    The host logged that it accepted tagged controls from PlayerId 2 for actor
+    1. Displacement, actual rounds used and reload completion still need
+    direct state measurements. Guest ammunition and weapon effects currently
+    lack the host event path.
+  - Full pinned MSVC x86 build compiled 286 units with zero diagnostics and
+    linked an LAA executable. Host and guest used SHA-256
+    `30a3ef3c3300304f3d960564d06ddc461b2a9eaf5f06cbafddbc32a13b3c04c3`.
+  - GCC and MSVC x86 protocol conformance passed ten suites with 566,056
+    checks each, including malformed typed control masks, length and version.
