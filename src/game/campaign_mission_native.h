@@ -24,6 +24,20 @@ E_CampaignReason BuildCampaignNativeSpawns(const S_CampaignMissionManifest &mani
     const C_CampaignSession &session, const S_CampaignNativeCatalog &catalog,
     std::vector<S_CampaignNativeSpawn> &spawns);
 
+// Captured before native actors are freed. Progression consumes this host-owned
+// result once; the replica's presentation state cannot write a campaign profile.
+struct S_CampaignMissionResult {
+    SessionId m_Session;
+    MissionGeneration m_Generation;
+    MissionKey m_Mission;
+    SnapshotId m_Snapshot;
+    std::uint32_t m_MissionTime = 0;
+    std::array<int, 256> m_ScriptValues{};
+    bool m_Success = false;
+    std::vector<std::uint8_t> m_Objectives;
+    std::vector<std::pair<SoldierId, S_SquadSoldier>> m_Soldiers;
+};
+
 // All attachment functions are trusted integration seams. COOP-010 must bind the
 // control adapter's exact-incarnation disconnect helper and synchronize hook.
 struct S_CampaignMissionNativeHooks {
@@ -31,14 +45,14 @@ struct S_CampaignMissionNativeHooks {
     std::function<E_CampaignReason()> m_RetireBeforeReconstruction;
     std::function<std::optional<PlayerId>(int)> m_FindTransportPlayer;
     std::function<E_CampaignReason(PlayerId)> m_Disconnected;
-    std::function<void(bool)> m_CampaignResult;
+    std::function<void(const S_CampaignMissionResult &, const S_CampaignOwnershipSnapshot &)> m_CampaignResult;
 };
 void InstallCampaignMissionNative(const S_CampaignNativeCatalog *catalog,
     S_CampaignMissionNativeHooks hooks = {});
 bool SpawnCampaignMissionSquad();
 bool SynchronizeCampaignMissionControllers();
-void CommitCampaignMissionSoldiers();
 void HandleCampaignMissionDeparture(int connection);
-void PublishCampaignMissionResult(bool success);
+bool PublishCampaignMissionResult();
+const S_CampaignMissionResult *GetCampaignMissionResult();
 C_Human *ResolveCampaignHuman(const S_CampaignOwnershipRecord &record);
 #endif

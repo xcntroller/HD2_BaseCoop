@@ -67,15 +67,16 @@ current bit offset (usually 37); it is **not byte-aligned** in the native stream
 | 0 | u32 LE | 0x50433248, literal bytes `48 32 43 50` / `H2CP` |
 | 4 | u16 LE | major, 1 |
 | 6 | u16 LE | minor, 0 |
-| 8 | u16 LE | explicit message tag, 1..20 |
+| 8 | u16 LE | explicit message tag, 1..21 |
 | 10 | u16 LE | flags, exactly zero; unknown flags fail closed |
 | 12 | u32 LE | exact body byte count, excluding the 16-byte header |
 | 16 | bytes | message body; no trailing bytes or implicit padding |
 
-Tags 1..20 are Hello, Accept, NegotiationAck, Reject, OwnershipRequest,
+Tags 1..21 are Hello, Accept, NegotiationAck, Reject, OwnershipRequest,
 EditRequest, ReadyRequest, DeployRequest, RequestResult, OwnershipSnapshot,
 PreparationSnapshot, PreparationDelta, BeginMission, SnapshotAck,
-StartSimulation, Input, WorldChunk, MissionUpdate, WeaponEvent, InventoryEvent. Tags never depend on C++ struct layout.
+StartSimulation, Input, WorldChunk, MissionUpdate, WeaponEvent, InventoryEvent,
+PreparationResync. Tags never depend on C++ struct layout.
 `T_Message` order is intentionally bound to these tags; a reorder is a wire change.
 Version 1.0 is the only implemented body schema. Unknown major/minor/tag/flags
 reject; no guessed decoding or fallback. Negotiation's bootstrap header remains
@@ -103,7 +104,8 @@ is copied onto the wire. The encodings are:
   remain model validation; the codec does not guess item physics.
 - All enums: u16 LE, zero-based in the merged declarations' explicit enumerator
   order; values outside the declared range reject. `E_InputKind` is 0 ControlBits,
-  1 ActorAction, 2 VehicleAction. Reject has only the nine contract refusal reasons.
+  1 ActorAction, 2 VehicleAction, 3 DoorAction, 4 WireCut. Reject has only the nine
+  contract refusal reasons.
   Changing any enumerator order requires a new reviewed wire version.
 - Bool and optional presence: u8 **exactly 0 or 1**. Present optionals immediately
   contain their value. Absent fields have no value bytes.
@@ -210,8 +212,17 @@ IDs and CRCs are freshness/integrity data, **not cryptographic authentication**.
 
 MissionUpdate names the committed session, mission generation, world snapshot
 and ownership revision. The body adds a sequence, the host mission clock, a
-player input flag, an optional cutscene camera, up to 64 uniquely bound squad
-actors and the original ordered objective statuses. Positions, direction axes,
+player input flag, an outcome (Running, Success or Failure), an optional cutscene
+camera, up to 64 uniquely bound squad actors and the original ordered objective
+statuses. This layout requires feature bit 6. The original live update used bit 3,
+which is reserved. Terminal updates disable input, omit the cutscene camera and
+report final objective statuses. Critical objective failure cannot encode as
+success. Each update can also include static ambient human poses, transforms
+for scripted scene frames and up to 64 ordered presentation commands. These
+commands describe events already evaluated by the host, including scene
+visibility, cutscene copies, sound, subtitle, weather and door events. The
+guest resolves them in the verified mission scene and presents them without
+evaluating mission scripts. Positions, direction axes,
 velocity and the camera FOV are finite IEEE binary32 values. The receiver checks
 the negotiated feature and host direction before handing the typed state to the
 mission adapter. The mission adapter must check its installed baseline and
@@ -229,6 +240,16 @@ choose a container using original mission inventory rules. The InventoryEvent
 returns the resolved destination and slot with the exact actor, initial snapshot,
 ownership revision and sequence. Containers and item UIDs are resolved on the
 assigned soldier.
+
+The DoorAction payload uses version byte 1, a u32 static door actor ID and an
+action enumeration (open, close, lock, unlock, pick). The host resolves the
+exact ownership token and checks the door's reach, lock and motion before
+starting the corresponding native command. Realized effects go out with the
+next host mission update. The WireCut
+payload uses version byte 1 and the authored fence frame name. The host looks
+up its native temporary actor and checks ownership, cutter inventory and
+interaction reach. The guest applies the committed WireCut presentation to
+the same authored frame using the quantized horizontal direction.
 
 The development ControlBits payload uses version byte 1, two little-endian
 u16 held and pressed masks, and the unit view direction as three IEEE binary32

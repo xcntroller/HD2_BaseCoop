@@ -1,11 +1,14 @@
 #include "campaign_mission_native.h"
 #include "actors_module.h"
+#include "campaign.h"
 #include "game.h"
 #include "human.h"
 #include "item_defs.h"
 #include "pending.h"
 #include "spawn_point.h"
 #include "team.h"
+#include "world.h"
+#include "script/script_module.h"
 #include <algorithm>
 #include <cmath>
 #include <limits>
@@ -14,6 +17,7 @@
 namespace {
 const S_CampaignNativeCatalog *g_Catalog = nullptr;
 S_CampaignMissionNativeHooks g_Hooks;
+std::optional<S_CampaignMissionResult> g_Result;
 using R = E_CampaignReason;
 }
 E_CampaignReason BuildCampaignNativeSpawns(const S_CampaignMissionManifest &manifest,
@@ -85,6 +89,7 @@ E_CampaignReason BuildCampaignNativeSpawns(const S_CampaignMissionManifest &mani
 }
 void InstallCampaignMissionNative(const S_CampaignNativeCatalog *catalog, S_CampaignMissionNativeHooks hooks) {
     g_Catalog = catalog; g_Hooks = std::move(hooks);
+    g_Result.reset();
     if (GetCampaignMissionAdapter()) GetCampaignMissionAdapter()->SetRetirementHook(g_Hooks.m_RetireBeforeReconstruction);
 }
 C_Human *ResolveCampaignHuman(const S_CampaignOwnershipRecord &record) {
@@ -156,34 +161,6 @@ bool SynchronizeCampaignMissionControllers() {
     if (GetCampaignMissionAdapter()) GetCampaignMissionAdapter()->Abort(reason);
     return false;
 }
-void CommitCampaignMissionSoldiers() {
-    auto *adapter = GetCampaignMissionAdapter();
-    if (!IsCampaignSimulationAuthority() || !adapter || adapter->GetFailure() != R::None ||
-        (adapter->GetContext().m_Phase != E_CampaignPhase::Running &&
-         adapter->GetContext().m_Phase != E_CampaignPhase::Ending)) return;
-    const auto state = GetCampaignMissionSnapshot();
-    std::vector<std::pair<S_SquadSoldier *, S_SquadSoldier>> updates;
-    for (const auto &record : state->m_Soldiers) {
-        if (!record.m_Deployed) continue;
-        C_Human *human = ResolveCampaignHuman(record);
-        const auto profile = adapter->GetOwnership().GetSession().FindProfile(record.m_Soldier);
-        if (!human || !profile || human->GetProfileIndex() != *profile) { adapter->Abort(R::ActorUnavailable); return; }
-        S_SquadSoldier *target = g_gameProfile.FindSoldierState(*profile);
-        if (!target || !GetSoldierProfile(*profile)) { adapter->Abort(R::InvalidSoldier); return; }
-        S_SquadSoldier result = *target;
-        ClearSoldierItems(&result); human->GetSoldierState(result);
-        // Live network item UIDs identify this world only, never the next mission.
-        for (auto *item : {&result.head,&result.uniform,&result.hands,&result.backpack,&result.longGun}) item->uid = -1;
-        for (auto &item : result.belt) item.uid = -1;
-        for (auto &item : result.backpackContents) item.uid = -1;
-        MergeSoldierItems(&result); UpdateSoldierLoad(&result);
-        updates.emplace_back(target, std::move(result));
-    }
-    for (auto &update : updates) {
-        *update.first = std::move(update.second);
-        GetSoldierProfile(update.first->profileIndex)->dead = update.first->health < 1;
-    }
-}
 void HandleCampaignMissionDeparture(int connection) {
     if (connection == 0) return;
     // Resolve BEFORE clearing connection fields; never infer PlayerId from a slot.
@@ -212,9 +189,76 @@ void HandleCampaignMissionDeparture(int connection) {
     }
     g_netGame.UnlockPlayers();
 }
-void PublishCampaignMissionResult(bool success) {
-    if (!IsCampaignSimulationAuthority()) return;
+bool PublishCampaignMissionResult()
+{
     auto *adapter = GetCampaignMissionAdapter();
-    if (adapter && adapter->GetContext().m_Phase == E_CampaignPhase::Running) adapter->End();
-    if (g_Hooks.m_CampaignResult) g_Hooks.m_CampaignResult(success);
+    if (!IsCampaignSimulationAuthority() || !adapter || !adapter->CanSimulate())
+        return false;
+
+    const auto state = GetCampaignMissionSnapshot();
+    auto *game = GetGame();
+    const auto *mission = game ? game->GetMission() : nullptr;
+    if (!state || !mission || (!game->IsMissionFailed() && !mission->AreObjectivesDecided()))
+        return false;
+
+    S_CampaignMissionResult result;
+    result.m_Session = state->m_Context.m_Session;
+    result.m_Generation = state->m_Context.m_MissionGeneration;
+    result.m_Mission = state->m_Context.m_Mission;
+    result.m_Snapshot = adapter->GetManifest()->m_Snapshot;
+    result.m_MissionTime = game->GetMissionTime();
+    static_assert(std::tuple_size<decltype(result.m_ScriptValues)>::value == SAVE_GAME_VALUES);
+    std::copy_n(g_scriptModule.GetSaveGameValues(), result.m_ScriptValues.size(), result.m_ScriptValues.begin());
+    result.m_Success = !game->IsMissionFailed();
+    for (int index = 0; index < mission->GetObjectiveCount(); ++index) {
+        const auto *objective = mission->GetObjective(index);
+        const auto status = objective->status;
+        result.m_Objectives.push_back(static_cast<std::uint8_t>(status));
+        if (status == OBJECTIVE_FAILED_CRITICAL || (status == OBJECTIVE_FAILED && !objective->bonus))
+            result.m_Success = false;
+    }
+    for (const auto &record : state->m_Soldiers) {
+        if (!record.m_Deployed)
+            continue;
+        auto *human = ResolveCampaignHuman(record);
+        const auto profile = adapter->GetOwnership().GetSession().FindProfile(record.m_Soldier);
+        if (!human || !profile || human->GetProfileIndex() != *profile) {
+            adapter->Abort(R::ActorUnavailable);
+            return false;
+        }
+        const auto *target = g_gameProfile.FindSoldierState(*profile);
+        if (!target || !GetSoldierProfile(*profile)) {
+            adapter->Abort(R::InvalidSoldier);
+            return false;
+        }
+        auto &soldier = result.m_Soldiers.emplace_back(record.m_Soldier, *target).second;
+        ClearSoldierItems(&soldier);
+        human->GetSoldierState(soldier);
+        // Live UIDs are scoped to this world.
+        for (auto *item : {&soldier.head, &soldier.uniform, &soldier.hands, &soldier.backpack, &soldier.longGun})
+            item->uid = -1;
+        for (auto &item : soldier.belt)
+            item.uid = -1;
+        for (auto &item : soldier.backpackContents)
+            item.uid = -1;
+        MergeSoldierItems(&soldier);
+        UpdateSoldierLoad(&soldier);
+    }
+
+    if (adapter->End() != R::None)
+        return false;
+    g_Result = std::move(result);
+    if (g_Hooks.m_CampaignResult)
+        g_Hooks.m_CampaignResult(*g_Result, *state);
+    return true;
+}
+
+const S_CampaignMissionResult *GetCampaignMissionResult()
+{
+    const auto state = GetCampaignMissionSnapshot();
+    if (!state || state->m_Context.m_Phase != E_CampaignPhase::Ending || !g_Result ||
+        g_Result->m_Session != state->m_Context.m_Session ||
+        g_Result->m_Generation != state->m_Context.m_MissionGeneration)
+        return nullptr;
+    return &*g_Result;
 }

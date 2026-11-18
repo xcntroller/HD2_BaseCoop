@@ -1,3 +1,4 @@
+#include "game/campaign_dev.h"
 #include "game/campaign_control_runtime.h"
 // The game interface's core (see interface.h; the original's 0x0049a420..0x0049fc10): its scene,
 // the panels' life, drawing and updates, the keys, the actor under the crosshair, the lower
@@ -612,7 +613,7 @@ void C_Interface::OnMemberClicked2(int id)
 
 void C_Interface::RenderOverlay()
 {
-    if (GetGame()->GetCameraModule()->HasScriptedView())
+    if (IsDevelopmentCampaignCutscene() || GetGame()->GetCameraModule()->HasScriptedView())
         return;
     if (m_commandPanel.IsOpen())
         m_commandPanel.RenderOverlay();
@@ -620,7 +621,7 @@ void C_Interface::RenderOverlay()
 
 void C_Interface::Render()
 {
-    if (GetGame()->GetCameraModule()->HasScriptedView())
+    if (IsDevelopmentCampaignCutscene() || GetGame()->GetCameraModule()->HasScriptedView())
         return;
     // The console's NO_GI.
     if (GetCheatValue(CONSOLE_NO_GI) != 0)

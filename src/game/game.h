@@ -137,6 +137,7 @@ public:
     void FreeMission();                             // 0x0069a6a0
     // Starts the fade out; the mission ends after it (every caller passes 100, which is not
     // used).
+    void PresentCampaignMissionResult(bool success);
     void EndMission(int unused);                    // 0x0069a7d0
     // Starts the mission (single player) or round (multiplayer) over; `newRound` keeps
     // the actors (the next multiplayer round).

@@ -21,6 +21,7 @@
 class C_BitStream;
 class C_chunk;
 class C_Script;
+namespace CampaignProtocol { struct S_MissionPresentation; }
 class I3D_camera;
 class I3D_frame;
 class I3D_model;
@@ -145,6 +146,10 @@ public:
     void SetPauseSoundsPaused(bool paused);                        // 0x00428f00
     void BroadcastGlobalAlarm();                                   // 0x00428b00
 
+    I3D_frame *DuplicateCutsceneHuman(I3D_frame *source, const char *name);
+    void AttachScriptFrame(I3D_frame *moving, I3D_frame *target, bool link);
+    void ClearCampaignCutsceneCopies();
+    void ApplyCampaignPresentation(const CampaignProtocol::S_MissionPresentation &event);
     bool IsCutsceneRunning() const { return m_cutsceneRunning; }   // 0x0041d5d0 (DS 0x0043dfd0)
     // The cutscene running (RunCutscene's; -1: the scripts' own camera).
     int GetCutscene() const { return m_cutscene; }
@@ -173,6 +178,7 @@ private:
     bool LoadScript(C_chunk &chunk);
     // (0x0042b650, __fastcall: type and message in registers, no module.)
     void HandleClientMessage(int type, C_BitStream *msg);
+    void SetScriptFrameOn(I3D_frame *frame, bool on);
     void HandleFrameSetOn(C_BitStream *msg);
 
     int m_inputDelay = 0;                                          // +0x0C ms until player input returns

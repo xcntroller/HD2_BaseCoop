@@ -1,8 +1,10 @@
 #include "game/campaign_control_runtime.h"
 #include "game/campaign_dev.h"
+#include "game/campaign_mission_adapter.h"
 #include "net/campaign_protocol.h"
 
 #include <algorithm>
+#include <memory>
 // The network side of C_PlayerController (original source 0x0053b370..0x0053b990 for the net
 // object's messages, the player's in 0x0053d340..0x005404f0 and 0x005406c0..0x00541cb0,
 // 0x00542920, 0x005441e0, 0x00544b40, 0x005470b0, 0x00547270).
@@ -535,6 +537,10 @@ void C_PlayerController::RequestAction(int action, const S_vector4 *pos, const S
 
 void C_PlayerController::IssueCommand(const S_HumanCommand &command)
 {
+    if (CampaignControlsActive()) {
+        RequestDevelopmentCampaignWorldAction(m_human->GetNetId(), command);
+        return;
+    }
     // The server carries it out (OnMessage2).
     S_MsgCommand *message = new S_MsgCommand;
     message->command = command.type;
@@ -545,7 +551,7 @@ void C_PlayerController::IssueCommand(const S_HumanCommand &command)
 
 void C_PlayerController::SendActionCommand(const S_ActionCommand &command)
 {
-    S_MsgAction *message = new S_MsgAction;
+    auto message = std::make_unique<S_MsgAction>();
     message->pos = WorldPos4Of(m_human->GetBodyFrame());
     message->command.category = command.category;
     message->command.dir = command.dir;
@@ -554,7 +560,12 @@ void C_PlayerController::SendActionCommand(const S_ActionCommand &command)
     message->command.actor = command.actor;
     message->command.value = command.value;
     message->command.member = command.member;
-    SendToServer(message);
+    if (CampaignControlsActive()) {
+        if (IsCampaignSimulationAuthority() && CanCampaignSimulate() && IsCampaignLocalActor(m_human->GetNetId()))
+            OnSquadCommand(*message);
+        return;
+    }
+    SendToServer(message.release());
 }
 
 void C_PlayerController::OnUniformChanged(int uid)

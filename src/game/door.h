@@ -83,6 +83,7 @@ public:
     void Tick(int timeDelta) override;                  // 0x18 0x00600920
     // A state change (3 bits): 0 open, 1 close (the moving sound), 2 locked, 3 unlocked, 4 locked
     // now, 5 the wrong key (their sounds).
+    void PresentDoorEvent(uint32_t kind);
     void OnMessage(C_BitStream *msg) override;          // 0x1C 0x00601f90
     void Unknown20(C_BitStream *) override {}           // 0x20 0x006021d0
     bool SetFrame(I3D_frame *frame) override { return C_Actor::SetFrame(frame); }   // 0x2C 0x005ff3d0

@@ -344,7 +344,7 @@ void C_game::Update(int timeDelta)                  // 0x0069b500 (DS 0x006dc3b0
             if ((IsCampaignMission() && IsCampaignSimulationAuthority()) ||
                 (!IsCampaignMission() && !g_playMode->singleMission && !m_missionFailed)) {
                 EndMission(100);
-                if (g_teamManager.GetPlayerTeam()->GetActivePlayer())
+                if (!IsCampaignMission() && g_teamManager.GetPlayerTeam()->GetActivePlayer())
                     ::GetCameraModule()->SetSpecialMode(2, true, nullptr);
                 return;
             }
@@ -515,7 +515,7 @@ void C_game::SetObjectiveStatus(int objective, int status)   // 0x0069bd30 (DS 0
         GetGameApp()->SendGameMessage(GAME_MSG_OBJECTIVE, 0, objective, status, false);
         return;
     }
-    if (IsCampaignMission() && !IsCampaignSimulationAuthority()) return;
+    if (IsCampaignMission() && (!IsCampaignSimulationAuthority() || m_missionFailed)) return;
     // (A failed copy protection check made an objective fail critically now and then.)
     if (status == OBJECTIVE_COMPLETED) {
         bool bonus = false;
@@ -581,7 +581,7 @@ void C_game::ApplyObjectiveStatus(int objective, int status)   // 0x0069bf10 (DS
 
 void C_game::FailMission(bool deadlyArea)           // 0x0069c1a0 (DS 0x006dcf30)
 {
-    if (IsCampaignMission() && !IsCampaignSimulationAuthority()) return;
+    if (IsCampaignMission() && (!IsCampaignSimulationAuthority() || m_missionFailed)) return;
     m_missionFailed = true;
     m_roundState = ROUND_OVER;
     m_roundStateTime = m_missionTime;

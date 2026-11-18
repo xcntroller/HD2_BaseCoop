@@ -152,7 +152,8 @@ E_CampaignReason C_CampaignReplicaControlAdapter::InstallCommitted(T_CampaignOwn
             const auto from = m_View->m_Context.m_Phase;
             const auto to = snapshot->m_Context.m_Phase;
             if (to != from && !(from == E_CampaignPhase::Loading && to == E_CampaignPhase::Running) &&
-                !(from == E_CampaignPhase::Preparation && to == E_CampaignPhase::Frozen)) return E_CampaignReason::InvalidPhase;
+                !(from == E_CampaignPhase::Preparation && to == E_CampaignPhase::Frozen) &&
+                !(from == E_CampaignPhase::Running && to == E_CampaignPhase::Ending)) return E_CampaignReason::InvalidPhase;
         }
     }
     m_Ready = false;

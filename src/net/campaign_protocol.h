@@ -11,7 +11,8 @@ namespace CampaignProtocol {
 constexpr std::uint32_t kCommand = 0x434f4f50;
 constexpr std::uint16_t kMajor = 1, kMinor = 0;
 constexpr std::uint64_t kFeatures = 7; // identities, atomic preparation, guarded input
-constexpr std::uint64_t kMissionUpdates = 8, kWeaponEvents = 16, kInventoryMoves = 32;
+// Bit 3 identified the earlier mission update layout.
+constexpr std::uint64_t kMissionUpdates = 64, kWeaponEvents = 16, kInventoryMoves = 32;
 constexpr std::uint64_t kLivePreparation = 128;
 constexpr std::size_t kHeaderBytes = 16, kMaxFrameBytes = 24576;
 constexpr std::size_t kMaxStringBytes = 256, kMaxCollection = 256;
@@ -56,7 +57,7 @@ struct S_PreparationResync {
     SessionId m_Session;
     PlayerId m_PlayerEcho;
 };
-enum class E_InputKind { ControlBits, ActorAction, VehicleAction };
+enum class E_InputKind { ControlBits, ActorAction, VehicleAction, DoorAction, WireCut };
 struct S_Input {
     S_CampaignControlToken m_Control;
     std::uint64_t m_Sequence = 0; // strictly increasing per control token and connection
@@ -104,6 +105,33 @@ struct S_MissionCamera {
     std::array<float, 3> m_Position{}, m_Direction{}, m_Up{};
     float m_Fov = 0;
 };
+enum class E_MissionOutcome : std::uint8_t { Running, Success, Failure };
+
+enum class E_MissionPresentation : std::uint8_t {
+    FrameOn, Speech, SubtitlesOn, Subtitle, ClearHints, Hint,
+    Animation, StopAnimation, Sound, CutsceneMusic, WeatherOn, WeatherMode, Clouds, Door, Clone, Attach, ReleaseClone, WireCut
+};
+
+// Commands already evaluated by the host VM. A guest executes only the
+// corresponding scene, sound or interface operation.
+struct S_MissionPresentation {
+    E_MissionPresentation m_Action = E_MissionPresentation::FrameOn;
+    std::string m_Frame;
+    std::string m_Resource;
+    std::array<std::int32_t, 3> m_Args{};
+};
+
+struct S_PresentationFramePose {
+    std::string m_Frame;
+    std::array<float, 3> m_Position{}, m_Direction{}, m_Up{};
+};
+
+struct S_AmbientHumanState {
+    // Static original mission actor, resolved against the verified startup cut.
+    S_SquadActorState m_Pose;
+    bool m_Visible = false;
+};
+
 struct S_MissionUpdate {
     SessionId m_Session;
     MissionGeneration m_Generation;
@@ -112,9 +140,13 @@ struct S_MissionUpdate {
     std::uint64_t m_Sequence = 0;
     std::uint32_t m_MissionTime = 0;
     bool m_PlayerInputEnabled = false;
+    E_MissionOutcome m_Outcome = E_MissionOutcome::Running;
     std::optional<S_MissionCamera> m_CutsceneCamera;
     std::vector<S_SquadActorState> m_Squad;
     std::vector<std::uint8_t> m_Objectives;
+    std::vector<S_MissionPresentation> m_Presentation;
+    std::vector<S_AmbientHumanState> m_Ambient;
+    std::vector<S_PresentationFramePose> m_FramePoses;
 };
 enum class E_WeaponEvent : std::uint8_t { Fire, Reload };
 struct S_WeaponEvent {
@@ -137,6 +169,16 @@ struct S_ItemMove {
 };
 E_CampaignReason EncodeItemMove(const S_ItemMove &move, T_Bytes &out);
 E_CampaignReason DecodeItemMove(const T_Bytes &bytes, S_ItemMove &out);
+enum class E_DoorAction : std::uint8_t { Open, Close, Lock, Unlock, PickLock };
+struct S_DoorAction {
+    std::uint32_t m_Door = 0;
+    E_DoorAction m_Action = E_DoorAction::Open;
+};
+E_CampaignReason EncodeDoorAction(const S_DoorAction &action, T_Bytes &out);
+E_CampaignReason DecodeDoorAction(const T_Bytes &bytes, S_DoorAction &out);
+E_CampaignReason EncodeWireCut(const std::string &frame, T_Bytes &out);
+E_CampaignReason DecodeWireCut(const T_Bytes &bytes, std::string &frame);
+
 struct S_InventoryEvent {
     ActorRef m_Actor;
     SnapshotId m_Snapshot;

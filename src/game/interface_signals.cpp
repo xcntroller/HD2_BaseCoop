@@ -1,3 +1,4 @@
+#include "game/campaign_mission_adapter.h"
 // The signals panel of the interface (see interface.h; the original's 0x004bf2e0..0x004c1200):
 // the menu of squad commands (numbered pages of the tables below) for the whole squad or one
 // member, with a page of commands on the actor under the crosshair.
@@ -26,6 +27,11 @@
 #include "ls3d/igraph.h"
 
 namespace {
+bool UseOriginalSquadSignals()
+{
+    return IsLocalGame() || IsCampaignSimulationAuthority();
+}
+
 
 using S_Entry = C_SignalsPanel::S_Entry;
 
@@ -215,7 +221,7 @@ bool C_SignalsPanel::Init(C_Interface *ui, I3D_scene *scene)
     m_target = nullptr;
     m_member = nullptr;
     m_noGroup = true;
-    s_pages = IsLocalGame() ? SINGLE_PLAYER_PAGES : MULTIPLAYER_PAGES;
+    s_pages = UseOriginalSquadSignals() ? SINGLE_PLAYER_PAGES : MULTIPLAYER_PAGES;
     return m_frame != nullptr;
 }
 
@@ -230,8 +236,11 @@ void C_SignalsPanel::Open(bool open, C_Actor *target, C_Human *member)
     m_target = target;
     m_member = member;
     if (open) {
+        if (IsCampaignMission() && (!IsCampaignSimulationAuthority() ||
+            (member && member->GetControllerType() != HUMAN_CONTROLLER_SQUAD)))
+            return;
         // Multiplayer: only for the whole squad, not in a deathmatch.
-        if (!IsLocalGame()) {
+        if (!UseOriginalSquadSignals()) {
             if (member)
                 return;
             if (g_mpSettings->gameType == MP_GAME_DEATHMATCH)
@@ -247,7 +256,7 @@ void C_SignalsPanel::Open(bool open, C_Actor *target, C_Human *member)
         C_Human *selected = PlayerTeam()->GetSelectedMember();
         if (!selected || selected->IsDead())
             return;
-        if (IsLocalGame()) {
+        if (UseOriginalSquadSignals()) {
             std::vector<C_Human *> group;
             GetSquadCommander()->CollectGroup(group, C_SquadCommander::GROUP_NEAR);
             if (!member) {
@@ -286,7 +295,7 @@ void C_SignalsPanel::SetEntry(int index, int textId, int command)
 
 bool C_SignalsPanel::HasTargetCommands() const
 {
-    if (!IsLocalGame() || !m_target)
+    if (!UseOriginalSquadSignals() || !m_target)
         return false;
     switch (m_target->GetType()) {
     case ACTOR_MINE:
@@ -337,7 +346,7 @@ void C_SignalsPanel::BuildPage()
     switch (m_page) {
     case SIGNAL_PAGE_MAIN:
         copyPage(TABLE_MAIN);
-        if (!IsLocalGame()) {
+        if (!UseOriginalSquadSignals()) {
             // No target pages; the fire support with one of the radios.
             m_entries[2].action = SIGNAL_DISABLED;
             m_entries[5].action = SIGNAL_DISABLED;
@@ -377,7 +386,7 @@ void C_SignalsPanel::BuildPage()
                 if (noBusy)
                     m_entries[7].action = SIGNAL_DISABLED;
                 // (Multiplayer's check of the radios; single player: off.)
-                if (IsLocalGame() ||
+                if (UseOriginalSquadSignals() ||
                     (!selected->FindItem(ITEM_SUPPORT_RADIO_F4) && !selected->FindItem(ITEM_SUPPORT_RADIO_F3)))
                     m_entries[8].action = SIGNAL_DISABLED;
                 if (selected->GetFormationType() == FORMATION_NO_ORDERS)
@@ -888,7 +897,7 @@ void C_SignalsPanel::Update(int /*timeDelta*/)
         Open(false, nullptr, nullptr);
         return;
     }
-    if (!IsLocalGame())
+    if (!UseOriginalSquadSignals())
         return;
     if (m_member && m_member->IsDead())
         Open(false, nullptr, nullptr);

@@ -683,10 +683,11 @@ void C_HumanMovement::UpdateAnimation(int time)
         return;
     m_owner->GetFrame()->GetWorldPos();   // (refreshes the world matrix)
     const bool localPlayer = m_owner->UsesPlayerLocomotion();
-    const bool authoritativePlayer = localPlayer && IsServer() && CampaignControlsActive();
-    if (authoritativePlayer && m_unknown1AC == 1) {
-        // Keep the player's native model and collision volumes bound to the
-        // host-integrated body instead of the legacy client interpolation lane.
+    const bool authoritativeSquad = IsServer() && CampaignControlsActive() &&
+        m_owner->GetRole() == HUMAN_ROLE_PLAYER;
+    if (authoritativeSquad && m_unknown1AC == 1) {
+        // Each host-simulated soldier, including squad AI, needs its model and
+        // collision volumes at the position integrated by the native body.
         m_unknown18C = true;
         m_visual.SetNetworkDriven(true);
     }
@@ -814,10 +815,10 @@ void C_HumanMovement::UpdateAnimation(int time)
     if (m_timer600 >= 600)
         m_timer600 -= 600;
 
-    const bool remotePhysics =
-        (m_flags & MOVE_FLAG_NOT_DRAWN) && !localPlayer && m_unknown1AC == 1 && !m_onDynamicGround;
+    const bool remotePhysics = (m_flags & MOVE_FLAG_NOT_DRAWN) && !localPlayer &&
+        !authoritativeSquad && m_unknown1AC == 1 && !m_onDynamicGround;
     if (!remotePhysics) {
-        if (m_unknown18C && (authoritativePlayer || static_cast<float>(m_stillTime) <= 280.0f / MOVE_TIME_SCALE ||
+        if (m_unknown18C && (authoritativeSquad || static_cast<float>(m_stillTime) <= 280.0f / MOVE_TIME_SCALE ||
             m_onDynamicGround))
             m_visual.SetNetworkPosition(m_owner->GetPosition4());
         m_animProfileTime += ProfileClock();
@@ -883,8 +884,8 @@ void C_HumanMovement::UpdatePhysics(int time)
     m_timer300 += time;
     m_timer400 += time;
     m_timer600 += time;
-    if ((m_flags & MOVE_FLAG_NOT_DRAWN) && !m_owner->UsesPlayerLocomotion() &&
-        m_unknown1AC == 1)
+    if ((m_flags & MOVE_FLAG_NOT_DRAWN) && !m_owner->UsesPlayerLocomotion() && m_unknown1AC == 1 &&
+        !(IsServer() && CampaignControlsActive() && m_owner->GetRole() == HUMAN_ROLE_PLAYER))
         return;
     m_physicsProfileTime = -ProfileClock();
     if (m_unknown1AC != 1) {

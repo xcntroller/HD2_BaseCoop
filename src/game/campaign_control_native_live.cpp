@@ -2,6 +2,7 @@
 #include "campaign_control_runtime.h"
 
 #include <algorithm>
+#include "game/actors_module.h"
 #include "game/controller_internal.h"
 #include "game/first_person_view.h"
 #include "game/game.h"
@@ -18,10 +19,7 @@ std::array<float, 3> VectorFields(const S_vector &value) {
 S_vector4 NativeVector(const std::array<float, 3> &value, float w) {
     return {value[0], value[1], value[2], w};
 }
-}
-
-bool C_CampaignNativeControlSink::CaptureSquadActor(CampaignProtocol::S_SquadActorState &state) const {
-    auto *human = Resolve(state.m_Actor);
+bool CaptureHuman(C_Human *human, CampaignProtocol::S_SquadActorState &state) {
     if (!human || !human->GetFrame() || !human->GetController())
         return false;
     const auto *frame = human->GetFrame();
@@ -38,6 +36,18 @@ bool C_CampaignNativeControlSink::CaptureSquadActor(CampaignProtocol::S_SquadAct
     return true;
 }
 
+C_Human *FindAmbientHuman(std::uint32_t id) {
+    if (id < C_ActorsModule::PLAYER_SLOTS || id >= static_cast<std::uint32_t>(g_actorsModule.GetActorCount()))
+        return nullptr;
+    auto *actor = g_actorsModule.GetActorById(static_cast<int>(id));
+    return actor && actor->GetType() == ACTOR_HUMAN ? static_cast<C_Human *>(actor) : nullptr;
+}
+}
+
+bool C_CampaignNativeControlSink::CaptureSquadActor(CampaignProtocol::S_SquadActorState &state) const {
+    return CaptureHuman(Resolve(state.m_Actor), state);
+}
+
 bool C_CampaignNativeControlSink::ApplySquadActors(
     const std::vector<CampaignProtocol::S_SquadActorState> &squad) const {
     std::vector<C_Human *> humans;
@@ -48,39 +58,74 @@ bool C_CampaignNativeControlSink::ApplySquadActors(
             return false;
         humans.push_back(human);
     }
-    for (std::size_t i = 0; i < squad.size(); ++i) {
-        auto &human = *humans[i];
-        const auto &actor = squad[i];
-        auto *frame = human.GetFrame();
-        const auto pos = NativeVector(actor.m_Position, 1.0f);
-        const auto facing = NativeVector(actor.m_Facing, 0.0f);
-        const auto view = NativeVector(actor.m_ViewDirection, 0.0f);
-        auto &visual = human.GetMovement()->m_visual;
-        const bool died = human.IsAlive() && actor.m_Health == 0;
-        human.m_stats[STAT_HEALTH] = actor.m_Health;
-        if (human.IsAlive() && human.GetWork()->GetStance() != actor.m_Stance)
-            human.m_body.SetStance(actor.m_Stance);
-        // Only host-authored state can populate these native presentation tracks.
-        if (auto *object = g_netReplication->FindObject(human.GetNetId(), false)) {
-            if (auto *property = object->GetProperty(1)) {
-                property->GetTrack().SetValue(pos);
-                property->GetTrack().SetRate(NativeVector(actor.m_Velocity, 0.0f));
-                property->GetDirTrack().SetDirection(view, 0.0f);
-            }
-        }
-        if (IsCampaignLocalActor(human.GetNetId())) {
-            // The local camera look remains responsive between host state cuts.
-            frame->SetPos({pos.x, pos.y, pos.z});
-            frame->Update();
-            human.SetPosition4(pos);
-        } else {
-            visual.SetPosition(pos);
-            visual.SetDirection(facing, 0.0f);
-        }
-        if (died)
-            human.ShowDeath();
+    for (std::size_t i = 0; i < squad.size(); ++i)
+        ApplyHumanPresentation(*humans[i], squad[i], IsCampaignLocalActor(humans[i]->GetNetId()));
+    return true;
+}
+
+bool C_CampaignNativeControlSink::CaptureAmbientHumans(SessionId session, MissionGeneration generation,
+        std::vector<CampaignProtocol::S_AmbientHumanState> &out) const {
+    for (int id = C_ActorsModule::PLAYER_SLOTS; id < g_actorsModule.GetActorCount(); ++id) {
+        auto *human = FindAmbientHuman(id);
+        if (!human)
+            continue;
+        CampaignProtocol::S_AmbientHumanState state;
+        state.m_Pose.m_Actor = {session, generation, ActorId(id), ActorSlotUse(0)};
+        if (!CaptureHuman(human, state.m_Pose))
+            return false;
+        state.m_Visible = human->GetFrame()->IsOn();
+        out.push_back(state);
     }
     return true;
+}
+
+bool C_CampaignNativeControlSink::ApplyAmbientHumans(const std::vector<CampaignProtocol::S_AmbientHumanState> &actors) const {
+    for (const auto &state : actors) {
+        auto *human = FindAmbientHuman(state.m_Pose.m_Actor.m_Actor.Value());
+        if (!human || !human->GetFrame() || !human->GetMovement() || !human->GetController())
+            return false;
+    }
+    for (const auto &state : actors) {
+        auto *human = FindAmbientHuman(state.m_Pose.m_Actor.m_Actor.Value());
+        ApplyHumanPresentation(*human, state.m_Pose, false);
+        if (human->GetFrame()->IsOn() != state.m_Visible) {
+            human->GetFrame()->SetOn(state.m_Visible);
+            human->GetFrame()->Update();
+        }
+    }
+    return true;
+}
+
+void C_CampaignNativeControlSink::ApplyHumanPresentation(C_Human &human,
+        const CampaignProtocol::S_SquadActorState &actor, bool local) const {
+    auto *frame = human.GetFrame();
+    const auto pos = NativeVector(actor.m_Position, 1.0f);
+    const auto facing = NativeVector(actor.m_Facing, 0.0f);
+    const auto view = NativeVector(actor.m_ViewDirection, 0.0f);
+    auto &visual = human.GetMovement()->m_visual;
+    const bool died = human.IsAlive() && actor.m_Health == 0;
+    human.m_stats[STAT_HEALTH] = actor.m_Health;
+    if (human.IsAlive() && human.GetWork()->GetStance() != actor.m_Stance)
+        human.m_body.SetStance(actor.m_Stance);
+    // Only host-authored state can populate these native presentation tracks.
+    if (auto *object = g_netReplication->FindObject(human.GetNetId(), false)) {
+        if (auto *property = object->GetProperty(1)) {
+            property->GetTrack().SetValue(pos);
+            property->GetTrack().SetRate(NativeVector(actor.m_Velocity, 0.0f));
+            property->GetDirTrack().SetDirection(view, 0.0f);
+        }
+    }
+    if (local) {
+        // The local camera look remains responsive between host state cuts.
+        frame->SetPos({pos.x, pos.y, pos.z});
+        frame->Update();
+        human.SetPosition4(pos);
+    } else {
+        visual.SetPosition(pos);
+        visual.SetDirection(facing, 0.0f);
+    }
+    if (died)
+        human.ShowDeath();
 }
 
 bool C_CampaignNativeControlSink::ApplyWeaponEvent(const CampaignProtocol::S_WeaponEvent &event) const {

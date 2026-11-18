@@ -1,13 +1,18 @@
 // Breakable fences (C_WireCut; original 0x005e2070..0x005e2a10).
 #include "game/wire_cut.h"
 
+#include <cmath>
+
 #include "common/chunk.h"
 #include "game/actors_module.h"                         // CreateTempActorMessage
+#include "game/campaign_dev.h"
+#include "game/campaign_mission_adapter.h"
 #include "game/game.h"
 #include "game/pending.h"                               // g_gameRole, g_texts
 #include "game/physics.h"
 #include "ls3d/i3d.h"
 #include "net/bitstream.h"
+#include "net/campaign_protocol.h"
 #include "script/script.h"
 
 namespace {
@@ -42,7 +47,7 @@ void C_WireCut::SetPointsType(uint8_t type)             // 0x005e2420
 
 void C_WireCut::OpenWay()                               // 0x005e2480
 {
-    if (!IsLocalGame())
+    if (!IsLocalGame() && !IsCampaignSimulationAuthority())
         return;
     GetGame()->GetCheckpoints()->JoinPoints(m_points[0], m_points[1]);
     SetPointsType(CHECKPOINT_TYPE_FENCE_GAP);
@@ -55,10 +60,17 @@ bool C_WireCut::Cut(const S_vector &dir, bool hideBrokenPart)   // 0x005e2510
     if (hideBrokenPart)
         m_door->HideBrokenPart();
     OpenWay();
-    // (Only the heading goes: WriteDirection drops y.)
-    auto *msg = static_cast<C_NetMessage *>(CreateTempActorMessage(m_netId, true));
-    msg->WriteDirection(dir, -1);
-    SendTempActorMessage(msg);
+    // The original message carries only the heading.
+    if (IsCampaignSimulationAuthority()) {
+        const auto heading = static_cast<std::int32_t>(std::lround(std::atan2(dir.x, dir.z) * 10000.0));
+        QueueDevelopmentCampaignPresentation({CampaignProtocol::E_MissionPresentation::WireCut,
+            m_frame->GetName(), {}, {heading, hideBrokenPart}});
+        LogDevelopmentCampaign("host completed wire cut", m_netId);
+    } else {
+        auto *msg = static_cast<C_NetMessage *>(CreateTempActorMessage(m_netId, true));
+        msg->WriteDirection(dir, -1);
+        SendTempActorMessage(msg);
+    }
     if (const S_FrameData *data = m_frame->GetData()) {
         if (data->script)
             data->script->OnUse(1);
@@ -76,6 +88,16 @@ void C_WireCut::OnCut(const S_vector &dir)              // 0x005e25c0
         OpenWay();
 }
 
+void C_WireCut::PresentCampaignCut(const S_vector &dir, bool hideBrokenPart)
+{
+    if (!IsServer() && !IsCut() && m_door->Hit(PHYS_HIT_BREAK, &dir, nullptr)) {
+        if (hideBrokenPart)
+            m_door->HideBrokenPart();
+        m_cutDir = dir;
+        LogDevelopmentCampaign("guest presented wire cut", m_netId);
+    }
+}
+
 void C_WireCut::OnMessage(C_BitStream *msg)             // 0x005e25f0
 {
     S_vector dir;
@@ -91,7 +113,7 @@ void C_WireCut::StartMission(bool server)               // 0x005e2260
         return;
     m_points[0] = CHECKPOINT_NONE;
     m_points[1] = CHECKPOINT_NONE;
-    if (!IsLocalGame())
+    if (!IsLocalGame() && !IsCampaignSimulationAuthority())
         return;
     // The point nearest to the fence, then the one nearest to that point's mirror image through
     // the fence.

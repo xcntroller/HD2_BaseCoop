@@ -671,6 +671,8 @@ void C_PlayerController::HandleInput(float *held, float *pressed)
     if ((m_moveFlags & MOVE_DEAD) || m_spectating)
         return;
     if (CampaignControlsActive() && !IsServer()) {
+        if (pressed[BUTTON_7] != 0.0f)
+            UpdateZoom();
         CampaignProtocol::S_PlayerControls controls;
         controls.m_ViewDirection = {m_viewDir.x, m_viewDir.y, m_viewDir.z};
         for (const auto &axis : kCampaignHeld) {
@@ -800,7 +802,7 @@ bool C_PlayerController::OnSquadCommand(const S_MsgAction &message)
         return DesignateTarget(id, XYZ(message.pos), XYZ(command.dir));
     int gesture = GESTURE_NONE;
     int sentence = SENTENCE_NONE;
-    if (!IsLocalGame()) {
+    if (!IsLocalGame() && !CampaignControlsActive()) {
         // The server: the soldier's gesture and sentence for the others.
         if (id != SQUAD_COMMAND_ON_ACTOR && id != SQUAD_COMMAND_ON_ACTOR_QUIET && GetCommandSpeech(id, &gesture, &sentence)) {
             if (gesture != GESTURE_NONE)

@@ -851,11 +851,11 @@ void C_Human::StartMission(bool server)
         m_carried = nullptr;
         m_body.Create(this, m_group);
 
-        // On co-op clients the server simulates the AI humans (asked only for the enemies and the
-        // neutrals, as the original does).
-        const auto simulated = [] { return IsLocalGame() || IsServer() || !g_gameProfile.IsCooperativeGame(); };
+        // The campaign guest presents host-authored AI movement through the remote controller.
+        const bool campaignReplica = CampaignControlsActive() && !IsServer();
+        const bool simulated = !campaignReplica && (IsLocalGame() || IsServer() || !g_gameProfile.IsCooperativeGame());
         const S_FrameData *data = m_frame->GetData();
-        if (data && data->script) {
+        if (data && data->script && !campaignReplica) {
             CreateController(HUMAN_CONTROLLER_AI);
         } else {
             switch (m_role) {
@@ -863,12 +863,12 @@ void C_Human::StartMission(bool server)
                 AssignPlayerController(false);
                 break;
             case HUMAN_ROLE_ENEMY:
-                CreateController(simulated() ? HUMAN_CONTROLLER_ENEMY : HUMAN_CONTROLLER_REMOTE);
+                CreateController(simulated ? HUMAN_CONTROLLER_ENEMY : HUMAN_CONTROLLER_REMOTE);
                 break;
             case HUMAN_ROLE_NEUTRAL:
             case HUMAN_ROLE_NPC_TEAM:
             case HUMAN_ROLE_NPC_TEAM_5:
-                CreateController(simulated() ? HUMAN_CONTROLLER_NEUTRAL : HUMAN_CONTROLLER_REMOTE);
+                CreateController(simulated ? HUMAN_CONTROLLER_NEUTRAL : HUMAN_CONTROLLER_REMOTE);
                 break;
             default:
                 break;
