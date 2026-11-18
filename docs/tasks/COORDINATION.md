@@ -10,7 +10,7 @@ creating or updating the operational branch. Do not merge its WIP ledger into `m
 - Contact/shared channel: this ledger and the canonical COOP-013 task branch/PR.
 - Integrator: Codex COOP-013 for its own task, subject to the review and runtime acceptance gates.
 - Latest checkpoint: `HEAD` on `origin/coord/coop-work-queue`.
-- Next action: COOP-013 has passed acceptance and is ready to integrate. COOP-014 retains its active mission-completion claim.
+- Next action: COOP-013 is integrated and has stopped coordination writes. COOP-014 retains its active mission-completion claim.
 
 ## Accepted task claims
 
@@ -30,7 +30,7 @@ creating or updating the operational branch. Do not merge its WIP ledger into `m
 | COOP-010 | Codex COOP-010 (2026-11-18), user assignment | `feature/coop-010-two-player-mission` | done | PR #22 merged `738b124d`, completion PR #23 merged `dc41c6b7`, `.worktrees/COOP-010` | Arctic1 playable gate and original mode regressions recorded. |
 | COOP-012 | Codex COOP-012 (2026-11-18), user assignment | `feature/coop-012-session-setup` | done | PR #26 merged `4ef8b814`; completion PR #27 merged `fd5ad4c3` | Five-instance setup matrix, concurrent admission, route isolation, original-mode regressions and COOP-013 contract recorded. |
 | COOP-014 | Codex COOP-014, user assignment, thread `01a1ed7a-ddd9-7000-bbec-e292bd129d25` | `feature/coop-014-arctic1-completion` | active | PR #25 draft, base `9ec7fe48` | Arctic1 solo/dev reference, interactions, objectives and Running replication. |
-| COOP-013 | Codex COOP-013, explicit user assignment on 2026-11-18 | `feature/coop-013-live-preparation` | review | PR #28, source `5632e7b8`, reviewed head `c3f69622` | Integrate the reviewed first-deployment change and record the actual merge. |
+| COOP-013 | Codex COOP-013, explicit user assignment on 2026-11-18 | `feature/coop-013-live-preparation` | done | PR #28 merged `73d518a5`; completion PR #29 merged `e4344dfc` | First menu deployment and recovery integrated. COOP-015 still awaits COOP-014. |
 
 
 Only the coordinator adds or reassigns claims. A missing row is not sufficient evidence
@@ -249,3 +249,10 @@ missing fields. COOP-006 was notified explicitly before this stopped-writer hand
 - Reviewed PR #28 head `c3f69622` against `main` at `4d4e0fab`. Verified the three merged dependencies, source equivalence to `5632e7b8`, whitespace and the full shared-file diff. The merge rehearsal produced the exact reviewed tree.
 - Verified the authority and revision checks, host-only AI editing, negotiated resync, loading fences and ordinary route separation. Matched each world reconstruction's byte count, CRC32 and generation to its host log and checked acknowledgment ordering. Reviewed live kit, briefing, cancel, solo inventory and native LAN evidence, the timeout and redeployment logs, the x86 build and the subsystem and sanitized harness results.
 - The acceptance criteria are satisfied for the first Arctic1 deployment with AI filling unclaimed slots. COOP-014 remains active. COOP-015 still depends on both tasks.
+
+
+## COOP-013 integration outcome and stopped-writer handoff
+
+- PR #28 merged as `73d518a5d4d2f1822c3caa5b995ebd4100c75477`. Its actual merged tree matches the reviewed candidate. Documentation-only PR #29 merged as `e4344dfcc2073c54b253a50633dc15f7701026e0` and records COOP-013 done.
+- COOP-014 keeps its active assignment and draft PR #25. COOP-015 remains planned until the mission outcome is integrated. Keep the COOP-013 branch, worktree and private validation evidence for the next integration.
+- COOP-013 stops all ledger writes after this ordinary push. A successor can accept the stopped-writer handoff before changing coordination entries.
