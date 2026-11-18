@@ -58,6 +58,8 @@ private:
 // session/generation/phase fences precede Begin; semantic rejections call Finish.
 // canonicalContent is a bounded, unambiguous full request encoding (not a hash).
 // currentState supplies the authoritative publication for early rejections.
+// Its optional generation fields describe the full CURRENT session epoch across
+// all families, populated whenever each counter is valid, not request presence.
 class C_CampaignRequestJournal {
 public:
     static constexpr std::size_t kMaxContent = 4096;

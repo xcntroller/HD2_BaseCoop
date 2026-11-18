@@ -9,7 +9,7 @@
 - Dependencies: COOP-002, COOP-011 (merged shared declarations)
 - Last checkpoint: implementation and validated harness `68bb0bc1`; current merge synchronizes integrated main `1b9b307f`
 - Checkpoint location: `.worktrees/COOP-004`; `origin/feature/coop-004-ownership`
-- Review/integration: separate local API/scope review passed; COOP-005 journal consumer review requested; not merged
+- Review/integration: separate local implementation/API/scope review and COOP-005 journal consumer review passed; final peer review requested; not merged
 - Pull request: https://github.com/xcntroller/HD2_BaseCoop/pull/9 (draft pending independent review)
 
 ## Branch authority and completion PR
@@ -122,6 +122,8 @@ model behavior only, and do not imply the later adapters or campaign mode are pl
   preparation uses injected callbacks/behavioral fake, no dependency on this unmerged
   header and no competing production journal. Later composition shares one authority
   queue and journal and synchronizes rights/preparation revisions before publication.
+  Both optional result generation fields describe the full current session epoch.
+  Deployed flags identify the selected preparation squad, before actor construction.
 - Remaining: final review, address findings, ready PR and integration;
   record actual merge SHA after acceptance. No outstanding implementation/toolchain blocker.
 - Next action: review published checkpoint/PR #9 against current `main`, reproduce native
@@ -130,3 +132,20 @@ model behavior only, and do not imply the later adapters or campaign mode are pl
   production policy, peer/world barriers, host-loss and live adapter composition stay explicit.
 - Uncommitted work: none at the implementation checkpoint. All build/runtime evidence
   stays ignored under this worktree's `build/`; source-only PR steps reproduce it.
+
+## Review evidence
+
+- Separate full implementation/API review after checkpoint `68bb0bc1`: traced forward/
+  reverse ownership commits, all request variants/rejection paths, exact participant
+  incarnations, script/disconnect/death, world invalidation and handoff gates; checked
+  constructor/catalog bounds, checked counters, full immutable results and journal
+  cache/high-water/generation/content/Finish validation. No outstanding finding.
+- COOP-005 worker, thread `01a1ebf9-90e7-7ca2-8a1d-987711a3d8fe`, bounded read-only
+  journal consumer review of `68bb0bc1`: **PASS**, no blocker. Confirmed callback signatures,
+  exact canonical/family compare, original immutable result replay, generation fences,
+  monotonic sequence including rejection, four-player/cache/content bounds and Finish
+  matching. This reviewer did not rerun the ownership harness or review the full model.
+- Updated main `1b9b307f` merged on this branch as `e86cc8c4`. Only overlap was the
+  planning status/handoff for this task; resolved to the active reviewed implementation.
+  No implementation source or shared declaration changed during synchronization.
+- Further full read-only peer review requested from COOP-006; pending at this record.

@@ -76,6 +76,8 @@ the same session. Initially the host is admitted as PlayerId 1, every roster sol
 is alive but ineligible/undeployed, and all revisions start at 1. Trusted setup
 explicitly installs eligibility/deployment with `SetAvailability`. A configured squad
 limit 1..4 bounds deployed soldiers; mission restrictions may remove eligibility.
+Here deployed means selected mission-squad membership, including preparation before
+actors exist; trusted setup sets selected soldiers eligible/deployed before editing.
 `Admit` is called only after transport negotiation; it allocates increasing connection
 incarnations and caps active humans at four. Display names are presentation only.
 Running admission returns `JoinNotSupported`; no reconnect/world snapshot is implied.
@@ -145,6 +147,11 @@ would violate the contract. No shared DTO/header was changed to introduce this s
    phase fence). Build a bounded, unambiguous full canonical request string. The
    ownership encoding uses tagged decimal fields with the classic locale; no hash,
    binary struct comparison or wire ABI is assumed.
+   Populate both optional result generation fields from the full current session epoch
+   whenever their counters are valid, consistently across families. A preparation result
+   after a previous mission still includes that current mission generation; omitting it
+   merely because the request does would falsely classify cross-family reuse as a change
+   of generation. The trusted production dispatcher must preserve this normalization.
 2. Call `Begin(context, family, canonicalContent, currentAuthoritativeResult)`. An empty
    optional reserves the new sequence; otherwise return the supplied result. It rejects
    in-flight work with `PendingTransaction`; callers may not interleave mutations.
