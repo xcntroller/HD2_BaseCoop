@@ -2,15 +2,15 @@
 
 ## Coordination
 
-- Status: review
+- Status: done
 - Owner/session: Codex COOP-004 / thread `01a1ebf9-60c7-74d0-9d39-cd09295875b0`, 2026-11-18
 - Canonical branch: `feature/coop-004-ownership`
 - Base commit: `0f367ed62af337633941bca0d22d3ff1932129ba`
 - Dependencies: COOP-002, COOP-011 (merged shared declarations)
-- Last checkpoint: corrected implementation `1e276554`; final target evidence `1958a63a`; final review metadata in this subsequent commit
+- Last checkpoint: corrected implementation `1e276554`; final target evidence `1958a63a`; reviewed publication `3fb31bbd`
 - Checkpoint location: `.worktrees/COOP-004`; `origin/feature/coop-004-ownership`
-- Review/integration: independent COOP-005 full review **PASS** at `1958a63a`; corrected native/target regression passed; ready for integration, not merged
-- Pull request: https://github.com/xcntroller/HD2_BaseCoop/pull/9 (ready for integration)
+- Review/integration: independent COOP-005 full review **PASS**; PR #9 merged into main at `59a480c8f612adac1c5967d2c47718defaad6278`
+- Pull request: https://github.com/xcntroller/HD2_BaseCoop/pull/9 (merged)
 
 ## Branch authority and completion PR
 
@@ -125,10 +125,12 @@ model behavior only, and do not imply the later adapters or campaign mode are pl
   queue and journal and synchronizes rights/preparation revisions before publication.
   Both optional result generation fields describe the full current session epoch.
   Deployed flags identify the selected preparation squad, before actor construction.
-- Remaining: coordinator integration and actual done/merge metadata. Independent full
-  review and all component checks passed; no outstanding finding or toolchain blocker.
-- Next action: coordinator merges ready PR #9, then this owner records actual merge SHA
-  and remaining dependent-task blockers in a reviewed documentation follow-up.
+- Remaining: none for the bounded session/ownership component. PR #9 integrated at
+  `59a480c8f612adac1c5967d2c47718defaad6278`; this reviewed documentation follow-up
+  records actual done metadata. Live controller/mission/runtime gates remain downstream.
+- Next action: downstream COOP-008/009 consume the merged APIs and preserve handoff/
+  generation/world-barrier obligations. COOP-008 still waits for COOP-006; COOP-009
+  additionally waits for remaining preparation/protocol components.
 - Decisions: no new product policy. Selection/switching fixture permissions are proposals;
   production policy, peer/world barriers, host-loss and live adapter composition stay explicit.
 - Uncommitted work: none at the implementation checkpoint. All build/runtime evidence
@@ -198,3 +200,15 @@ boundaries and the corrected phase baseline. Independently reran final native ha
 execution log `msvc-f4oonfu6`: same **10,654 passed**, with source unchanged after target
 validation. Reviewer confirms isolated component scope and downstream runtime limitations.
 This subsequent commit adds review metadata only; implementation/fixture unchanged.
+
+## Integration record
+
+PR #9 merged at `59a480c8f612adac1c5967d2c47718defaad6278` after independent
+COOP-005 review, native reproduction and target-log inspection. The final publication
+`3fb31bbd` changed review metadata only after validated implementation `1e276554`.
+No runtime playability claim is added by this merge.
+
+This documentation-only follow-up updates the actual done/merge record and COOP-008's
+remaining blocker. COOP-005's completion follow-up owns COOP-009 dependency metadata
+to avoid overlapping writers. The implementation and completion worktrees/checkpoints
+are preserved; build artifacts and borrowed tooling remain ignored/local.
