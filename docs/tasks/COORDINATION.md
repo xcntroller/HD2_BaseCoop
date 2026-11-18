@@ -6,7 +6,7 @@ creating or updating the operational branch. Do not merge its WIP ledger into `m
 
 ## Coordinator
 
-- Owner/session: Codex COOP-007 explicitly STOPS ledger writes after this published transfer checkpoint; COOP-008 may accept next. Current COOP-007 review is independent and incomplete.
+- Owner/session: Codex COOP-007 / thread `01a1ec02-1d0b-7791-8a57-e16ee680b905`, resumed its own stopped handoff `ee8b441f` after COOP-008 explicitly declined coordinator transfer and confirmed STOPPED. Only COOP-007 writes this ledger.
 - Contact/shared channel: this published ledger and active COOP-007 conversation; notifying prior coordinator and available reviewers. Existing claims/scopes remain unchanged.
 - Integrator: Codex COOP-007, with independent review before integration. No COOP-007 merge approval yet.
 - Latest checkpoint: `HEAD`; ordinary push to `origin/coord/coop-work-queue`.
@@ -24,6 +24,8 @@ creating or updating the operational branch. Do not merge its WIP ledger into `m
 | COOP-006 | Codex COOP-006 / thread `01a1ec01-a68f-7170-9f75-7536a079675b`, user assignment | `feature/coop-006-protocol` | done | PR #13 merge `59cb8944`; completion PR #16 merge `0fcea78f`; `.worktrees/COOP-006` | `src/net/campaign_protocol.{h,cpp}`, protocol harness and own record. Native dispatch audit read-only; no shared header or live hooks. |
 | COOP-007 | Codex COOP-007 / thread `01a1ec02-1d0b-7791-8a57-e16ee680b905`, user assignment | `feature/coop-007-preparation-screen` | active; claim acknowledged by this commit | Checkpoint `be6aea95`; draft PR #12; `.worktrees/COOP-007` | Native `campaign_preparation_screen.{h,cpp}`, UI harness and own record. Consume merged header/layout; no legacy panel edits or production entry. Required native rendering/input evidence remains gate. |
 | COOP-001 | Codex / 2026-11-18 user assignment | `feature/coop-001-build-baseline` | done | PR #2 merge `15b572ff`; completion metadata PR #11 merge `1b9b307f` | Build/solo/native host-guest baseline and isolation accepted; guide/evidence integrated. Firing/reload/completion remain unverified downstream gates. |
+
+| COOP-009 | Codex COOP-009 / thread `01a1ec1f-ea8d-77f3-b0e9-7c683f367ec3`, user assignment | `feature/coop-009-campaign-adapters` | active; claim acknowledged | Base `0fcea78f`; `.worktrees/COOP-009` | Reserved adapter/lifecycle harness and game.cpp/game_app.cpp/game_rounds.cpp/spawn_point.cpp; narrow profile/script/AI hooks. Agree 008 API; final integration after 008 merge. |
 
 Only the coordinator adds or reassigns claims. A missing row is not sufficient evidence
 of availability: check worktrees and existing task branches as well. Task records carry
@@ -111,3 +113,9 @@ missing fields. COOP-006 was notified explicitly before this stopped-writer hand
 - COOP-009's concurrent user assignment is acknowledged: thread `01a1ec1f-ea8d-77f3-b0e9-7c683f367ec3`, branch `feature/coop-009-campaign-adapters`, base integrated `0fcea78f`. Scope remains the task's reserved lifecycle files; agree the COOP-008 adapter API and serialize shared lifecycle files before consumers bind. No prerequisite branch is stacked or merged unfinished.
 - COOP-007 implementation checkpoint `b7e6bb16` (own source `5f122ce5`) is published in draft PR #12; final native build passed, behavioral GCC/MSVC x86 passed, final native input/capture repeats ongoing. Independent full source/campaign-style/native-evidence review requested from COOP-003. No review/merge approval implied.
 - COOP-007 now explicitly STOPS all ledger writes after this ordinary push. COOP-008 may accept the role, update the current owner/header and claim rows, notify COOP-007/009, then serialize later reviews/integration. Preserve 007 resources; compiler reuse remains read-only with separate outputs/prefixes.
+
+## Coordinator transfer declined / COOP-007 retained
+
+- Crossing messages reconciled: COOP-008 explicitly declined the offered role to focus on controller implementation and confirmed stopped ledger writes. No new coordinator accepted `ee8b441f`. COOP-007 resumes its own stopped handoff and remains the sole coordinator writer. Both workers were notified.
+- COOP-008 claim remains accepted at `22352122`; COOP-009 confirmed its exact reserved scope and base `0fcea78f`, now recorded above. Both may use COOP-007 tools read-only with their own prefixes/outputs. No file scope expansion or unfinished integration approved.
+- COOP-007 final native/source independent review and repeat checks remain ongoing; PR #12 stays draft.
