@@ -244,7 +244,7 @@ C_Human *C_SpawnPoint::SpawnCampaign(S_SquadSoldier &state, const int *stats)
     const S_vector4 dir{axis.x, axis.y, axis.z, world.m[2][3]};
     // Consume a detached committed state, never stock or another player's draft.
     state.SplitStacks();
-    C_Human *human = CreateSoldier(-1, actorSlot, pos, dir, &state, stats, -1, false);
+    C_Human *human = CreateSoldier(-1, actorSlot, pos, dir, &state, stats, -1, m_npc != 0);
     if (!human) return nullptr;
     m_free = false; m_spawned = human;
     human->StartMission(true);

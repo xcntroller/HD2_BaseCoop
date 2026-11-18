@@ -99,13 +99,13 @@ struct Hooks {
     std::function<R(PlayerId)> m_Disconnected;
 } g_Hooks;
 struct C_SpawnPoint {
-    PointFrame *m_frame=nullptr;bool m_free=true;C_Human *m_spawned=nullptr;
+    PointFrame *m_frame=nullptr;int m_npc=0;bool m_free=true;C_Human *m_spawned=nullptr;
     C_Human *SpawnCampaign(S_SquadSoldier &state,const int *stats);
     void NotifyCampaignSpawned();
     static inline C_Human created;
-    static inline int slot=0,actor=0,health=0;static inline S_vector4 position{},direction{};
-    static C_Human *CreateSoldier(int s,int a,const S_vector4 &p,const S_vector4 &d,S_SquadSoldier *,const int *stats,int uniform,bool npc){
-        CHECK(uniform==-1);CHECK(!npc);slot=s;actor=a;position=p;direction=d;health=stats[0];created={};return &created;
+    static inline bool npc=false;static inline int slot=0,actor=0,health=0;static inline S_vector4 position{},direction{};
+    static C_Human *CreateSoldier(int s,int a,const S_vector4 &p,const S_vector4 &d,S_SquadSoldier *,const int *stats,int uniform,bool isNpc){
+        CHECK(uniform==-1);npc=isNpc;slot=s;actor=a;position=p;direction=d;health=stats[0];created={};return &created;
     }
 };
 #include "legacy_bodies.inc"
@@ -155,12 +155,13 @@ void TestOriginalPointSpawn() {
     PointScript script;frame.data.script=&script;C_SpawnPoint point;point.m_frame=&frame;
     S_SquadSoldier state;std::array<int,STAT_COUNT> stats{};stats[0]=640;
     CHECK(point.SpawnCampaign(state,stats.data())==&C_SpawnPoint::created);
-    CHECK(C_SpawnPoint::slot==-1);CHECK(C_SpawnPoint::actor==23);CHECK(C_SpawnPoint::health==640);
+    CHECK(C_SpawnPoint::slot==-1);CHECK(!C_SpawnPoint::npc);CHECK(C_SpawnPoint::actor==23);CHECK(C_SpawnPoint::health==640);
     CHECK(C_SpawnPoint::position.x==10);CHECK(C_SpawnPoint::position.y==20);CHECK(C_SpawnPoint::position.z==30);
     CHECK(C_SpawnPoint::direction.z==1);CHECK(!point.m_free);CHECK(point.m_spawned->starts==2);
     CHECK(g_teamManager.GetPlayerTeam()->IsMember(point.m_spawned));CHECK(script.uses==0);
     point.NotifyCampaignSpawned();CHECK(script.uses==1);
     CHECK(point.SpawnCampaign(state,stats.data())==nullptr);
+    point.m_free=true;point.m_npc=1;CHECK(point.SpawnCampaign(state,stats.data())!=nullptr);CHECK(C_SpawnPoint::npc);
     InstallCampaignMissionView(nullptr);point.m_free=true;CHECK(point.SpawnCampaign(state,stats.data())==nullptr);CHECK(point.m_free);
 }
 void TestConversion() {
