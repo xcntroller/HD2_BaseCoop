@@ -59,6 +59,7 @@ public:
     bool OnStart(void *arg) override;                   // 0x40 0x0067f650 (DS 0x006bcab0)
     // The game's input (none). True.
     bool OnInput(float *held, float *pressed) override; // 0x44 0x00680960
+    void Update(int timeDelta) override;
     // The network games: the panel's soldier, the load's button, the game's status; a client: the
     // game's update.
     void OnUpdate(int timeDelta) override;              // 0x48 0x006808d0 (DS 0x006be180)

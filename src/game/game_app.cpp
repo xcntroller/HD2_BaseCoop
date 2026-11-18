@@ -494,7 +494,8 @@ bool C_GameApp::UpdateClient(int timeDelta)             // 0x006c2410
     case GAME_STATE_CLOSE_GAME_MENU:
         CloseGameMenu();
         m_state->SetState(GAME_STATE_RUNNING);
-        static_cast<C_game *>(m_state)->SetPlayerInputEnabled(true);
+        if (!IsCampaignMission())
+            static_cast<C_game *>(m_state)->SetPlayerInputEnabled(true);
         GetCameraModule()->SetSpecialMode(3, true, 1);
         if (m_state && m_state->GetTypeId() == GAME_STATE_TYPE_GAME && IsLocalGame())
             static_cast<C_game *>(m_state)->SetPaused(m_gamePaused);
@@ -502,6 +503,11 @@ bool C_GameApp::UpdateClient(int timeDelta)             // 0x006c2410
 
     case GAME_STATE_MENU_END_MISSION:
         CloseGameMenu();
+        if (IsCampaignNet(E_CampaignLanRoute::CampaignSession)) {
+            // The campaign controller retires the world and session on the next client frame.
+            m_state->SetState(GAME_STATE_LOBBY);
+            break;
+        }
         static_cast<C_game *>(m_state)->EndMission(100);
         if (g_teamManager.GetPlayerTeam()->GetActivePlayer())
             GetCameraModule()->SetSpecialMode(2, true, nullptr);

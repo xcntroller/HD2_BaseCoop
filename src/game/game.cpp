@@ -31,6 +31,7 @@
 #include "game/world.h"
 #include "ls3d/i3d.h"
 #include "ls3d/igraph.h"
+#include "net/campaign_net.h"
 #include "script/script_module.h"
 
 C_game *g_game = nullptr;                           // 0x008ae8f4
@@ -420,7 +421,29 @@ void C_game::Render()                               // 0x0069bb40
 
 bool C_game::HandleInput(float *held, float *pressed)   // 0x0069a830 (DS 0x006db860)
 {
-    if (!CanCampaignSimulate() || m_fadeTime > 0 || m_inputDelay != 0)
+    if (m_fadeTime > 0 || m_inputDelay != 0)
+        return true;
+
+#ifndef HD2_DEDICATED
+    if (IsClient() && m_state == GAME_STATE_RUNNING && pressed && pressed[INPUT_MENU] != 0.0f &&
+        IsCampaignNet(E_CampaignLanRoute::CampaignSession) && IsCampaignMission()) {
+        const auto campaign = GetCampaignMissionSnapshot();
+        if (!CanCampaignSimulate() && campaign->m_Context.m_Phase != E_CampaignPhase::Ending)
+            return true;
+        if (g_scriptModule.IsCutsceneRunning() || IsDevelopmentCampaignCutscene()) {
+            if (IsCampaignSimulationAuthority())
+                g_scriptModule.EndCutscene();
+            return true;
+        }
+        m_interface->FilterInput(held, pressed);
+        m_interface->HandleInput(held, pressed);
+        if (pressed[INPUT_MENU] != 0.0f)
+            OpenGameMenu();
+        return true;
+    }
+#endif
+
+    if (!CanCampaignSimulate())
         return true;
     if (IsClient())
         m_interface->FilterInput(held, pressed);
