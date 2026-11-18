@@ -11,6 +11,7 @@
 #include <cstring>
 #include <cwchar>
 #include <deque>
+#include <iterator>
 
 #include "game/actors_module.h"
 #include "game/campaign.h"
@@ -266,6 +267,8 @@ std::uint64_t g_weaponSequence = 0, g_inventorySequence = 0;
 bool g_liveSendFailed = false;
 OwnershipRevision g_publishedOwnership;
 std::vector<std::uint8_t> g_publishedObjectives;
+constexpr std::size_t kPresentationBatchSize = 64;
+constexpr std::size_t kMaxPresentationBacklog = 1024;
 std::vector<Wire::S_MissionPresentation> g_presentation;
 std::vector<std::string> g_trackedFrames;
 
@@ -1065,14 +1068,15 @@ bool PublishMissionUpdate(Clock::time_point now, const S_CampaignOwnershipSnapsh
     const auto manifest = g_mission->GetManifest();
     if (!game || !game->GetMission() || !manifest)
         return false;
-    if (!PublishLiveOwnership(state))
+    if (!PublishLiveOwnership(state)) {
+        LogDevelopmentCampaign("host could not publish campaign ownership", state.m_Revision.Value());
         return false;
+    }
     Wire::S_MissionUpdate update;
     update.m_Session = state.m_Context.m_Session;
     update.m_Generation = state.m_Context.m_MissionGeneration;
     update.m_Snapshot = manifest->m_Snapshot;
     update.m_OwnershipRevision = state.m_Revision;
-    update.m_Sequence = ++g_missionUpdateSequence;
     update.m_MissionTime = game->GetMissionTime();
     update.m_PlayerInputEnabled = !terminal && game->IsPlayerInputEnabled();
     if (terminal)
@@ -1092,12 +1096,16 @@ bool PublishMissionUpdate(Clock::time_point now, const S_CampaignOwnershipSnapsh
             continue;
         Wire::S_SquadActorState actor;
         actor.m_Actor = *soldier.m_Actor;
-        if (!g_sink.CaptureSquadActor(actor))
+        if (!g_sink.CaptureSquadActor(actor)) {
+            LogDevelopmentCampaign("host could not capture campaign soldier", soldier.m_Soldier.Value());
             return false;
+        }
         update.m_Squad.push_back(actor);
     }
-    if (!g_sink.CaptureAmbientHumans(update.m_Session, update.m_Generation, update.m_Ambient))
+    if (!g_sink.CaptureAmbientHumans(update.m_Session, update.m_Generation, update.m_Ambient)) {
+        LogDevelopmentCampaign("host could not capture campaign ambient humans", update.m_Generation.Value());
         return false;
+    }
     if (terminal) {
         update.m_Objectives = terminal->m_Objectives;
     } else {
@@ -1114,19 +1122,34 @@ bool PublishMissionUpdate(Clock::time_point now, const S_CampaignOwnershipSnapsh
         const auto up = (matrix(1) - direction * matrix(1).Dot(direction)).Normalized();
         update.m_FramePoses.push_back({name, VectorFields(matrix(3)), VectorFields(direction), VectorFields(up)});
     }
-    update.m_Presentation.swap(g_presentation);
+    auto presentation = std::move(g_presentation);
+    g_presentation.clear();
     g_nextMissionUpdate = now + std::chrono::milliseconds(66);
-    if (!SendHostMissionMessage(update)) {
-        Wire::T_Bytes bytes;
-        const auto reason = Wire::Encode(update, bytes);
-        LogDevelopmentCampaign("host mission update send or encoding failed", update.m_Sequence,
-                               static_cast<std::uint64_t>(reason));
-        if (reason != R::None) {
-            for (const auto &event : update.m_Presentation)
-                LogDevelopmentCampaign(event.m_Frame.c_str(), static_cast<unsigned>(event.m_Action), event.m_Args[0]);
+    const bool firstUpdate = g_missionUpdateSequence == 0;
+    const auto outcome = update.m_Outcome;
+    auto current = presentation.begin();
+    do {
+        const auto count = (std::min)(kPresentationBatchSize,
+            static_cast<std::size_t>(presentation.end() - current));
+        const auto end = current + count;
+        update.m_Presentation.assign(std::make_move_iterator(current), std::make_move_iterator(end));
+        update.m_Outcome = end == presentation.end() ? outcome : Wire::E_MissionOutcome::Running;
+        update.m_Sequence = ++g_missionUpdateSequence;
+        if (!SendHostMissionMessage(update)) {
+            Wire::T_Bytes bytes;
+            const auto reason = Wire::Encode(update, bytes);
+            LogDevelopmentCampaign("host mission update send or encoding failed", update.m_Sequence,
+                                   static_cast<std::uint64_t>(reason));
+            if (reason != R::None) {
+                for (const auto &event : update.m_Presentation)
+                    LogDevelopmentCampaign(event.m_Frame.c_str(), static_cast<unsigned>(event.m_Action), event.m_Args[0]);
+            }
+            return false;
         }
-        return false;
-    }
+        current = end;
+    } while (current != presentation.end());
+    if (presentation.size() > kPresentationBatchSize)
+        LogDevelopmentCampaign("host sent batched campaign presentation", update.m_Generation.Value(), presentation.size());
     ObserveSquadState(update, "host measured authoritative squad movement cm",
                       "host measured authoritative squad health");
     for (std::size_t index = 0; index < update.m_Objectives.size(); ++index) {
@@ -1134,7 +1157,7 @@ bool PublishMissionUpdate(Clock::time_point now, const S_CampaignOwnershipSnapsh
             LogDevelopmentCampaign("host published objective state", index + 1, update.m_Objectives[index]);
     }
     g_publishedObjectives = update.m_Objectives;
-    if (update.m_Sequence == 1) {
+    if (firstUpdate) {
         LogDevelopmentCampaign("host published first live mission state", update.m_MissionTime, update.m_Squad.size());
         LogDevelopmentCampaign("host published ambient humans", update.m_Ambient.size());
     }
@@ -1515,6 +1538,8 @@ R RetireMenuWorld()
     }
     g_loadingDeadline.reset();
     g_nextMissionUpdate.reset();
+    g_missionUpdateSequence = g_weaponSequence = g_inventorySequence = 0;
+    g_liveSendFailed = false;
     g_receivedControls.clear();
     g_presentation.clear();
     g_trackedFrames.clear();
@@ -2121,7 +2146,9 @@ void QueueDevelopmentCampaignPresentation(Wire::S_MissionPresentation event)
 {
     if (g_peers.empty() || !IsCampaignSimulationAuthority() || !CanCampaignSimulate())
         return;
-    if (g_presentation.size() == 64) {
+    if (g_presentation.size() >= kMaxPresentationBacklog) {
+        if (!g_liveSendFailed)
+            LogDevelopmentCampaign("campaign presentation backlog exceeded", g_presentation.size());
         g_liveSendFailed = true;
         return;
     }
