@@ -6,11 +6,11 @@ creating or updating the operational branch. Do not merge its WIP ledger into `m
 
 ## Coordinator
 
-- Owner/session: Codex COOP-013, explicit user assignment on 2026-11-18, thread `01a1edba-b5e3-7c73-bfa7-51e0b12fc205`.
-- Contact/shared channel: this ledger and the canonical COOP-013 task branch/PR.
-- Integrator: Codex COOP-013 for its own task, subject to the review and runtime acceptance gates.
+- Owner/session: Codex COOP-014, user assignment, thread `01a1ed7a-ddd9-7000-bbec-e292bd129d25`.
+- Contact/shared channel: this ledger and COOP-014 PR #25.
+- Integrator: Codex COOP-014 for the Arctic1 technical delivery after separate review.
 - Latest checkpoint: `HEAD` on `origin/coord/coop-work-queue`.
-- Next action: COOP-013 is integrated and has stopped coordination writes. COOP-014 retains its active mission-completion claim.
+- Next action: integrate the reviewed COOP-014 technical delivery. The full paired original route remains an owner playtest.
 
 ## Accepted task claims
 
@@ -29,7 +29,7 @@ creating or updating the operational branch. Do not merge its WIP ledger into `m
 
 | COOP-010 | Codex COOP-010 (2026-11-18), user assignment | `feature/coop-010-two-player-mission` | done | PR #22 merged `738b124d`, completion PR #23 merged `dc41c6b7`, `.worktrees/COOP-010` | Arctic1 playable gate and original mode regressions recorded. |
 | COOP-012 | Codex COOP-012 (2026-11-18), user assignment | `feature/coop-012-session-setup` | done | PR #26 merged `4ef8b814`; completion PR #27 merged `fd5ad4c3` | Five-instance setup matrix, concurrent admission, route isolation, original-mode regressions and COOP-013 contract recorded. |
-| COOP-014 | Codex COOP-014, user assignment, thread `01a1ed7a-ddd9-7000-bbec-e292bd129d25` | `feature/coop-014-arctic1-completion` | active | PR #25 draft, base `9ec7fe48` | Arctic1 solo/dev reference, interactions, objectives and Running replication. |
+| COOP-014 | Codex COOP-014, user assignment, thread `01a1ed7a-ddd9-7000-bbec-e292bd129d25` | `feature/coop-014-arctic1-completion` | review | PR #25, reviewed source and harness at `c96d169d`, documentation at `4aa68925` | Integrate reviewed technical delivery. Keep the full paired route in the owner playtest handoff. |
 | COOP-013 | Codex COOP-013, explicit user assignment on 2026-11-18 | `feature/coop-013-live-preparation` | done | PR #28 merged `73d518a5`; completion PR #29 merged `e4344dfc` | First menu deployment and recovery integrated. COOP-015 still awaits COOP-014. |
 
 
@@ -256,3 +256,9 @@ missing fields. COOP-006 was notified explicitly before this stopped-writer hand
 - PR #28 merged as `73d518a5d4d2f1822c3caa5b995ebd4100c75477`. Its actual merged tree matches the reviewed candidate. Documentation-only PR #29 merged as `e4344dfcc2073c54b253a50633dc15f7701026e0` and records COOP-013 done.
 - COOP-014 keeps its active assignment and draft PR #25. COOP-015 remains planned until the mission outcome is integrated. Keep the COOP-013 branch, worktree and private validation evidence for the next integration.
 - COOP-013 stops all ledger writes after this ordinary push. A successor can accept the stopped-writer handoff before changing coordination entries.
+
+## COOP-014 coordinator acceptance and integration review
+
+- COOP-014 accepts the published stopped-writer handoff at `815659a2`. The canonical task branch and accepted claim continue. Current main at `a40563bb` includes the completed COOP-010 and COOP-013 dependencies. The only open candidate is COOP-014 PR #25.
+- Separate source and evidence review passed at `c96d169d`. The reviewer repeated the terminal log checks and assessed route scope, legacy gating, compatibility and result lifecycle. The follow-up `4aa68925` records the review, the guest-originated wire action for owner testing and the result of auditing the authored doors.
+- The production x86 build, menu deployment and native guest-to-AI handoff passed. Three checked-host and ordinary-guest fixtures verified native wire cutting, the original entrance, garrison and assembly triggers, critical guide failure, and matching final results. Genuine full paired completion remains pending owner playtest.
