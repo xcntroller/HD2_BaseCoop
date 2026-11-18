@@ -75,22 +75,40 @@ E_CampaignReason C_CampaignMissionAdapter::Begin(const S_CampaignMissionManifest
     m_LastSnapshot = *next; m_Manifest.reset(); m_Acknowledged.clear(); m_Failure = R::None;
     m_Loading = frozen; m_Loading->m_Snapshot = *next;
     m_Loading->m_Context = GetContext();
-    m_LoadingRevision = m_Ownership.GetSnapshot()->m_Revision;
+    m_LoadingState = m_Ownership.GetSnapshot();
     return R::None;
 }
 E_CampaignReason C_CampaignMissionAdapter::Bind(SoldierId soldier, const ActorRef &actor) {
     if (!m_Loading || m_Manifest || GetContext().m_Phase != P::Loading || m_Failure != R::None) return R::InvalidPhase;
     if (std::none_of(m_Loading->m_Loadouts.begin(), m_Loading->m_Loadouts.end(),
         [&](const auto &l) { return l.m_Soldier == soldier; })) return R::InvalidSoldier;
-    if (m_Ownership.GetSnapshot()->m_Revision != m_LoadingRevision) return R::StaleRevision;
+    const auto startup = RefreshStartupScripts(); if (startup != R::None) return startup;
     const auto reason = m_Ownership.BindActor(soldier, actor);
-    if (reason == R::None) m_LoadingRevision = m_Ownership.GetSnapshot()->m_Revision;
+    if (reason == R::None) m_LoadingState = m_Ownership.GetSnapshot();
     return reason;
+}
+E_CampaignReason C_CampaignMissionAdapter::RefreshStartupScripts() {
+    const auto current = m_Ownership.GetSnapshot();
+    if (!m_LoadingState || current->m_Context.m_Phase != P::Loading ||
+        current->m_Context.m_MissionGeneration != m_LoadingState->m_Context.m_MissionGeneration ||
+        current->m_Soldiers.size() != m_LoadingState->m_Soldiers.size() ||
+        current->m_Participants.size() != m_LoadingState->m_Participants.size()) return R::StaleRevision;
+    for (std::size_t i=0;i<current->m_Participants.size();++i) {
+        const auto &a=current->m_Participants[i], &b=m_LoadingState->m_Participants[i];
+        if (a.m_Player!=b.m_Player || a.m_Connected!=b.m_Connected || a.m_Admitted!=b.m_Admitted) return R::Disconnected;
+    }
+    for (std::size_t i=0;i<current->m_Soldiers.size();++i) {
+        const auto &a=current->m_Soldiers[i], &b=m_LoadingState->m_Soldiers[i];
+        auto stable=a; stable.m_Scripted=b.m_Scripted; stable.m_ControlRevision=b.m_ControlRevision;
+        if (!SameRecord(stable,b)) return R::StaleRevision;
+        if (a.m_ControlRevision < b.m_ControlRevision || !a.m_ControlRevision.IsValid()) return R::StaleRevision;
+    }
+    m_LoadingState=current; return R::None;
 }
 E_CampaignReason C_CampaignMissionAdapter::SealInitialWorld() {
     if (!m_Loading || m_Manifest || GetContext().m_Phase != P::Loading || m_Failure != R::None) return R::InvalidPhase;
     auto candidate = *m_Loading; const auto state = m_Ownership.GetSnapshot();
-    if (state->m_Revision != m_LoadingRevision) return R::StaleRevision;
+    const auto startup = RefreshStartupScripts(); if (startup != R::None) return startup;
     // Any membership/rights change invalidates the frozen cut. Binding alone is
     // allowed; BeginMissionGeneration and BindActor legitimately advance revisions.
     for (auto p : candidate.m_RequiredParticipants) {
@@ -103,7 +121,7 @@ E_CampaignReason C_CampaignMissionAdapter::SealInitialWorld() {
         if (found == state->m_Soldiers.end()) return R::InvalidSoldier;
         const auto &old = s.m_Ownership;
         if (old.m_Owner != found->m_Owner || old.m_Alive != found->m_Alive || old.m_Eligible != found->m_Eligible ||
-            old.m_Deployed != found->m_Deployed || found->m_Scripted) return R::StaleRevision;
+            old.m_Deployed != found->m_Deployed) return R::StaleRevision;
         s.m_Ownership = *found;
         if (found->m_Deployed) {
             if (!found->m_Actor) return R::ActorUnavailable;
@@ -212,7 +230,15 @@ std::optional<S_CampaignSnapshotAck> C_CampaignMissionReconstruction::GetAcknowl
         state->m_Context.m_Phase != P::Loading || state->m_Revision != m_Ack->m_OwnershipRevision) return std::nullopt;
     return m_Ack;
 }
+bool C_CampaignMissionReconstruction::IsStarted() const {
+    const auto state = m_View.GetSnapshot();
+    return m_Started && m_Ack && state && state->m_Context.m_Session == m_Session &&
+        state->m_Context.m_MissionGeneration == m_Ack->m_Generation &&
+        (state->m_Context.m_Phase == P::Loading || state->m_Context.m_Phase == P::Running);
+}
 E_CampaignReason C_CampaignMissionReconstruction::AcceptStart(const S_CampaignStartSimulation &start) {
+    if (IsStarted() && start.m_Session == m_Ack->m_Session && start.m_Generation == m_Ack->m_Generation &&
+        start.m_Snapshot == m_Ack->m_Snapshot) return R::None;
     if (!GetAcknowledgment()) return R::SnapshotUnavailable;
     if (start.m_Session != m_Session) return R::WrongSession;
     if (start.m_Generation != m_Ack->m_Generation) return R::WrongGeneration;

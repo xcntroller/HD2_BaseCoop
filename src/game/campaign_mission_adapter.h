@@ -35,7 +35,8 @@ private:
     std::shared_ptr<const S_CampaignMissionManifest> m_Manifest;
     std::set<PlayerId> m_Acknowledged;
     SnapshotId m_LastSnapshot;
-    OwnershipRevision m_LoadingRevision;
+    T_CampaignOwnershipSnapshot m_LoadingState;
+    E_CampaignReason RefreshStartupScripts();
     E_CampaignReason m_Failure = E_CampaignReason::None;
 };
 
@@ -52,7 +53,7 @@ public:
         const std::vector<std::uint8_t> &verifiedWorld, const T_Reconstruct &reconstruct);
     std::optional<S_CampaignSnapshotAck> GetAcknowledgment() const;
     E_CampaignReason AcceptStart(const S_CampaignStartSimulation &start);
-    bool IsStarted() const { return m_Started; }
+    bool IsStarted() const;
     void Invalidate();
 private:
     SessionId m_Session;

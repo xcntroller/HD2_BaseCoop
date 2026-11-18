@@ -252,12 +252,19 @@ C_Human *C_SpawnPoint::SpawnCampaign(S_SquadSoldier &state, const int *stats)
     // C_Human::Setup preserves campaign progress through the controller adapter.
     if (!g_teamManager.GetPlayerTeam()->IsMember(human))
         g_teamManager.GetPlayerTeam()->AddMember(human);
-    if (const S_FrameData *data = m_frame->GetData()) {
-        if (data->script) data->script->OnUse(0);
-    }
     // No native player spawn message: its 8-bit slot cannot represent ownership
     // and omits campaign generation/identity. Initial-world transfer owns clients.
     return human;
+}
+
+void C_SpawnPoint::NotifyCampaignSpawned()
+{
+    if (!IsCampaignSimulationAuthority() || !m_spawned || !m_frame) return;
+    // Ownership must already bind this actor before a point script can suspend
+    // its control. Controller reconciliation follows after the script stack exits.
+    if (const S_FrameData *data = m_frame->GetData()) {
+        if (data->script) data->script->OnUse(0);
+    }
 }
 
 void C_SpawnPoint::SetupSpawned(int slot, int actorSlot, const S_vector4 &pos, const S_vector4 &dir,

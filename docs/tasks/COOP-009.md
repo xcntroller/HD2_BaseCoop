@@ -7,7 +7,7 @@
 - Canonical branch: `feature/coop-009-campaign-adapters`
 - Base commit: `0fcea78f85d0fe9348c3b8e13d1a0f23f50a482a`
 - Dependencies: COOP-001, COOP-004, COOP-005, COOP-006
-- Last checkpoint: lifecycle/native adapter implementation (this commit)
+- Last checkpoint: startup-script/departure/reconstruction review candidate (this commit)
 - Checkpoint location: `.worktrees/COOP-009`, canonical branch on origin
 - Review/integration: active component; final combined integration waits for COOP-008 merge
 - Pull request: https://github.com/xcntroller/HD2_BaseCoop/pull/19 (draft)
@@ -71,15 +71,19 @@ and repeats affected checks; do not merge an unfinished dependency branch.
   No live attachment/menu or two-player campaign gameplay claim; COOP-010 owns those.
 - Next action: repeat target/sanitizer checks on the final source; add the agreed
   COOP-008 progress setter call after its merge and review the combined native paths.
-- Validation run: GCC 7 lifecycle suites/274 checks and 3 extracted native source
-  regression suites/75 checks PASS; MSVC 19.44.35230 x86 `/W4 /WX` same PASS in
-  `build/campaign_mission/msvc-_sn7paat` before tooling disappearance. Source has
-  subsequently gained safe-tick reconciliation, atomic profile writeback and bounds;
-  refreshed target/sanitizer checks are in progress, not yet claimed.
+- Validation run: latest GCC 8 lifecycle suites / 312 checks and 4 extracted native
+  source regression suites / 100 checks PASS; MSVC 19.44.35230 x86 `/W4 /WX` same PASS in
+  `build/campaign_mission/msvc-1c7ncu78` on the restored private toolchain.
+  Native ASan/UBSan PASS both suites (`gcc-qvjj1iq2`) using process-local private
+  libraries in `build/tooling/gccsan/usr/lib64`, `--sanitizer-library-dir` and
+  LD_LIBRARY_PATH; no machine-global changes. Full source-extracted checks include
+  original-point spawn/notification ordering and the real native departure helper.
 - Build evidence: full MSVC x86/x87 game build compiled 278 units, 0 compiler messages,
   link 0/LAA yes (`build/full-game-build.log`). Later source refresh (`build/game-restored.log`)
   compiled 1 changed unit and linked successfully after private toolchain restoration.
-  The build predates the final source changes; final combined build remains required.
+  Complete refresh `build/game-script-final.log` again compiled 278 units with zero
+  messages/link 0. The final small reconstruction check and future COOP-008 merge
+  require an affected/full combined repeat; no final combined claim yet.
 - Runtime evidence: a private copied 1.12 installation launched intro/main menu on
   Xvfb :101, original campaign flow was attempted but no mission-play acceptance is
   claimed. Focused source regressions establish dormant solo/native settings and

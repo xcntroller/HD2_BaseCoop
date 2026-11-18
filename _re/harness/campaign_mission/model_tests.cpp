@@ -137,6 +137,23 @@ void TestNewGeneration() {
     CHECK(f.adapter.GetManifest()->m_Snapshot!=old->m_Snapshot);
     CHECK(old->m_Context.m_MissionGeneration==MissionGeneration(1)); CHECK(f.adapter.GetContext().m_MissionGeneration==MissionGeneration(2));
 }
+void TestStartupScripts() {
+    Fixture f; CHECK(f.adapter.Begin(f.frozen)==R::None);
+    const auto context=f.adapter.GetContext();
+    CHECK(f.adapter.Bind(SoldierId(1),{context.m_Session,context.m_MissionGeneration,ActorId(20),ActorSlotUse(0)})==R::None);
+    CHECK(f.ownership.SetScripted(SoldierId(1),true)==R::None);
+    for(unsigned n=2;n<=4;++n) CHECK(f.adapter.Bind(SoldierId(n),{context.m_Session,context.m_MissionGeneration,ActorId(19+n),ActorSlotUse(0)})==R::None);
+    CHECK(f.adapter.SealInitialWorld()==R::None);CHECK(f.adapter.GetManifest()->m_Soldiers[0].m_Ownership.m_Scripted);
+    const auto state=f.ownership.GetSnapshot();
+    for(const auto &s:state->m_Soldiers) CHECK(f.ownership.CompleteControlHandoff({s.m_Soldier,s.m_ControlRevision})==R::None);
+    f.AckAll();S_CampaignStartSimulation start;CHECK(f.adapter.Start(start)==R::None);
+    CHECK(f.adapter.CanSimulate());
+    Fixture changed;CHECK(changed.adapter.Begin(changed.frozen)==R::None);
+    CHECK(changed.ownership.OnDeath(SoldierId(4))==R::None);
+    const auto c=changed.adapter.GetContext();
+    CHECK(changed.adapter.Bind(SoldierId(1),{c.m_Session,c.m_MissionGeneration,ActorId(20),ActorSlotUse(0)})==R::StaleRevision);
+}
+
 void TestReconstruction() {
     struct View : I_CampaignOwnershipView {
         S_CampaignOwnershipSnapshot state;
@@ -160,6 +177,10 @@ void TestReconstruction() {
     CHECK(replica.Reconstruct(manifest,{1,2,3},success)==R::None);CHECK(replica.GetAcknowledgment());
     start.m_Snapshot=SnapshotId(99);CHECK(replica.AcceptStart(start)==R::ContentMismatch);CHECK(!replica.IsStarted());
     start.m_Snapshot=manifest.m_Snapshot;CHECK(replica.AcceptStart(start)==R::None);CHECK(replica.IsStarted());
+    view.state.m_Context.m_Phase=P::Running;
+    CHECK(replica.AcceptStart(start)==R::None);CHECK(replica.IsStarted());
+    view.state.m_Context.m_MissionGeneration=MissionGeneration(99);CHECK(!replica.IsStarted());
+    view.state=*f.ownership.GetSnapshot();
     replica.Invalidate();CHECK(!replica.GetAcknowledgment());CHECK(!replica.IsStarted());
     manifest.m_Snapshot=SnapshotId(4);manifest.m_Bindings[0].m_Actor.m_Generation=MissionGeneration(99);
     CHECK(replica.Reconstruct(manifest,{1},success)==R::Malformed);CHECK(calls==3);
@@ -167,7 +188,7 @@ void TestReconstruction() {
 
 }
 int main() {
-    try { TestDormancy(); TestFrozenRejection(); TestBarrier(); TestAckFences(); TestInvalidation(); TestNewGeneration(); TestReconstruction(); }
+    try { TestDormancy(); TestFrozenRejection(); TestBarrier(); TestAckFences(); TestInvalidation(); TestNewGeneration(); TestStartupScripts(); TestReconstruction(); }
     catch(const std::exception &e) { std::cerr<<"FAIL after "<<g_Checks<<": "<<e.what()<<'\n'; return 1; }
-    std::cout<<"PASS: 7 lifecycle suites / "<<g_Checks<<" checks\n";
+    std::cout<<"PASS: 8 lifecycle suites / "<<g_Checks<<" checks\n";
 }

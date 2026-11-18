@@ -40,12 +40,21 @@ struct S_CampaignNativeCatalog {
     std::map<SoldierId,S_SquadSoldier> m_Soldiers;
 };
 struct S_CampaignNativeSpawn {SoldierId m_Soldier;S_SquadSoldier m_State;std::array<int,STAT_COUNT> m_Stats;};
+struct S_vector {float x=0,y=0,z=0;S_vector NormalizedGame()const{float len=std::sqrt(x*x+y*y+z*z);return {x/len,y/len,z/len};}};
+struct S_vector4 {float x,y,z,w;};
+struct S_matrix {float m[4][4]{};S_vector operator()(int n)const{return {m[n][0],m[n][1],m[n][2]};}};
+struct PointScript {int uses=0;void OnUse(int){++uses;}};
+struct S_FrameData {PointScript *script=nullptr;};
+struct PointFrame {S_matrix world;S_FrameData data;const S_matrix &GetMatrix(){return world;}const S_FrameData *GetData(){return &data;}};
 struct C_Human {
-    C_Human *GetController(){return this;}
+    int starts=0;C_Human *GetController(){return this;}
+    void StartMission(bool){++starts;}
 };
 struct Team {
     C_Human *watched=nullptr;
-    int removed=0;
+    int removed=0;std::vector<C_Human *> members;
+    bool IsMember(C_Human *h){return std::find(members.begin(),members.end(),h)!=members.end();}
+    void AddMember(C_Human *h){members.push_back(h);}
     void RemoveMember(C_Human *) {++removed;}
     C_Human *GetWatchedHuman(){return watched;}
     void SetWatchedHuman(C_Human *h){watched=h;}
@@ -57,7 +66,8 @@ struct Interface {
     C_Human *GetShownSquadMember(){return shown;}
     void ShowSquadMember(C_Human *h){shown=h;}
 };
-struct S_NetPlayerState {int connection=0;char name[32]{};bool left=false;C_Human *human=nullptr;int stats[12]{};bool IsConnected(){return connection!=0;}};
+struct S_NetStats {int values[9]{};int &operator[](int i){return values[i];}operator int *(){return values;}};
+struct S_NetPlayerState {int connection=0;char name[32]{};bool left=false;C_Human *human=nullptr;S_NetStats stats;bool IsConnected(){return connection!=0;}};
 struct Net {
     S_NetPlayerState players[4];int locks=0,process=0;
     S_NetPlayerState *LockPlayers(){++locks;return players;}
@@ -67,7 +77,7 @@ struct Net {
     void Process(int,bool){++process;}
 } g_netGame;
 struct Temporary {int destroyed=0;void DestroyMinesOf(C_Human *){++destroyed;}} g_temporaryActors;
-struct Actors {int destroyed=0;void DestroyActor(C_Human *,bool){++destroyed;}} g_actorsModule;
+struct Actors {int destroyed=0,freeSlot=23;int FindFreePlayerSlot(){return freeSlot;}void DestroyActor(C_Human *,bool){++destroyed;}} g_actorsModule;
 struct Mp {int coopDifficulty=2;bool select=true;int maps=0;bool SelectMap(const char *){++maps;return select;}} mp,*g_mpSettings=&mp;
 struct Player {int GetDifficulty(){return 4;}} fixturePlayer;
 bool g_local=true,g_server=true,g_client=true,g_coop=false;
@@ -84,7 +94,20 @@ struct C_game {
     void OnPlayerLeft(int connection);
     static void SendToPlayers(int){}
 };
-int departed=0;void HandleCampaignMissionDeparture(int){++departed;}
+struct Hooks {
+    std::function<std::optional<PlayerId>(int)> m_FindTransportPlayer;
+    std::function<R(PlayerId)> m_Disconnected;
+} g_Hooks;
+struct C_SpawnPoint {
+    PointFrame *m_frame=nullptr;bool m_free=true;C_Human *m_spawned=nullptr;
+    C_Human *SpawnCampaign(S_SquadSoldier &state,const int *stats);
+    void NotifyCampaignSpawned();
+    static inline C_Human created;
+    static inline int slot=0,actor=0,health=0;static inline S_vector4 position{},direction{};
+    static C_Human *CreateSoldier(int s,int a,const S_vector4 &p,const S_vector4 &d,S_SquadSoldier *,const int *stats,int uniform,bool npc){
+        CHECK(uniform==-1);CHECK(!npc);slot=s;actor=a;position=p;direction=d;health=stats[0];created={};return &created;
+    }
+};
 #include "legacy_bodies.inc"
 struct View:I_CampaignOwnershipView {
     S_CampaignOwnershipSnapshot state;
@@ -115,10 +138,30 @@ void TestActiveLegacyGuards() {
     CHECK(g_gameProfile.GetDifficulty()==1);g_coop=true;CHECK(GetPlayerTeamForMode()==g_teamManager.GetPlayerTeam());
     C_Human h;C_game game;auto &p=g_netGame.players[3];p={};p.connection=77;p.human=&h;p.stats[0]=65;
     const int actors=g_actorsModule.destroyed,mines=g_temporaryActors.destroyed;
-    game.OnPlayerLeft(77);CHECK(departed==1);CHECK(p.connection==77);CHECK(p.human==&h);CHECK(p.stats[0]==65);
+    int callbacks=0;
+    g_Hooks.m_FindTransportPlayer=[&](int slot)->std::optional<PlayerId>{CHECK(slot==3);return PlayerId(123);};
+    g_Hooks.m_Disconnected=[&](PlayerId exact){CHECK(exact==PlayerId(123));CHECK(p.connection==77);CHECK(p.human==&h);CHECK(p.stats[0]==65);CHECK(g_netGame.locks==0);++callbacks;return R::None;};
+    game.OnPlayerLeft(77);CHECK(callbacks==1);CHECK(p.connection==0);CHECK(p.human==nullptr);CHECK(p.stats[0]==0);
+    game.OnPlayerLeft(77);game.OnPlayerLeft(0);CHECK(callbacks==1);
     CHECK(g_actorsModule.destroyed==actors);CHECK(g_temporaryActors.destroyed==mines);
     int before=mp.maps;ChangeMap("wrong");CHECK(mp.maps==before);
-    InstallCampaignMissionView(nullptr);g_netGame.players[3]={};
+    InstallCampaignMissionView(nullptr);g_netGame.players[3]={};g_Hooks={};
+}
+void TestOriginalPointSpawn() {
+    View view;view.state.m_Context.m_Kind=E_CampaignSessionKind::CampaignCoop;
+    view.state.m_Context.m_UsesCampaignRules=true;view.state.m_Context.m_IsTransportServer=true;
+    InstallCampaignMissionView(&view);g_server=true;g_client=true;
+    PointFrame frame;frame.world.m[3][0]=10;frame.world.m[3][1]=20;frame.world.m[3][2]=30;frame.world.m[2][2]=2;
+    PointScript script;frame.data.script=&script;C_SpawnPoint point;point.m_frame=&frame;
+    S_SquadSoldier state;std::array<int,STAT_COUNT> stats{};stats[0]=640;
+    CHECK(point.SpawnCampaign(state,stats.data())==&C_SpawnPoint::created);
+    CHECK(C_SpawnPoint::slot==-1);CHECK(C_SpawnPoint::actor==23);CHECK(C_SpawnPoint::health==640);
+    CHECK(C_SpawnPoint::position.x==10);CHECK(C_SpawnPoint::position.y==20);CHECK(C_SpawnPoint::position.z==30);
+    CHECK(C_SpawnPoint::direction.z==1);CHECK(!point.m_free);CHECK(point.m_spawned->starts==2);
+    CHECK(g_teamManager.GetPlayerTeam()->IsMember(point.m_spawned));CHECK(script.uses==0);
+    point.NotifyCampaignSpawned();CHECK(script.uses==1);
+    CHECK(point.SpawnCampaign(state,stats.data())==nullptr);
+    InstallCampaignMissionView(nullptr);point.m_free=true;CHECK(point.SpawnCampaign(state,stats.data())==nullptr);CHECK(point.m_free);
 }
 void TestConversion() {
     C_CampaignSession session({SessionId(7),CampaignId(2),MissionKey("original"),{},true},{17,0});
@@ -154,4 +197,4 @@ void TestConversion() {
     CHECK(catalog.m_Soldiers.at(SoldierId(2)).uniform.typeId==99);
 }
 }
-int main(){try{TestDormantLegacy();TestActiveLegacyGuards();TestConversion();}catch(const std::exception &e){std::cerr<<"FAIL after "<<checks<<": "<<e.what()<<'\n';return 1;}std::cout<<"PASS: 3 native source regression suites / "<<checks<<" checks\n";}
+int main(){try{TestDormantLegacy();TestActiveLegacyGuards();TestOriginalPointSpawn();TestConversion();}catch(const std::exception &e){std::cerr<<"FAIL after "<<checks<<": "<<e.what()<<'\n';return 1;}std::cout<<"PASS: 4 native source regression suites / "<<checks<<" checks\n";}

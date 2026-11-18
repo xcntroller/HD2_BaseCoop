@@ -90,7 +90,7 @@ C_Human *ResolveCampaignHuman(const S_CampaignOwnershipRecord &record) {
     const auto snapshot = GetCampaignMissionSnapshot();
     if (!snapshot || !record.m_Actor || record.m_Actor->m_Session != snapshot->m_Context.m_Session ||
         record.m_Actor->m_Generation != snapshot->m_Context.m_MissionGeneration ||
-        record.m_Actor->m_Actor.Value() > static_cast<uint32_t>((std::numeric_limits<int>::max)())) return nullptr;
+        record.m_Actor->m_Actor.Value() >= C_ActorsModule::PLAYER_SLOTS || record.m_Actor->m_SlotUse.Value() > 255) return nullptr;
     const int id = static_cast<int>(record.m_Actor->m_Actor.Value());
     C_Actor *actor = g_actorsModule.GetActorById(id);
     if (!actor || actor->GetType() != ACTOR_HUMAN ||
@@ -112,6 +112,7 @@ bool SpawnCampaignMissionSquad() {
         if (!g_actorsModule.GetActorById(id)) ++freeSlots;
     if (freeSlots < static_cast<int>(spawns.size())) { adapter->Abort(R::ActorUnavailable); return false; }
     for (const auto &spawn : spawns) {
+        if (!GetSoldierProfile(spawn.m_State.profileIndex)) { adapter->Abort(R::InvalidSoldier); return false; }
         const auto validItem = [](const S_SoldierItem &i) { return i.typeId < 0 || GetItemDef(i.typeId) != nullptr; };
         if (!validItem(spawn.m_State.head) || !validItem(spawn.m_State.uniform) ||
             !validItem(spawn.m_State.hands) || !validItem(spawn.m_State.backpack) || !validItem(spawn.m_State.longGun) ||
@@ -139,6 +140,7 @@ bool SpawnCampaignMissionSquad() {
             ActorSlotUse(static_cast<uint8_t>(g_actorsModule.GetPlayerSlotUse(human->GetNetId())))};
         reason = adapter->Bind(spawn.m_Soldier, actor);
         if (reason != R::None) { adapter->Abort(reason); return false; }
+        point->NotifyCampaignSpawned();
     }
     reason = g_Hooks.m_SynchronizeControllers();
     if (reason != R::None) { adapter->Abort(reason); return false; }
@@ -166,7 +168,7 @@ void CommitCampaignMissionSoldiers() {
         const auto profile = adapter->GetOwnership().GetSession().FindProfile(record.m_Soldier);
         if (!human || !profile || human->GetProfileIndex() != *profile) { adapter->Abort(R::ActorUnavailable); return; }
         S_SquadSoldier *target = g_gameProfile.FindSoldierState(*profile);
-        if (!target) { adapter->Abort(R::InvalidSoldier); return; }
+        if (!target || !GetSoldierProfile(*profile)) { adapter->Abort(R::InvalidSoldier); return; }
         S_SquadSoldier result = *target;
         ClearSoldierItems(&result); human->GetSoldierState(result);
         // Live network item UIDs identify this world only, never the next mission.
@@ -176,9 +178,13 @@ void CommitCampaignMissionSoldiers() {
         MergeSoldierItems(&result); UpdateSoldierLoad(&result);
         updates.emplace_back(target, std::move(result));
     }
-    for (auto &update : updates) *update.first = std::move(update.second);
+    for (auto &update : updates) {
+        *update.first = std::move(update.second);
+        GetSoldierProfile(update.first->profileIndex)->dead = update.first->health < 1;
+    }
 }
 void HandleCampaignMissionDeparture(int connection) {
+    if (connection == 0) return;
     // Resolve BEFORE clearing connection fields; never infer PlayerId from a slot.
     S_NetPlayerState *players = g_netGame.LockPlayers();
     std::optional<PlayerId> player;
@@ -189,6 +195,7 @@ void HandleCampaignMissionDeparture(int connection) {
         break;
     }
     g_netGame.UnlockPlayers();
+    if (departedSlot < 0) return; // repeated exact departure is already retired
     if (player && g_Hooks.m_Disconnected) {
         const auto reason = g_Hooks.m_Disconnected(*player);
         if (reason != R::None && GetCampaignMissionAdapter()) GetCampaignMissionAdapter()->Abort(reason);

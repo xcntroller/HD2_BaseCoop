@@ -9,7 +9,8 @@ def generate(root: Path, output: Path):
     spec.loader.exec_module(module)
     bodies = []
     for path, signatures in {
-        'src/game/campaign_mission_native.cpp': ['E_CampaignReason BuildCampaignNativeSpawns('],
+        'src/game/campaign_mission_native.cpp': ['E_CampaignReason BuildCampaignNativeSpawns(', 'void HandleCampaignMissionDeparture('],
+        'src/game/spawn_point.cpp': ['C_Human *C_SpawnPoint::SpawnCampaign(', 'void C_SpawnPoint::NotifyCampaignSpawned('],
         'src/game/game_rounds.cpp': ['void C_game::OnPlayerLeft(', 'void ChangeMap('],
         'src/game/profile.cpp': ['int C_GameProfile::GetDifficulty('],
         'src/script/script_vm.cpp': ['C_TeamBase *GetPlayerTeamForMode('],

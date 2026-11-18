@@ -28,13 +28,16 @@ outputs, exact commands, compiler/version/environment logs and execution logs.
 Expected: both executable suites exit zero and all steps report PASS. MSVC requires
 32-bit pointers/_M_IX86, `/W4 /WX /std:c++17 /arch:IA32 /MT`; GCC uses strict warnings.
 The sanitizers run both executables, including extracted checked-out source bodies.
+If sanitizer libraries are unpacked privately, provide `--sanitizer-library-dir DIR`
+with unversioned libasan/libubsan links and launch with `LD_LIBRARY_PATH=DIR`.
+This changes only the compiler/runtime process environment, not the machine.
 
 The lifecycle executable uses real session/ownership/lifecycle implementation:
 frozen-state validation, noncontiguous actors, loading versus simulation, old/wrong
 ack tuples, duplicate/missing acks, departure, abort, generations/immutable retained
 manifests, failed native reconstruction and binding verification. The second
-executable extracts the actual current `OnPlayerLeft`, `ChangeMap`, difficulty,
-script-team and native spawn-conversion bodies. Detached services verify legacy
+executable extracts the actual current `OnPlayerLeft`/native departure helper, `ChangeMap`, difficulty,
+script-team, original-point spawn and native spawn-conversion bodies. Detached services verify legacy
 solo/native co-op destruction and settings paths are preserved when dormant, while
 campaign departure bypasses actor/mine destruction and map rotation. It also
 checks committed equipment/stat conversion, roster/profile identity, stock/seed
@@ -84,7 +87,9 @@ lifetime and attachment lifetimes must exceed consumers; uninstall before teardo
    transforms, health, inventories and item UIDs, controllers/AI, vehicles/dynamic
    actors, scripts/objectives and replication baseline. Freeze world mutations
    during capture/transfer or buffer and replay ordered post-baseline changes.
-   Native script startup must be complete at this cut. Calling `SealInitialWorld`
+   Native script startup must be complete at this cut. Point scripts are notified
+   only after their spawned actor is bound; startup script suspension is captured
+   without treating it as a change to frozen roster rights. Calling `SealInitialWorld`
    is the trusted integration assertion that these operations succeeded; the
    method validates binding/catalog consistency and publishes an immutable
    manifest. It deliberately does not implement an engine world save format.
@@ -94,7 +99,8 @@ lifetime and attachment lifetimes must exceed consumers; uninstall before teardo
    may reach its legacy handler during campaign loading.
 6. On a guest, keep one `C_CampaignMissionReconstruction` per session/player. Its
    callback reconstructs ALL world categories and installs the exact ownership
-   view/native bindings/controllers while input remains suspended. The hook checks
+   view/native bindings/controllers and full deployed PlayerTeam membership while
+   input remains suspended. The hook checks
    installed catalog/rules/actors before exposing `GetAcknowledgment`. A failed
    callback, partial body, missing binding or changed catalog never acknowledges.
    Observed generation/snapshot floors reject delayed older reconstruction. A

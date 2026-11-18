@@ -21,6 +21,7 @@ SOURCES = ROOT / "_re" / "harness" / "campaign_mission"
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--compiler", choices=("gcc", "msvc"), required=True)
+    parser.add_argument("--sanitizer-library-dir", type=Path, help="private ASan/UBSan library directory")
     parser.add_argument("--sanitize", action="store_true", help="GCC AddressSanitizer/UndefinedBehaviorSanitizer")
     parser.add_argument("--vcvars", default=os.environ.get("HD2_VCVARS32"))
     parser.add_argument("--output-root", type=Path, default=ROOT / "build" / "campaign_mission")
@@ -83,6 +84,8 @@ def main():
         flags = ["-std=c++17", "-Wall", "-Wextra", "-Werror", "-pedantic"]
         if args.sanitize:
             flags += ["-fsanitize=address,undefined", "-fno-omit-frame-pointer", "-g"]
+            if args.sanitizer_library_dir:
+                flags += ["-L" + str(args.sanitizer_library_dir.resolve())]
         run("version", [compiler, "--version"])
         run("model", [compiler, *flags, *sources, "-o", "mission"])
         run("execute", [str(output / "mission")])
