@@ -2,13 +2,13 @@
 
 ## Coordination
 
-- Status: ready
-- Owner/session: unassigned
+- Status: active
+- Owner/session: Codex COOP-007 / thread `01a1ec02-1d0b-7791-8a57-e16ee680b905`, user assignment 2026-11-18
 - Canonical branch: `feature/coop-007-preparation-screen`
-- Base commit: not started
+- Base commit: `dbc9a85a7161d8844f2907dbaf6586c7f3b67d19`
 - Dependencies: COOP-002, COOP-003, COOP-011 (merged shared declarations)
 - Last checkpoint: none
-- Checkpoint location: none
+- Checkpoint location: `.worktrees/COOP-007`; canonical branch (publication pending)
 - Review/integration: none
 - Pull request: none
 
@@ -63,8 +63,9 @@ fake; no COOP-005 model implementation dependency is needed. Coordinate any `equ
 - Completed: dependencies; COOP-002 merged `9f59ff47`, COOP-003 merged `dd2aa98e`,
   COOP-011 merged `0f367ed6`.
 - Remaining: native component implementation and UI verification against the merged contract/layout/header.
-- Next action: obtain coordinator claim acknowledgment, create the canonical worktree,
-  then review the merged layout/interface and build the fake model/native component.
+- Claim acknowledged: coordinator ledger commit `cbe2a01b` (published).
+- Next action: implement snapshot-driven presenter and input/transaction guards, then build
+  the fake/native LS3D harness. No panel/frame extraction or shipping menu edits planned.
 - Blockers: none for the fake-backed component; native visuals/input still require
   this task's runtime component evidence and campaign-style review.
 - Decisions: new campaign-style UI, with existing singleplayer components reused when suitable.
