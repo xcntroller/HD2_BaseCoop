@@ -2,14 +2,14 @@
 
 ## Coordination
 
-- Status: active
+- Status: review
 - Owner/session: Codex / user-assigned COOP-001, 2026-11-18
 - Canonical branch: `feature/coop-001-build-baseline`
 - Base commit: `7e033adde95881baad06c6877cbbd6eef8197d96`
 - Dependencies: none
-- Last checkpoint: `ca28d52c` (build isolation and portable MSVC selection); next handoff commit contains this update
+- Last checkpoint: tooling `23079565`; runtime game/engine source `ca28d52c`; final evidence/handoff is this subsequent commit
 - Checkpoint location: `origin/feature/coop-001-build-baseline`; `.worktrees/COOP-001`
-- Review/integration: not ready; baseline acceptance remains required
+- Review/integration: implementation and bounded runtime baseline recorded; separate final review requested; not merged
 - Pull request: https://github.com/xcntroller/HD2_BaseCoop/pull/2 (draft)
 
 ## Branch authority and completion PR
@@ -47,12 +47,88 @@ temporary directories, so verify cache separation across worktrees.
 - Missing game data/toolchains are a blocker to the baseline gate, not a passing result.
   Split independently finished tooling improvements out if runtime access remains blocked.
 
+## Acceptance evidence
+
+| Criterion | Actual evidence |
+| --- | --- |
+| Exact environment/dependency/build/launch commands | [Build/baseline guide](../build_baseline.md): pinned downloader source, compiler/SDK/Python versions, local RPM extraction, Wine configuration, x87 flags, private game/prefix setup, solo and native host/guest commands. |
+| Playable x86 executable and matching DLLs | MSVC 19.44.35230 x86: rw_data link passed, 78 LS3DF units compiled/link passed, 272 game units compiled with zero diagnostics/link passed. All three PE machine headers 0x014c; exact hashes in guide. No gameplay C++ changes. |
+| Solo and real native co-op run with commits | Original Campaign/Tutorial: scripted intro, movement, inventory, return/exit. Two actual Wine game processes/prefixes connected to native Sicily2: independent loadouts/spawn, both directions of visible movement replication, inventory and weapon selection, two-player native status/ping/objectives. Source checkpoint `ca28d52c`; tests/scripts repeated at `23079565`. |
+| Concurrent/stale output safety | Three process-level tests passed under native Linux and clean embedded Windows Python/Wine; paths with spaces, cross-tree same filename, same-tree engine variant lock, failure exit propagation/release. Two real concurrent MSVC c_str.cpp checks in distinct worktrees each passed with their own root/response/object. |
+| Missing prerequisites remain blockers | Initial missing MSVC/SDK/Wine dependencies were resolved locally. Installed game data is present and 1.12.0 menu observed. GCC fallback remains unavailable for game syntax because gnu/stubs-32.h is absent; it is not counted as build/runtime evidence. |
+
+The runtime baseline is bounded: **partial Tutorial, two-player native mission run**.
+No mission completion, original campaign co-op mode, save/load, internet/NAT, dedicated
+server, healing or full interaction compatibility is claimed. Synthetic firing/reload
+input did not establish an ammunition change and is explicitly **not a passed check**.
+That remains a required check for later controller/mission acceptance; no gameplay fix
+or waiver of those gates is introduced here.
+
+## Validation actually performed
+
+Detailed commands, versions, artifact hashes and exact launch/settings are in the
+[guide](../build_baseline.md). Key commands executed from `.worktrees/COOP-001`:
+
+```bash
+python _re/tools/test_build_isolated.py -v
+python _re/tools/configure_wine_msvc.py --msvc-version 14.44.35207 --sdk-version 10.0.26100.0
+env -u WAYLAND_DISPLAY DISPLAY=:99 WINEPREFIX="$PWD/build/wine-prefix" WINEDEBUG=-all wine64 cmd /c 'build\tooling\run-python.bat' '_re\tools\test_build_isolated.py' -v
+env -u WAYLAND_DISPLAY DISPLAY=:99 WINEPREFIX="$PWD/build/wine-prefix" WINEDEBUG=-all wine64 cmd /c 'build\tooling\run-python.bat' '_re\tools\build_isolated.py' ls3df
+env -u WAYLAND_DISPLAY DISPLAY=:99 WINEPREFIX="$PWD/build/wine-prefix" WINEDEBUG=-all wine64 cmd /c 'build\tooling\run-python.bat' '_re\tools\build_isolated.py' rw-data
+env -u WAYLAND_DISPLAY DISPLAY=:99 WINEPREFIX="$PWD/build/wine-prefix" WINEDEBUG=-all wine64 cmd /c 'build\tooling\run-python.bat' '_re\tools\build_isolated.py' game --all --copy 'build\runtime\solo'
+git diff --check
+```
+
+- Tests: all three passed natively and under Wine. Initial embedded-Python child import
+  failure was corrected by an explicit test-child module path; rerun passed with stock
+  `python313._pth`. Launcher doesn't require modifying embedded Python configuration.
+- Real concurrency check: task and detached cache-probe worktrees independently report
+  `1 files, 0 errors, 0 warnings`; commands/paths are in the guide.
+- Runnable builds: all three links passed. Game retains `/arch:IA32`; optional missing
+  upstream icon/title resources did not prevent menu/mission operation.
+- Native runtime: host/guest use separate prefixes/displays, copied installation/data,
+  matching port DLLs, installed native DirectPlay components, IPv4, LAN port 31567/31568.
+  `port 11001 domain local` command ordering is material. Both appear on native Sicily2
+  status with zero kills/deaths and observed guest ping 6; original objectives not complete.
+- No `.RPT` crash reports generated. Local compiler/runtime logs and screenshots stay
+  ignored under `build/`; the guide lists exact evidence filenames and limitations.
+- Documentation checks: relative link targets, Python snippet syntax, shell snippet
+  syntax, whitespace and complete diff/scope review are performed before final publication.
+
+## PR test instructions and delivery
+
+**Source-only** build tooling/documentation. Runnable EXE/DLL/PDB files were built and
+tested locally, but are not distributed in Git; installed assets/toolchains/credentials
+are excluded. This is wired into build guidance, not a new gameplay entry point.
+
+1. Follow `docs/build_baseline.md` prerequisites and setup using a legitimate Sabre
+   Squadron1.12 installation; build matching DLLs and x86/x87 executable through wrapper.
+2. Run native/Windows process isolation tests and real two-worktree compile check.
+   Expect independent object roots, same-tree collision rejection and passing diagnostics.
+3. Repeat the original Tutorial flow and native two-client Sicily2 commands/actions.
+   Expect normal mission loading, each client's inventory and bidirectional movement
+   replication. Confirm firing/reload separately; these were not established here.
+4. Compare actual observations with the bounded baseline; review full diff and ensure
+   no gameplay, generated tier1, game assets or build outputs are included.
+
 ## Handoff
 
-- Completed: read design/workflow/index; fetched origin and checked branches, worktrees and PRs. No existing task branch or handoff. Kickoff coordinator accepted the claim on `coord/coop-work-queue`. Created canonical branch/worktree from integrated main.
-- Remaining: finish real host/guest in-mission actions, documentation and review; build and solo training run passed.
-- Next action: equip/accept both native co-op participants on Sicily2, spawn and verify replicated movement/actions, then finish baseline guide and review.
-- Blockers: none currently. MSVC/Wine and game data available. Native Wine DirectPlay server is insufficient; copied the already installed native DirectPlay components into private test prefixes and selected IPv4. `port` changes domain to internet, so tested LAN command orders `port 11001 domain local`; otherwise key validation fails. Guest has now connected to native host player setup.
-- Decisions: preserve the port's required runnable math/toolchain behavior. Scope expanded in coordinator ledger 6c0421e6 to permit `HD2_VCVARS32` override in engine build script, plus `_re/tools/build_isolated.py` and focused process tests; no engine/gameplay source changes.
-- Local state: portable tooling, download manifests/cache, compiler logs and Wine prefix are ignored under `.worktrees/COOP-001/build/`; installed Steam game remains untouched. Build-tool changes are in the next checkpoint.
-- Validation: Linux and clean embedded Windows Python/Wine pass 3 process-level isolation/lock/failure tests. Two real MSVC c_str.cpp checks ran concurrently in distinct worktrees and passed independently. All 78 LS3DF and 272 game translation units compiled; matching x86 DLL/executable links passed (game `/arch:IA32`, zero game diagnostics). Native x64 dlltool needs `-m i386 -f --32` to make every import archive member i386. Solo original Campaign/Tutorial: automatic squad/active soldier, loading/scripted scene, W movement, I inventory and normal return/exit passed. Native co-op host and guest now connected on Sicily2; mission actions pending. Detailed exact commands/evidence are being consolidated in docs/build_baseline.md.
+- Completed: canonical branch/worktree and published coordinator claim; diagnosed and
+  provisioned portable MSVC/SDK/Windows Python; build wrapper/locks and focused tests;
+  explicit toolchain override; reproducible Wine configurator; full matching runnable
+  builds; solo Tutorial and real native host/guest baseline; detailed command/evidence guide.
+- Files/interfaces: `_re/tools/build_isolated.py`, `test_build_isolated.py`,
+  `configure_wine_msvc.py`, `build_check.py`; `ls3df/build.py` environment override only;
+  root README, agent workflow, baseline guide and this record. No game/engine C++ edits,
+  protocol/layout changes or generated tier1 edits. Scope acknowledged in coordinator ledger.
+- Remaining: final independent/separate review, publication as ready PR, integration and
+  actual done/merge metadata. No missing compiler/game-data blocker remains.
+- Next action: review published diff and evidence against integrated main, address findings,
+  mark PR #2 ready and integrate only after acceptance review; then record actual merge SHA.
+- Known limits: partial runs and loopback only; unconfirmed firing/reload, mission completion,
+  saves/healing/vehicles and future campaign gameplay retain their separate evidence gates.
+- Local state: own tree contains this final evidence update before checkpoint. Ignored
+  toolchain/download cache, private prefixes/runtime copies, logs/screenshots and detached
+  cache-probe remain accessible; installed game/prefix were read-only sources.
+- Checkpoint publication: `origin/feature/coop-001-build-baseline`, draft PR #2. No work on
+  main; other task branches/worktrees preserved. Operational coordinator ledger is separate.
