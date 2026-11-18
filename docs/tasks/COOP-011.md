@@ -11,7 +11,8 @@
 - Checkpoint location: `.worktrees/COOP-011`; `origin/feature/coop-011-shared-declarations`; claim acknowledged at coordinator commit `72ced131`
 - Review/integration: final coordinator review passed; merged by PR #6 as `0f367ed62af337633941bca0d22d3ff1932129ba`
 - Pull request: https://github.com/xcntroller/HD2_BaseCoop/pull/6 (merged)
-- Completion metadata: `docs/coop-011-completion`, based on actual merged main `0f367ed6`; completion PR publication follows this checkpoint
+- Completion metadata: `docs/coop-011-completion`, based on actual merged main `0f367ed6`;
+  https://github.com/xcntroller/HD2_BaseCoop/pull/7, checkpoint `0fb97f5d` plus URL handoff
 
 ## Branch authority and completion PR
 
