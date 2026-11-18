@@ -140,6 +140,9 @@ void TickProgressionRegression(C_GameApp &app, const std::function<bool(C_Campai
             std::strcmp(game->GetMission()->GetName(), "Arctic1") == 0 &&
             game->GetMissionTime() > 5000 && game->IsPlayerInputEnabled() && !g_scriptModule.IsCutsceneRunning()) {
             finished = true;
+            // Stop mission scripts so they cannot change the seeded objectives
+            // during the original end-of-mission fade.
+            g_scriptModule.StopMission(true);
             game->SetObjectiveStatus(4, OBJECTIVE_OPEN);
             for (int objective = 1; objective <= 4; ++objective)
                 game->SetObjectiveStatus(objective, OBJECTIVE_COMPLETED);
