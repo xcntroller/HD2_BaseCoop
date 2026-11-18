@@ -9,7 +9,7 @@
 - Dependencies: COOP-001, COOP-004, COOP-005, COOP-006
 - Last checkpoint: source `6375ccad`, integrated-main sync `3a257b90`; final evidence in this documentation commit
 - Checkpoint location: `.worktrees/COOP-009`, canonical branch on origin
-- Review/integration: combined adapters validated; final COOP-008 independent review/merge gate pending
+- Review/integration: independent COOP-008 complete/final source review PASS; exact-head integration pending
 - Pull request: https://github.com/xcntroller/HD2_BaseCoop/pull/19 (draft)
 
 ## Branch authority and completion PR
@@ -73,8 +73,11 @@ and repeats affected checks; do not merge an unfinished dependency branch.
   Pre-generation retirement callback drains prior physical controllers before
   advancing ownership generation; failed/missing prior-world retirement does not
   advance the mission generation. Host simulation also requires its own successful
-  lifecycle Start receipt for the exact sealed session/generation. Final peer
-  rereview is pending; no source fixes remain.
+  lifecycle Start receipt for the exact sealed session/generation. Final COOP-008
+  review PASS through `3a257b90` / source `6375ccad`: independently reproduced
+  GCC 409 + 104 checks (`gcc-kqvcy9yg`), inspected matching final MSVC/sanitizer
+  and 282-unit full game evidence. Durable review comment is on PR #19.
+  No source fixes remain.
 - Remaining: final exact-head independent review and integration of PR #19.
   COOP-008 implementation and actual-done metadata are merged (`d34b6900`, `934143aa`);
   the agreed public progress setter is now called after native mission initialization.
@@ -96,7 +99,7 @@ and repeats affected checks; do not merge an unfinished dependency branch.
   host/guest control and protocol modules through world acknowledgment, reordered
   Running/Start, input, disconnect and pre-generation retirement.
 - Diff/document checks: `git diff --check`, complete final scope/history review,
-  Python runner syntax and local Markdown file links are required before merge.
+  Python runner syntax and local Markdown file links PASS.
 - Runtime evidence: a private copied 1.12 installation launched intro/main menu on
   Xvfb :101, original campaign flow was attempted but no mission-play acceptance is
   claimed. Focused source regressions establish dormant solo/native settings and
