@@ -2,14 +2,14 @@
 
 ## Coordination
 
-- Status: ready
-- Owner/session: unassigned
+- Status: active
+- Owner/session: Codex COOP-012, user assignment 2026-11-18, thread `01a1ed7a-8dcb-7ee1-8de0-23710cb94c81`
 - Canonical branch: `feature/coop-012-session-setup`
-- Base commit: not started
+- Base commit: `9ec7fe48bb21c38f9d95976b99198c6fb1576e74`
 - Dependencies: [COOP-010](COOP-010.md) live admission and development session
-- Last checkpoint: none
-- Checkpoint location: task queue only
-- Review/integration: none
+- Last checkpoint: claim and implementation plan
+- Checkpoint location: `.worktrees/COOP-012` and canonical remote branch
+- Review/integration: claim acknowledged at ledger `63b4ac3f`; parallel scope agreed with COOP-014 at `75131f7a`
 - Pull request: none
 
 ## Branch authority and completion PR
@@ -61,10 +61,17 @@ runtime evidence and legacy regression requirements.
 
 ## Handoff
 
-- Completed: task definition.
-- Remaining: implementation or verification and the acceptance evidence above.
-- Next action: Trace the mode picker resource and callbacks, then agree on the admitted-session seam with the COOP-013 scope.
-- Blockers: None in scope. Obtain a coordination claim before implementation.
-- Decisions: Use the confirmed host-led model and four-player cap. Record setup UX choices separately from open preparation policies.
-- Local state: no task worktree or artifacts.
-- Review notes: none.
+- Completed: COOP-010 integration ancestry, live coordinator ledger, existing
+  branches/worktrees and PRs checked. Canonical worktree created from integrated main.
+  Traced the native singleplayer picker, DirectPlay callbacks and COOP-010 handshake.
+- Scope: append the gated native mode-picker entry and setup screen. Keep setup
+  admission, participant and teardown state together for COOP-013. COOP-014 owns
+  Running dispatch, mission interactions and outcomes.
+- Decisions: opt in with the process environment `HD2_CAMPAIGN_COOP_MENU=1`;
+  ordinary game launch needs no additional arguments. Use direct IPv4 on the
+  existing fixed LAN port (31567), with an explicit cancel/leave/end action.
+- Next action: build the native screen and separate its setup lifetime from the
+  fixed two-player development mission. Validate real admission and teardown with
+  private Wine game instances alongside the original menu paths.
+- Local state: shared compiler and engine libraries are available; private runtime
+  copies and prefixes will live under ignored `build/`.
