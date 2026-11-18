@@ -2,7 +2,7 @@
 
 ## Coordination
 
-- Status: planned
+- Status: ready
 - Owner/session: unassigned
 - Canonical branch: `feature/coop-005-preparation-model`
 - Base commit: not started
@@ -63,9 +63,11 @@ and COOP-007 notification before editing shared equipment files.
 
 ## Handoff
 
-- Completed: proposed transaction rules in the campaign design.
-- Remaining: reviewed transaction contract, implementation, and behavioral tests.
-- Next action: read the merged COOP-002 contract and inventory reusable equipment validators.
-- Blockers: COOP-002 and COOP-011 have not merged; deploy/stock UX policies may need user input later.
+- Completed: design/contract foundation; COOP-002 merged `9f59ff47`, COOP-011 merged `0f367ed6`.
+- Remaining: transaction model/validators and behavioral tests against the merged declarations.
+- Next action: obtain coordinator claim acknowledgment, create the canonical worktree,
+  then inventory reusable validators and implement against the merged contract/header.
+- Blockers: none for isolated implementation/tests with explicit policy fixtures;
+  unresolved deploy/stock UX policies remain production gates, not silently chosen defaults.
 - Decisions: editing permissions are confirmed; shared-state implementation follows the contract.
 - Validation: none for this task.
