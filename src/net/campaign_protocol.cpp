@@ -516,11 +516,20 @@ bool Valid(const S_CampaignMissionManifest &x) {
         !Roster(x.m_Soldiers, x.m_Loadouts) || x.m_Bindings.size() > kMaxSoldiers || x.m_RequiredParticipants.size() > kMaxParticipants ||
         !Unique(x.m_Bindings, [](const auto &b) { return b.m_Soldier; }) ||
         !Unique(x.m_RequiredParticipants, [](const auto &p) { return p; })) return false;
+    std::vector<S_CampaignOwnershipRecord> records;
+    for (const auto &soldier : x.m_Soldiers) records.push_back(soldier.m_Ownership);
+    if (!ConsistentActors(records, x.m_Context)) return false;
     std::set<std::uint32_t> actors;
     for (const auto &b : x.m_Bindings) if (b.m_Actor.m_Session != x.m_Context.m_Session ||
         b.m_Actor.m_Generation != x.m_Context.m_MissionGeneration ||
         !actors.insert(b.m_Actor.m_Actor.Value()).second ||
         std::none_of(x.m_Soldiers.begin(), x.m_Soldiers.end(), [&](const auto &s) { return s.m_Soldier == b.m_Soldier; })) return false;
+    for (const auto &soldier : x.m_Soldiers) if (soldier.m_Ownership.m_Actor) {
+        const auto binding = std::find_if(x.m_Bindings.begin(), x.m_Bindings.end(),
+            [&](const auto &entry) { return entry.m_Soldier == soldier.m_Soldier; });
+        if (binding != x.m_Bindings.end() && (binding->m_Actor != *soldier.m_Ownership.m_Actor ||
+            binding->m_ControlRevision != soldier.m_Ownership.m_ControlRevision)) return false;
+    }
     return std::all_of(x.m_RequiredParticipants.begin(), x.m_RequiredParticipants.end(), [](const auto &p) { return Id(p); });
 }
 bool Valid(const S_CampaignSnapshotAck &x) {
@@ -825,13 +834,24 @@ E_CampaignReason C_InputGate::Validate(const S_Input &input, PlayerId sender,
     return E_CampaignReason::None;
 }
 void C_InputGate::Reset() { m_Control.reset(); m_Sequence = 0; }
+void C_PreparationReplica::Observe(PreparationGeneration generation, ViewRevision view) {
+    if (m_MinGeneration < generation) { m_MinGeneration = generation; m_MinView = view; }
+    else if (generation == m_MinGeneration && m_MinView < view) m_MinView = view;
+}
 E_CampaignReason C_PreparationReplica::Install(const S_CampaignPreparationSnapshot &snapshot) {
     T_Bytes encoded;
     if (Encode(T_Message(snapshot), encoded) != E_CampaignReason::None) return E_CampaignReason::Malformed;
     if (snapshot.m_Context.m_Session != m_Session) return E_CampaignReason::WrongSession;
     if (snapshot.m_Sync != E_CampaignSyncStatus::Current || snapshot.m_Connection != E_CampaignConnectionStatus::Admitted) return E_CampaignReason::SnapshotUnavailable;
+    if (m_Snapshot && snapshot.m_Generation < m_Snapshot->m_Generation) return E_CampaignReason::WrongGeneration;
+    if (snapshot.m_Generation < m_MinGeneration ||
+        (snapshot.m_Generation == m_MinGeneration && snapshot.m_ViewRevision < m_MinView)) {
+        // A delayed full snapshot cannot erase knowledge of a newer publication
+        // already observed in a gapped delta. Keep editing disabled until >=floor.
+        if (!m_Current) return E_CampaignReason::SnapshotGap;
+        return E_CampaignReason::StaleRevision;
+    }
     if (m_Snapshot) {
-        if (snapshot.m_Generation < m_Snapshot->m_Generation) return E_CampaignReason::WrongGeneration;
         if (snapshot.m_Generation == m_Snapshot->m_Generation) {
             if (snapshot.m_ViewRevision < m_Snapshot->m_ViewRevision) return E_CampaignReason::StaleRevision;
             if (snapshot.m_ViewRevision == m_Snapshot->m_ViewRevision) {
@@ -843,11 +863,13 @@ E_CampaignReason C_PreparationReplica::Install(const S_CampaignPreparationSnapsh
             if (snapshot.m_PreparationRevision < m_Snapshot->m_PreparationRevision || snapshot.m_OwnershipRevision < m_Snapshot->m_OwnershipRevision ||
                 snapshot.m_Context.m_MissionGeneration < m_Snapshot->m_Context.m_MissionGeneration) {
                 m_Current = false;
+                Observe(snapshot.m_Generation, snapshot.m_ViewRevision);
                 return E_CampaignReason::SnapshotGap;
             }
         }
     }
     m_Snapshot = std::make_shared<const S_CampaignPreparationSnapshot>(snapshot);
+    Observe(snapshot.m_Generation, snapshot.m_ViewRevision);
     m_Current = true;
     return E_CampaignReason::None;
 }
@@ -859,6 +881,7 @@ E_CampaignReason C_PreparationReplica::Apply(const S_PreparationDelta &delta) {
     if (m_Snapshot && delta.m_Replacement.m_Generation == m_Snapshot->m_Generation && !(m_Snapshot->m_ViewRevision < delta.m_Replacement.m_ViewRevision)) return E_CampaignReason::StaleRevision;
     if (!m_Current || !m_Snapshot || delta.m_Replacement.m_Generation != m_Snapshot->m_Generation || delta.m_Base != m_Snapshot->m_ViewRevision) {
         m_Current = false;
+        Observe(delta.m_Replacement.m_Generation, delta.m_Replacement.m_ViewRevision);
         return E_CampaignReason::SnapshotGap;
     }
     return Install(delta.m_Replacement);

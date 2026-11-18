@@ -140,7 +140,10 @@ public:
     E_CampaignReason Apply(const S_PreparationDelta &delta);
     S_CampaignPreparationView GetView() const;
 private:
+    void Observe(PreparationGeneration generation, ViewRevision view);
     SessionId m_Session;
+    PreparationGeneration m_MinGeneration;
+    ViewRevision m_MinView;
     T_CampaignPreparationSnapshot m_Snapshot;
     bool m_Current = false;
 };

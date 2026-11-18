@@ -133,7 +133,8 @@ not an incoming client's context.
 The decoder enforces structural validity and transport limits, unique roster,
 loadout, stock and participant IDs, exclusive human ownership, declared participant
 membership, matching loadout roster, valid slot membership and actor/session
-fences where those snapshots supply a baseline. One actor coordinate cannot be
+fences where those snapshots supply a baseline, including present manifest
+ownership actors and agreement with corresponding actor/control bindings. One actor coordinate cannot be
 bound to two soldiers at a single baseline, even with different slot-use values.
 Result metadata equals every corresponding baseline present in its attached
 authoritative state; duplicates retain the original metadata and original state
@@ -216,8 +217,8 @@ The server issues SessionId/PlayerId, accepts only the exact ack and rejects nat
 unmodded peers by deadline before spawn. Unknown required features reject;
 unsupported optional features are disabled. Feature bits 0/1/2 mean distinct
 identities, atomic preparation, guarded input; all three are required by defaults.
-No other feature has a codec/handler in 1.0. Matching duplicate Hello/Accept/Ack
-is harmless and deadline/rate-bounded; rejected/closed endpoints stay terminal.
+No other feature has a codec/handler in 1.0. Matching duplicate Hello while AwaitAck, retransmitted Accept on the admitted
+client and Ack on the admitted server are harmless and deadline/rate-bounded; rejected/closed endpoints stay terminal.
 `Tick` must run even with no incoming traffic. On timeout, the caller sends one
 bounded Reject if appropriate and closes the transport.
 
@@ -248,7 +249,10 @@ snapshot, including stock/loadouts/presence/rights/findings/readiness. Replica
 installation publishes a detached `shared_ptr<const ...>` only after complete
 validation. Stale/old-generation data never rolls back a view. A gap or regressing
 baseline disables editing (`Resyncing`, null current snapshot) until a full current
-snapshot arrives. Retained handles remain immutable for display history; they
+snapshot at least as new as the highest observed generation/view arrives. A
+late full snapshot of the pre-gap baseline cannot re-enable editing after a
+newer delta has been observed; the replica retains that minimum required epoch
+until a sufficiently new complete publication is installed. Retained handles remain immutable for display history; they
 cannot re-enable editing. A duplicate result's old inline state must use this same
 install rule; the local request correlation lifecycle remains the UI adapter's job.
 

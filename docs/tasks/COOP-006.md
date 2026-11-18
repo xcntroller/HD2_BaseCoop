@@ -115,6 +115,14 @@ adapters merge. Tests must reject pre-admission mutation without claiming a live
 - Independent reviewer: COOP-001 session accepted full read-only review after its
   completed task. Reviewer caught the transient WrongSession fixture race; fixed
   as above before checkpoint. No reviewer approval inferred until final report.
+- Independent review findings resolved in next checkpoint: replica retains minimum
+  observed preparation generation/view after a gap; delayed pre-gap full snapshots
+  cannot re-enable edits. Manifest nested actors share context/unique-coordinate
+  checks and must agree with a matching binding's ActorRef/control revision when
+  both present; reconstruction absence remains valid. README qualifies duplicate
+  Hello handling to AwaitAck. Focused regressions pass **541,811 checks** on GCC
+  (`gcc-ihns3m_g`); prior 6f4ea658 MSVCx86/ASan repeats passed541799. Final target/
+  sanitizer repeat and review of this focused delta pending.
 - Remaining: independent review, resolve any findings, mark PR ready and coordinator integration handoff. Ordinary
   runtime/game build not claimed; this independently testable component does not
   attach a live campaign handshake or world synchronization.

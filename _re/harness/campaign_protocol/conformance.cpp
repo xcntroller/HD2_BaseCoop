@@ -211,6 +211,11 @@ void Malformed() {
     CHECK(Encode(S_Reject{static_cast<R>(65536)}, bytes) == R::Malformed);
     auto input = Input(); input.m_Payload.resize(kMaxInputBytes + 1); CHECK(Encode(input, bytes) == R::Malformed);
     auto chunk = Chunk(); chunk.m_Count = UINT32_MAX; CHECK(Encode(chunk, bytes) == R::Malformed);
+    auto manifest = Manifest(); manifest.m_Soldiers[0].m_Ownership.m_Actor->m_Session = SessionId(1); CHECK(Encode(manifest, bytes) == R::Malformed);
+    manifest = Manifest(); manifest.m_Soldiers[0].m_Ownership.m_Actor->m_Generation = MissionGeneration(99); CHECK(Encode(manifest, bytes) == R::Malformed);
+    manifest = Manifest(); manifest.m_Bindings[0].m_Actor.m_SlotUse = ActorSlotUse(1); CHECK(Encode(manifest, bytes) == R::Malformed);
+    manifest = Manifest(); manifest.m_Bindings[0].m_ControlRevision = ControlRevision(8); CHECK(Encode(manifest, bytes) == R::Malformed);
+    manifest = Manifest(); manifest.m_Soldiers[0].m_Ownership.m_Actor.reset(); CHECK(Encode(manifest, bytes) == R::None); // reconstruction absence remains valid
 }
 C_Admission Server() { return {E_CampaignSessionKind::CampaignCoop, true, Hello(), Context().m_Session, PlayerId(5), 0}; }
 C_Admission Client() { return {E_CampaignSessionKind::CampaignCoop, false, Hello(), {}, {}, 0}; }
@@ -334,15 +339,25 @@ void Replicas() {
     auto future = next; future.m_ViewRevision = ViewRevision(13);
     CHECK(replica.Apply({ViewRevision(12), future}) == R::SnapshotGap); CHECK(!replica.GetView().m_Snapshot);
     CHECK(replica.Apply({ViewRevision(11), future}) == R::SnapshotGap); // only full snapshot repairs gap
-    CHECK(replica.Install(next) == R::None); // same full baseline repairs gap
-    auto conflict = next; conflict.m_Loadouts[0].m_Weight = 1; CHECK(replica.Install(conflict) == R::Malformed);
+    CHECK(replica.Install(next) == R::SnapshotGap); // delayed old full cannot erase observed view13
+    CHECK(!replica.GetView().m_Snapshot);
+    auto conflict = next; conflict.m_Loadouts[0].m_Weight = 1; CHECK(replica.Install(conflict) == R::SnapshotGap);
     CHECK(replica.Install(future) == R::None); CHECK(replica.GetView().m_Snapshot->m_ViewRevision == ViewRevision(13));
+    conflict = future; conflict.m_Loadouts[0].m_Weight = 1; CHECK(replica.Install(conflict) == R::Malformed);
     auto old = s; old.m_Generation = PreparationGeneration(3); CHECK(replica.Install(old) == R::WrongGeneration);
     CHECK(replica.GetView().m_Status == E_CampaignSyncStatus::Current);
     future.m_ViewRevision = ViewRevision(14); future.m_PreparationRevision = PreparationRevision(7);
     CHECK(replica.Install(future) == R::SnapshotGap); CHECK(!replica.GetView().m_Snapshot);
     future = s; future.m_Generation = PreparationGeneration(5); future.m_ViewRevision = ViewRevision(1); future.m_PreparationRevision = PreparationRevision(1);
     CHECK(replica.Install(future) == R::None);
+    // Observing a newer generation also raises the floor; old full generations
+    // and a low full view in that new generation cannot enable editing.
+    auto newGeneration = future; newGeneration.m_Generation = PreparationGeneration(6); newGeneration.m_ViewRevision = ViewRevision(5);
+    CHECK(replica.Apply({ViewRevision(4), newGeneration}) == R::SnapshotGap);
+    CHECK(replica.Install(future) == R::SnapshotGap);
+    auto insufficient = newGeneration; insufficient.m_ViewRevision = ViewRevision(4);
+    CHECK(replica.Install(insufficient) == R::SnapshotGap); CHECK(!replica.GetView().m_Snapshot);
+    CHECK(replica.Install(newGeneration) == R::None);
     auto wrong = s; wrong.m_Context.m_Session = SessionId(1); wrong.m_Soldiers[0].m_Ownership.m_Actor->m_Session = SessionId(1); CHECK(replica.Install(wrong) == R::WrongSession);
 }
 void Chunks() {
