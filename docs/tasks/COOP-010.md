@@ -7,7 +7,7 @@
 - Canonical branch: `feature/coop-010-two-player-mission`
 - Base commit: `6f1bdd96075b074a6a7b958257af5f56f8374fb5`
 - Dependencies: COOP-008, COOP-009 and their transitive merged dependencies
-- Last checkpoint: initial-world entry verified at source checkpoint `055daf08`
+- Last checkpoint: initial-world entry and live host publication at source checkpoint `2cb0509e`
 - Checkpoint location: `.worktrees/COOP-010` and the canonical branch on origin
 - Review/integration: claim acknowledged by coordination ledger commit `69cb6361`
 - Pull request: [#22](https://github.com/xcntroller/HD2_BaseCoop/pull/22) (draft)
@@ -97,13 +97,21 @@ roster/loadouts/policies as fixtures, not approved production menu behavior.
   The time-zero actor poses come from the host. The guest sends an exact
   snapshot acknowledgment after controller, actor and world installation.
   The host releases simulation only after both required acknowledgments.
-- Remaining: the host intro and script events still diverge from the guest
-  presentation after the barrier. Guarded live player input, host-to-guest
-  gameplay and objective replication, in-play disconnect preservation and
-  original Tutorial and native Sicily2 gameplay verification remain open.
-- Next action: connect the existing ownership-tagged input adapter and publish
-  generation-bound squad and objective state. Verify original scripted startup
-  on both instances, then exercise both players and the disconnect in mission.
+- The Running transport publishes typed, sequenced host mission updates for the
+  exact initial snapshot, mission generation and ownership revision. It sends
+  four squad actor poses, view and movement state, health and stance, the native
+  objective statuses, input availability and the host cutscene camera. The
+  guest updates its native actor presentation and objective definitions.
+- Remaining: wire the guest's controls, inventory requests and authoritative
+  weapon effects and item state. The guest intro camera follows the host,
+  with scripted scene props, audio and HUD transitions still pending. The
+  preserved guest soldier's health, equipment and position on disconnect
+  require explicit live evidence. Verify the Tutorial and native Sicily2
+  in mission and record a bounded co-op objective route.
+- Next action: use the committed guest ownership view to build input envelopes.
+  Validate at enqueue and execution on the host and feed native movement and
+  weapon controls without accepting guest positions. Exercise host and guest
+  movement, firing and reload, then inventory and in-play disconnect.
 - Blockers: none. COOP-008 merged at `d34b6900` and COOP-009 at `ce306626`.
 - Local prerequisites: root-checkout ignored `build/coop-shared-tooling/run-python.bat`
   configures preserved MSVC 14.44.35207 / SDK 10.0.26100.0 / Windows Python 3.13.9.
@@ -178,3 +186,28 @@ roster/loadouts/policies as fixtures, not approved production menu behavior.
     `4cca4f6c2fc0a9027e38ef0b821e9d5651a6187a1e841f04a052f37e9c058248`).
     Runtime logs, captures and the preceding crash report are in
     `build/coop-010-evidence/initial-world/` in the root checkout.
+
+
+- Live mission publication validation at the `2cb0509e` checkpoint
+  - The host log in `live-mission-v1` records the first four-actor update at
+    mission time 100. The guest applied it and received objectives 2, 3 and 1
+    opening. It entered the host's cutscene view at mission time 1,200 and
+    returned to its own soldier at 33,000. Captures confirm the original terrain
+    on both peers after the intro and a presentation difference during it.
+  - In the `tracker-replica` run the host observed PlayerId 2's process
+    disconnect. A new connection on provider slot 1 got PlayerId 3 and
+    received `JoinNotSupported` (39) while the same host remained Running.
+    The concurrent third local connection had timed out (37) before reaching
+    campaign admission. The proven rejection used the freed provider slot.
+  - Pinned MSVC x86 full game build compiled 286 units with zero diagnostics.
+    The runtime build for `live-mission-v1` had SHA-256
+    `42871f60945f934eb5936d3b35db2b183025a4a9ed310deca8213f34e95b607e`.
+    The final incremental build includes a native track null check and
+    terminates the session on a live publication failure. Its two affected
+    units compiled with zero diagnostics and linked.
+  - The protocol harness passed ten suites and 566,014 checks on GCC and
+    MSVC x86. Tests cover the feature negotiation, host-only direction,
+    malformed and duplicate actor records, and a new canonical wire fixture.
+  - Logs and screenshots are preserved in root ignored
+    `build/coop-010-evidence/initial-world/`. Player controls, completed
+    objective progress and disconnect state preservation remain unverified.
