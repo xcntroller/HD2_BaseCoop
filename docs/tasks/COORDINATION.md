@@ -6,7 +6,7 @@ creating or updating the operational branch. Do not merge its WIP ledger into `m
 
 ## Coordinator
 
-- Owner/session: Codex COOP-007 / thread `01a1ec02-1d0b-7791-8a57-e16ee680b905`; accepts COOP-006's explicit stopped-writer handoff `95afcaed` on 2026-11-18.
+- Owner/session: Codex COOP-007 explicitly STOPS ledger writes after this published transfer checkpoint; COOP-008 may accept next. Current COOP-007 review is independent and incomplete.
 - Contact/shared channel: this published ledger and active COOP-007 conversation; notifying prior coordinator and available reviewers. Existing claims/scopes remain unchanged.
 - Integrator: Codex COOP-007, with independent review before integration. No COOP-007 merge approval yet.
 - Latest checkpoint: `HEAD`; ordinary push to `origin/coord/coop-work-queue`.
@@ -100,7 +100,14 @@ missing fields. COOP-006 was notified explicitly before this stopped-writer hand
 
 ## COOP-008 kickoff / coordinator acceptance
 
-- COOP-008 accepts stopped-writer handoff at `eb25ab32`. Refreshed origin; main `0fcea78f` includes all 008 prerequisites. No existing 008 branch/PR/worktree at inspection.
+- Historical kickoff race: COOP-008 observed a prior stopped handoff, but COOP-007 had already accepted at `aa8081a6`. COOP-008 explicitly stopped after `bf838b1e`; the accepted task claim is retained, and transfer is reconciled below. Refreshed origin; main `0fcea78f` includes all 008 prerequisites. No existing 008 branch/PR/worktree at inspection.
 - Accepted claim: COOP-008, Codex thread `01a1ec1f-4589-7051-9994-2a236a14b49b`, `feature/coop-008-controller-adapters`, `.worktrees/COOP-008`, base `0fcea78f`. Scope: campaign_control_adapter, controller/input/presentation consumers and actors_module; own harness/docs. No game_rounds/spawn_point/game_app/profile layout edits.
 - COOP-009 user-assigned concurrent worker notified of reserved lifecycle scope and API sequencing; awaiting owner acknowledgment before claim row. COOP-007 scope/tooling preserved.
 - Controller adapter remains inactive until COOP-010; no live admission, dispatch or playable runtime acceptance is implied.
+
+## COOP-007 to COOP-008 explicit transfer
+
+- Race reconciled without rewriting history: `aa8081a6` established COOP-007 coordinator; `bf838b1e` appended COOP-008 kickoff before observing it. COOP-008 explicitly confirmed stopped ledger writes in the shared task channel. COOP-007 now acknowledges its user-assigned task claim, base `0fcea78f`, branch `feature/coop-008-controller-adapters`, owner thread `01a1ec1f-4589-7051-9994-2a236a14b49b`, reserved scope and checkpoint `22352122`.
+- COOP-009's concurrent user assignment is acknowledged: thread `01a1ec1f-ea8d-77f3-b0e9-7c683f367ec3`, branch `feature/coop-009-campaign-adapters`, base integrated `0fcea78f`. Scope remains the task's reserved lifecycle files; agree the COOP-008 adapter API and serialize shared lifecycle files before consumers bind. No prerequisite branch is stacked or merged unfinished.
+- COOP-007 implementation checkpoint `b7e6bb16` (own source `5f122ce5`) is published in draft PR #12; final native build passed, behavioral GCC/MSVC x86 passed, final native input/capture repeats ongoing. Independent full source/campaign-style/native-evidence review requested from COOP-003. No review/merge approval implied.
+- COOP-007 now explicitly STOPS all ledger writes after this ordinary push. COOP-008 may accept the role, update the current owner/header and claim rows, notify COOP-007/009, then serialize later reviews/integration. Preserve 007 resources; compiler reuse remains read-only with separate outputs/prefixes.
