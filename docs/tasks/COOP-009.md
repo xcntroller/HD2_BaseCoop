@@ -3,13 +3,13 @@
 ## Coordination
 
 - Status: active
-- Owner/session: Codex COOP-009, user assignment 2026-11-18; coordinator COOP-007 acknowledged claim on coord/coop-work-queue, coordination transferred to COOP-008
+- Owner/session: Codex COOP-009, user assignment 2026-11-18; coordinator COOP-007 acknowledged claim; COOP-009 accepted its stopped-writer handoff at ledger `9e051608`
 - Canonical branch: `feature/coop-009-campaign-adapters`
 - Base commit: `0fcea78f85d0fe9348c3b8e13d1a0f23f50a482a`
 - Dependencies: COOP-001, COOP-004, COOP-005, COOP-006
-- Last checkpoint: initial claim (this commit)
+- Last checkpoint: lifecycle/native adapter implementation (this commit)
 - Checkpoint location: `.worktrees/COOP-009`, canonical branch on origin
-- Review/integration: none
+- Review/integration: active component; final combined integration waits for COOP-008 merge
 - Pull request: none
 
 ## Branch authority and completion PR
@@ -62,14 +62,39 @@ and repeats affected checks; do not merge an unfinished dependency branch.
 
 ## Handoff
 
-- Completed: legacy start/stop/spawn coupling mapped in the design.
-- Remaining: campaign adapters, synchronization hooks, focused regressions and final combined review after COOP-008 merge.
-- Next action: implement frozen-manifest/lifecycle barrier and original-point native spawning; agree exact disconnect/context helpers with COOP-008.
-- Scope confirmed: sole lifecycle writer in game.cpp/game_app.cpp/game_rounds.cpp/spawn_point.cpp; narrow profile/script/AI adapters, campaign_mission_adapter and lifecycle harness. COOP-008 owns controller/human/actor dispatch files. Native SpawnPoint may gain nonvirtual helpers without layout changes. No live transport attachment; COOP-010 owns activation.
-- Coordination: all dependency implementations and completion records are merged; COOP-007 acknowledged claim before substantial work. Its compiler/SDK/Python may be borrowed read-only with private COOP-009 Wine prefix and isolated outputs.
-- Blockers: none for the isolated adapter task. COOP-006 protocol merged at
-  `59cb8944`; COOP-004 ownership merged at `59a480c8`,
-  COOP-005 preparation merged at `06d999d7`, and COOP-001 build/runtime baseline
-  merged at `15b572ff`. Prerequisites and commands are in [the guide](../build_baseline.md).
-- Decisions: original campaign spawning and mission behavior; multiplayer infrastructure reuse.
-- Validation: none for this task.
+- Completed: engine-independent frozen manifest/generation/actor binding/loading barrier,
+  reconstruction acknowledgment/start hooks, original-point native spawn conversion,
+  dormant lifecycle/profile/script/AI guards and source-extracted legacy regressions.
+  Native file split `campaign_mission_native.{h,cpp}` was acknowledged by COOP-007.
+- Remaining: final combined adapter check after COOP-008 merges (including its public
+  progress setter), exact-head independent review, final source checks and review PR.
+  No live attachment/menu or two-player campaign gameplay claim; COOP-010 owns those.
+- Next action: repeat target/sanitizer checks on the final source; add the agreed
+  COOP-008 progress setter call after its merge and review the combined native paths.
+- Validation run: GCC7 lifecycle suites/274 checks and3 extracted native source
+  regression suites/75 checks PASS; MSVC19.44.35230 x86 `/W4 /WX` same PASS in
+  `build/campaign_mission/msvc-_sn7paat` before tooling disappearance. Source has
+  subsequently gained safe-tick reconciliation, atomic profile writeback and bounds;
+  refreshed target/sanitizer checks are in progress, not yet claimed.
+- Build evidence: full MSVC x86/x87 game build compiled278 units,0 compiler messages,
+  link0/LAA yes (`build/full-game-build.log`). Later source refresh (`build/game-restored.log`)
+  compiled1 changed unit and linked successfully after private toolchain restoration.
+  The build predates the final source changes; final combined build remains required.
+- Runtime evidence: a private copied1.12 installation launched intro/main menu on
+  Xvfb :101, original campaign flow was attempted but no mission-play acceptance is
+  claimed. Focused source regressions establish dormant solo/native settings and
+  departure behavior; full live campaign acceptance remains COOP-010.
+- Resources: original COOP-007 toolchain/worktree disappeared externally after its
+  completion;007/008/009 confirmed absence, none reports deleting it. Historical
+  passing evidence remains accurate. Restored private009 compiler/SDK/WinPython
+  is `build/tooling/run-python.bat` (same14.44.35207/10.0.26100.0/3.13.9), with own
+  Wine prefix and isolated outputs. Read-only borrowing authorized for008.
+  Native imports/DLLs copied before deletion are preserved in ignored009 directories.
+- API: native callback hooks bind008 `SynchronizeCommitted`,
+  `FindCampaignTransportPlayer(int slot)`, `HandleCampaignDisconnect(PlayerId)`;
+  resolve authenticated incarnation before connection cleanup. All world/snapshot
+  and input dispatch obligations are in the [harness guide](../../_re/harness/campaign_mission/README.md).
+- Scope: sole lifecycle writer;008 retains all human/controller/actor consumers.
+  No shared DTO/legacy layout/wire changes or generated tier1 edits.
+- Prerequisites:001 `15b572ff`,004 `59a480c8`,005 `06d999d7`,006 `59cb8944` are merged.
+  Final009 combined adapter integration follows008 merge; no draft branch is stacked.

@@ -7,6 +7,7 @@
 #include <cstring>
 
 #include "game/actor.h"
+#include "game/campaign_mission_native.h"
 #include "game/actors_module.h"
 #include "game/car_effects.h"
 #include "game/collision.h"
@@ -94,6 +95,7 @@ void AwardTeamPoints(int points, int team)          // 0x0069bbd0
 // Switches the session to map `name` (null: the next one).
 void ChangeMap(const char *name)                    // 0x0069bcc0
 {
+    if (IsCampaignMission()) return;
     if (!g_mpSettings->SelectMap(name))
         return;
     C_game::SendToPlayers(GAME_MSG_SETTINGS);
@@ -107,6 +109,7 @@ void ChangeMap(const char *name)                    // 0x0069bcc0
 
 void LoadNextMap()                                  // 0x0069bca0
 {
+    if (IsCampaignMission()) return;
     g_mpSettings->SelectMap(nullptr);
     GetGameApp()->m_state->SetPendingState(GAME_STATE_NEXT_MAP);
 }
@@ -236,12 +239,13 @@ void C_game::SendToPlayers(int type)                // 0x00699560
 
 void C_game::Tick(int timeDelta)                    // 0x0069b1e0 (DS 0x006dc050)
 {
+    if (!SynchronizeCampaignMissionControllers() || !CanCampaignSimulate()) return;
     if (IsClient()) {
         m_interface->FilterInput(nullptr, nullptr);
         if (IsClient())
             g_teamManager.GetPlayerTeam()->Tick(timeDelta);
     }
-    if (!IsLocalGame()) {
+    if (!IsLocalGame() && !IsCampaignMission()) {
         if (g_mpSettings->dedicated) {
             // The dedicated server's console commands.
             for (char *command = GetConsole()->PopCommand(); command; command = GetConsole()->PopCommand())
@@ -313,6 +317,8 @@ void C_game::Tick(int timeDelta)                    // 0x0069b1e0 (DS 0x006dc050
 
 void C_game::Update(int timeDelta)                  // 0x0069b500 (DS 0x006dc3b0)
 {
+    if (!CanCampaignSimulate() && (!IsCampaignMission() ||
+        GetCampaignMissionSnapshot()->m_Context.m_Phase != E_CampaignPhase::Ending)) return;
 #ifndef HD2_DEDICATED   // no interface on the server
     if (IsClient())
         m_interface->FilterInput(nullptr, nullptr);
@@ -328,14 +334,15 @@ void C_game::Update(int timeDelta)                  // 0x0069b500 (DS 0x006dc3b0
             m_musicTimer = 0;
     }
 
-    if (IsLocalGame()) {
+    if (IsLocalGame() || IsCampaignSimulationAuthority()) {
         // 4 s after the objectives are decided (or the mission failed) the mission ends.
         if (m_roundState == ROUND_OVER && m_roundStateTime + 4000 < m_missionTime &&
             (AreObjectivesDecided() || m_missionFailed)) {
             m_roundState = ROUND_PLAYING;
             if (GetGameApp()->m_state != this)
                 return;
-            if (!g_playMode->singleMission && !m_missionFailed) {
+            if ((IsCampaignMission() && IsCampaignSimulationAuthority()) ||
+                (!IsCampaignMission() && !g_playMode->singleMission && !m_missionFailed)) {
                 EndMission(100);
                 if (g_teamManager.GetPlayerTeam()->GetActivePlayer())
                     ::GetCameraModule()->SetSpecialMode(2, true, nullptr);
@@ -344,7 +351,7 @@ void C_game::Update(int timeDelta)                  // 0x0069b500 (DS 0x006dc3b0
             m_state = GAME_STATE_GAME_MENU;
             return;
         }
-    } else {
+    } else if (!IsCampaignMission()) {
         CheckPlayerAreas(timeDelta);
         if (m_roundState == ROUND_WARMUP) {
 #ifndef HD2_DEDICATED   // no interface on the server
@@ -453,11 +460,12 @@ void C_game::Update(int timeDelta)                  // 0x0069b500 (DS 0x006dc3b0
         // (Outside cutscenes the original calls an empty interface method here.)
         m_state = GAME_STATE_RUNNING;
     } else if (m_state == GAME_STATE_ENDING) {
-        if (IsLocalGame())
+        if (IsLocalGame() || IsCampaignMission())
             m_state = m_mode == GAME_MODE_QUIT ? GAME_STATE_MAIN_MENU : GAME_STATE_ENDED;
         else
             m_state = GAME_STATE_MAIN_MENU;
     }
+    if (IsCampaignMission() && !CanCampaignSimulate()) return;
     g_teamManager.GetPlayerTeam()->Update(timeDelta);
     if (m_paused) {
         ::GetCameraModule()->Update(timeDelta);
@@ -499,7 +507,7 @@ int C_game::GetAttackingTeam() const
 
 void C_game::SetObjectiveStatus(int objective, int status)   // 0x0069bd30 (DS 0x006dcaa0)
 {
-    if (!IsLocalGame()) {
+    if (!IsLocalGame() && !IsCampaignMission()) {
         S_MpObjective *target = GetMpObjective(m_mission, objective - 1);
         if (g_mpSettings->gameType == MP_GAME_OBJECTIVES && status == OBJECTIVE_COMPLETED)
             AwardTeamPoints(target->points, target->team);
@@ -507,6 +515,7 @@ void C_game::SetObjectiveStatus(int objective, int status)   // 0x0069bd30 (DS 0
         GetGameApp()->SendGameMessage(GAME_MSG_OBJECTIVE, 0, objective, status, false);
         return;
     }
+    if (IsCampaignMission() && !IsCampaignSimulationAuthority()) return;
     // (A failed copy protection check made an objective fail critically now and then.)
     if (status == OBJECTIVE_COMPLETED) {
         bool bonus = false;
@@ -546,7 +555,7 @@ void C_game::ApplyObjectiveStatus(int objective, int status)   // 0x0069bf10 (DS
     }
     if (status == OBJECTIVE_INACTIVE)
         return;
-    if (IsLocalGame()) {
+    if (IsLocalGame() || IsCampaignMission()) {
         if (!AreObjectivesDecided())
             return;
         // All decided: the mission ends. (The message follows this objective's status.)
@@ -572,6 +581,7 @@ void C_game::ApplyObjectiveStatus(int objective, int status)   // 0x0069bf10 (DS
 
 void C_game::FailMission(bool deadlyArea)           // 0x0069c1a0 (DS 0x006dcf30)
 {
+    if (IsCampaignMission() && !IsCampaignSimulationAuthority()) return;
     m_missionFailed = true;
     m_roundState = ROUND_OVER;
     m_roundStateTime = m_missionTime;
@@ -617,6 +627,7 @@ void C_game::ReadObjectiveStates(C_BitStream *msg)  // 0x006994f0
 
 void C_game::CheckRoundEnd(int timeDelta)           // 0x00699e20
 {
+    if (IsCampaignMission()) return;
     g_roundCheckTimer += timeDelta;
     if (g_roundCheckTimer < 1000)
         return;
@@ -801,6 +812,7 @@ void C_game::ChooseVip()                            // 0x00699950
 
 void C_game::StartWarmup()                          // 0x00699b60
 {
+    if (IsCampaignMission()) return;
     g_netGame.ApplyPendingTeams();
     FreezePlayers(true);
     if (g_mpSettings->autoTeamBalance)
@@ -812,6 +824,7 @@ void C_game::StartWarmup()                          // 0x00699b60
 
 void C_game::StartNextRound()                       // 0x00699a80
 {
+    if (IsCampaignMission()) return;
     RestartMission(true);
     SendToPlayers(GAME_MSG_TEMP_ACTORS);
     GetGameApp()->SendGameMessage(GAME_MSG_SESSION, 0, 0, 0, true);
@@ -867,6 +880,7 @@ void C_game::CheckPlayerAreas(int timeDelta)        // 0x0069f1a0 (DS 0x006e0700
 
 void C_game::OnRoundOver(int winner)                // 0x00699860
 {
+    if (IsCampaignMission()) return;
     if (g_mpSettings->gameType != MP_GAME_DEATHMATCH && g_mpSettings->gameType != MP_GAME_COOPERATIVE) {
         m_roundState = ROUND_OVER;
         m_interface->ShowRespawnScreen(false);
@@ -882,6 +896,7 @@ void C_game::OnRoundOver(int winner)                // 0x00699860
 
 void C_game::OnRespawnScreen(bool unknown)          // 0x006998f0
 {
+    if (IsCampaignMission()) return;
     if (m_roundState != ROUND_PLAYING && m_roundState != ROUND_WARMUP)
         return;
     m_respawnRequest = unknown ? 1 : 2;
@@ -894,6 +909,7 @@ void C_game::OnRespawnScreen(bool unknown)          // 0x006998f0
 
 void C_game::OnWarmupStarted()                      // 0x00699ae0
 {
+    if (IsCampaignMission()) return;
     m_interface->ShowScores(false);
     m_interface->ShowMessage(TEXT_WARMUP);
     FreezePlayers(true);
@@ -909,6 +925,7 @@ void C_game::OnWarmupStarted()                      // 0x00699ae0
 
 void C_game::OnWarmupFinished()                     // 0x00699bd0
 {
+    if (IsCampaignMission()) return;
     m_roundTime = 0;
     FreezePlayers(false);
     m_interface->ShowMessage(-1);
@@ -976,6 +993,7 @@ int C_game::GetVipSlot() const                      // 0x0069e340
 void C_game::RespawnPlayer(int slot, const S_vector4 &pos, const S_vector4 &dir, S_SoldierState *state,
                            const int *stats)        // 0x0069da50
 {
+    if (IsCampaignMission()) return;
     S_NetPlayerState *players = g_netGame.LockPlayers();
     if (!IsServer() && g_mpSettings->gameType == MP_GAME_COOPERATIVE) {
         if (g_mpSettings->teamLives == 0)
@@ -1009,6 +1027,7 @@ void C_game::RespawnPlayer(int slot, const S_vector4 &pos, const S_vector4 &dir,
 
 void C_game::OnRespawnRequest(int slot, S_SoldierState *state, int *stats)   // 0x0069dc90
 {
+    if (IsCampaignMission()) { delete state; delete[] stats; return; }
     S_vector4 pos;
     S_vector4 dir;
     switch (g_mpSettings->gameType) {
@@ -1103,6 +1122,7 @@ void C_game::OnRespawnRequest(int slot, S_SoldierState *state, int *stats)   // 
 
 void C_game::OnPlayerJoined(int slot, S_SoldierState *state, int *stats)   // 0x0069e610
 {
+    if (IsCampaignMission()) return;
     if (!IsLocalGame() && g_actorsModule.GetActor(slot))
         return;
     switch (g_mpSettings->gameType) {
@@ -1169,6 +1189,7 @@ void C_game::OnPlayerJoined(int slot, S_SoldierState *state, int *stats)   // 0x
 
 void C_game::OnPlayerSpawned(int slot, C_Human *human)   // 0x0069e560 (DS 0x006df940)
 {
+    if (IsCampaignMission()) return;
     if (slot != g_localPlayerSlot)
         return;
     if (m_roundState == ROUND_WARMUP) {
@@ -1194,6 +1215,7 @@ void C_game::OnPlayerSpawned(int slot, C_Human *human)   // 0x0069e560 (DS 0x006
 
 void C_game::OnPlayerLeft(int connection)           // 0x0069e9f0 (DS 0x006dfe70)
 {
+    if (IsCampaignMission()) { HandleCampaignMissionDeparture(connection); return; }
     S_NetPlayerState *players = g_netGame.LockPlayers();
     int slot = -1;
     for (int i = g_netGame.GetPlayerCount(); i-- > 0;) {

@@ -1,5 +1,6 @@
 // Spawn points (C_SpawnPoint; original 0x00611730..0x006131d0).
 #include "game/spawn_point.h"
+#include "game/campaign_mission_adapter.h"
 
 #include <windows.h>
 #include <mmsystem.h>                                   // timeGetTime
@@ -131,7 +132,7 @@ bool C_SpawnPoint::ReadProperties(C_chunk &chunk)       // 0x006119b0
 
 void C_SpawnPoint::Spawn(int slot, S_SoldierState *state, int *stats)   // 0x00611c90 (DS 0x0063bf90)
 {
-    if (!IsServer())
+    if (IsCampaignMission() || !IsServer())
         return;
     if (IsLocalGame())
         m_free = false;
@@ -230,6 +231,35 @@ void C_SpawnPoint::Spawn(int slot, S_SoldierState *state, int *stats)   // 0x006
     }
 }
 
+
+C_Human *C_SpawnPoint::SpawnCampaign(S_SquadSoldier &state, const int *stats)
+{
+    if (!IsCampaignSimulationAuthority() || !IsServer() || !m_frame || !m_free || !stats)
+        return nullptr;
+    const int actorSlot = g_actorsModule.FindFreePlayerSlot();
+    if (actorSlot < 0) return nullptr;
+    const S_matrix &world = m_frame->GetMatrix();
+    const S_vector axis = world(2).NormalizedGame();
+    const S_vector4 pos{world.m[3][0], world.m[3][1], world.m[3][2], world.m[3][3]};
+    const S_vector4 dir{axis.x, axis.y, axis.z, world.m[2][3]};
+    // Consume a detached committed state, never stock or another player's draft.
+    state.SplitStacks();
+    C_Human *human = CreateSoldier(-1, actorSlot, pos, dir, &state, stats, -1, false);
+    if (!human) return nullptr;
+    m_free = false; m_spawned = human;
+    human->StartMission(true);
+    if (IsClient()) human->StartMission(false);
+    // C_Human::Setup preserves campaign progress through the controller adapter.
+    if (!g_teamManager.GetPlayerTeam()->IsMember(human))
+        g_teamManager.GetPlayerTeam()->AddMember(human);
+    if (const S_FrameData *data = m_frame->GetData()) {
+        if (data->script) data->script->OnUse(0);
+    }
+    // No native player spawn message: its 8-bit slot cannot represent ownership
+    // and omits campaign generation/identity. Initial-world transfer owns clients.
+    return human;
+}
+
 void C_SpawnPoint::SetupSpawned(int slot, int actorSlot, const S_vector4 &pos, const S_vector4 &dir,
                                 S_SoldierState *state, const int *stats)   // 0x006123a0
 {
@@ -276,7 +306,7 @@ void C_SpawnPoint::SetupSpawned(int slot, int actorSlot, const S_vector4 &pos, c
 
 void C_SpawnPoint::OnMessage(C_BitStream *stream)       // 0x006125a0
 {
-    if (!IsClient() || !stream)
+    if (IsCampaignMission() || !IsClient() || !stream)
         return;
     auto *msg = static_cast<C_NetMessage *>(stream);
     if (msg->ReadBits(MSG_KIND_BITS) != MSG_SPAWNED)
@@ -362,7 +392,7 @@ C_Human *C_SpawnPoint::CreateSoldier(int slot, int actorSlot, const S_vector4 &p
     human->SetFrame(frame);
     frame->Release();
     human->Setup(*state, npc ? HUMAN_ROLE_NPC_TEAM : HUMAN_ROLE_PLAYER, 1, stats, slot);
-    if (!IsLocalGame()) {
+    if (!IsLocalGame() && !IsCampaignMission()) {
         S_NetPlayerState *players = g_netGame.LockPlayers();
         players[slot].human = human;
         players[slot].activityTime = timeGetTime();
