@@ -2,7 +2,7 @@
 
 ## Coordination
 
-- Status: planned
+- Status: ready
 - Owner/session: unassigned
 - Canonical branch: `feature/coop-009-campaign-adapters`
 - Base commit: not started
@@ -64,8 +64,11 @@ and repeats affected checks; do not merge an unfinished dependency branch.
 
 - Completed: legacy start/stop/spawn coupling mapped in the design.
 - Remaining: exact file split, campaign adapters, synchronization hooks, focused regressions.
-- Next action: review merged contracts/models and agree on overlapping edits with COOP-008.
-- Blockers: COOP-004/005/006 have not merged. COOP-001 build/runtime baseline merged at
-  `15b572ff`; prerequisites and commands are in [the guide](../build_baseline.md).
+- Next action: obtain coordinator claim acknowledgment, review merged contracts/models,
+  and agree on overlapping edits with COOP-008.
+- Blockers: none for the isolated adapter task. COOP-006 protocol merged at
+  `59cb8944`; COOP-004 ownership merged at `59a480c8`,
+  COOP-005 preparation merged at `06d999d7`, and COOP-001 build/runtime baseline
+  merged at `15b572ff`. Prerequisites and commands are in [the guide](../build_baseline.md).
 - Decisions: original campaign spawning and mission behavior; multiplayer infrastructure reuse.
 - Validation: none for this task.

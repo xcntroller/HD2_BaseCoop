@@ -1,0 +1,54 @@
+# Protocol 1.0 body fields in wire order; see README for container/scalar encodings.
+ActorRef Session Generation Actor SlotUse
+S_CampaignContentDescriptor CampaignContent MissionContent SoldierContent ItemContent Rules
+S_CampaignRulesDescriptor Content Difficulty
+S_CampaignSessionContext Kind Session Campaign Mission MissionGeneration Phase UsesCampaignRules IsTransportServer IsTransportClient LocalPlayer HostPlayer Rules
+S_CampaignCapability Allowed Reason
+S_CampaignPolicyDecision Policy State Explanation
+S_CampaignPolicySnapshot Decisions
+S_CampaignOwnershipRecord Soldier Eligible Deployed Alive Owner Actor Scripted ControlRevision
+S_CampaignParticipant Player DisplayName Connected Admitted ReadyAt
+S_CampaignOwnershipSnapshot Context Revision Soldiers Participants
+S_CampaignControlToken Session Generation Player Soldier Actor ControlRevision
+S_CampaignRequestContext Session PlayerEcho Request
+S_CampaignOwnershipTarget Soldier ExpectedControlRevision
+S_CampaignClaim Target
+S_CampaignRelease Target
+S_CampaignSwitch From To
+S_CampaignOwnershipRequest Context PreparationGeneration MissionGeneration ExpectedOwnershipRevision Operation
+S_CampaignPlacement Slot Position
+S_CampaignItemState Item Quantity AmmoType Rounds Charges Condition
+S_CampaignLoadoutItem Entry State Placement
+S_CampaignSkill Key Value
+S_CampaignFinding Reason Severity Message Soldier Item Entry Slot UnresolvedPolicy Required Actual
+S_CampaignConstraintSummary Key Description Findings
+S_CampaignSoldierLoadout Soldier Items Weight WeightCapacity BeltVolume BeltCapacity BackpackVolume BackpackCapacity BackpackWeight BackpackWeightCapacity BeltWeight Skills Findings
+S_CampaignAllowedDestination Soldier Placements CanTake
+S_CampaignStockEntry Entry State Destinations Constraints
+S_CampaignEssential Item Required Carried Deficit EligibleCarriers Findings
+S_CampaignSoldierPresentation Soldier Profile DisplayName Portrait Preview Ownership CanView CanEdit CanClaim CanRelease Restrictions
+S_CampaignPresentationSlot Soldier UnavailableReason Restrictions
+S_CampaignBriefing OperationTitle MissionTitle Body Image
+S_CampaignPreparationSnapshot Context Generation PreparationRevision ViewRevision OwnershipRevision Connection Sync Briefing Slots Soldiers Loadouts Stock Essentials Participants Findings CanDeploy DeployBlockers Policies
+S_CampaignTakeFromStock Soldier StockEntry Destination Count
+S_CampaignReturnToStock Soldier Entry Count
+S_CampaignMoveWithinLoadout Soldier Entry Destination Count
+S_CampaignApplyPreset Preset
+S_CampaignAutoEquip Policy PreferredItems
+S_CampaignPreparationRequestContext Request Generation ExpectedPreparationRevision
+S_CampaignEditRequest Context Targets Operation
+S_CampaignReadyRequest Context Ready
+S_CampaignDeployRequest Context
+S_CampaignResyncDescriptor Session PreparationGeneration MissionGeneration OwnershipRevision PreparationRevision ViewRevision Snapshot Reason
+S_CampaignRequestResult Context Family Outcome Reason PreparationGeneration MissionGeneration OwnershipRevision PreparationRevision ViewRevision OriginalOutcome State Findings
+S_CampaignActorBinding Soldier Actor ControlRevision
+S_CampaignMissionManifest Snapshot Context PreparationGeneration FrozenPreparationRevision ViewRevision OwnershipRevision Soldiers Loadouts Bindings RequiredParticipants
+S_CampaignSnapshotAck Session PlayerEcho Generation Snapshot PreparationGeneration PreparationRevision ViewRevision OwnershipRevision
+S_CampaignStartSimulation Session Generation Snapshot
+S_Hello Mod Major MinMinor MaxMinor Required Offered Kind Content
+S_Accept Major Minor Features Session Player Content MaxFrameBytes MaxWorldBytes MaxParticipants
+S_NegotiationAck Major Minor Features Session Player
+S_Reject Reason
+S_PreparationDelta Base Replacement
+S_Input Control Sequence Kind Payload
+S_WorldChunk Baseline TotalBytes Index Count Crc32 Bytes
