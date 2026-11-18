@@ -67,8 +67,17 @@ Separate worktrees do not isolate the existing build tools' temporary directorie
 the same variant can overwrite each other's objects and response files, or reuse objects
 from a different branch.
 
-Until the baseline/build task provides explicit unique output directories, either serialize
-these legacy builds or launch each build with process-local Windows `TEMP` and `TMP`
+Prefer `python _re/tools/build_isolated.py TOOL [arguments]` using Windows Python for
+MSVC: `TOOL` is `game`, `ls3df`, `rw-data`, or `check` for the baseline route. It sets
+TEMP/TMP/TMPDIR in the child environment under this worktree's ignored `build/isolated/`,
+and rejects a concurrent build of the same family in that tree. Release/debug engine
+builds share a lock because their final DLL destination is shared; check/link-check share
+objects and a lock. Interrupted builds retain an inspectable `build.lock/owner.json`;
+confirm the owner and compiler descendants have stopped before removing a stale lock.
+See [the build/baseline guide](build_baseline.md) for commands and tested evidence.
+
+If invoking the legacy scripts directly, either serialize them or launch each build
+with process-local Windows `TEMP` and `TMP`
 pointing to a unique absolute directory for its worktree. Create that directory first and
 verify Python's choice with `python -c "import tempfile; print(tempfile.gettempdir())"`
 in the same environment. A directory under that worktree's ignored `build/` directory is
