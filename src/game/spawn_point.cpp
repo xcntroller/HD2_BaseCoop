@@ -249,7 +249,7 @@ C_Human *C_SpawnPoint::SpawnCampaign(S_SquadSoldier &state, const int *stats)
     m_free = false; m_spawned = human;
     human->StartMission(true);
     if (IsClient()) human->StartMission(false);
-    // C_Human::Setup preserves campaign progress through the controller adapter.
+    human->SetCampaignProgress(state.progress);
     if (!g_teamManager.GetPlayerTeam()->IsMember(human))
         g_teamManager.GetPlayerTeam()->AddMember(human);
     // No native player spawn message: its 8-bit slot cannot represent ownership

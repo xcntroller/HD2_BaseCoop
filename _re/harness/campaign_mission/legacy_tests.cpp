@@ -47,7 +47,7 @@ struct PointScript {int uses=0;void OnUse(int){++uses;}};
 struct S_FrameData {PointScript *script=nullptr;};
 struct PointFrame {S_matrix world;S_FrameData data;const S_matrix &GetMatrix(){return world;}const S_FrameData *GetData(){return &data;}};
 struct C_Human {
-    int starts=0;C_Human *GetController(){return this;}
+    int starts=0,progress=0;void SetCampaignProgress(int value){progress=value;}C_Human *GetController(){return this;}
     void StartMission(bool){++starts;}
 };
 struct Team {
@@ -157,7 +157,7 @@ void TestOriginalPointSpawn() {
     CHECK(point.SpawnCampaign(state,stats.data())==&C_SpawnPoint::created);
     CHECK(C_SpawnPoint::slot==-1);CHECK(!C_SpawnPoint::npc);CHECK(C_SpawnPoint::actor==23);CHECK(C_SpawnPoint::health==640);
     CHECK(C_SpawnPoint::position.x==10);CHECK(C_SpawnPoint::position.y==20);CHECK(C_SpawnPoint::position.z==30);
-    CHECK(C_SpawnPoint::direction.z==1);CHECK(!point.m_free);CHECK(point.m_spawned->starts==2);
+    CHECK(C_SpawnPoint::direction.z==1);CHECK(!point.m_free);CHECK(point.m_spawned->starts==2);CHECK(point.m_spawned->progress==state.progress);
     CHECK(g_teamManager.GetPlayerTeam()->IsMember(point.m_spawned));CHECK(script.uses==0);
     point.NotifyCampaignSpawned();CHECK(script.uses==1);
     CHECK(point.SpawnCampaign(state,stats.data())==nullptr);
