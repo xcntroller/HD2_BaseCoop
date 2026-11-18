@@ -7,7 +7,7 @@
 - Canonical branch: `feature/coop-014-arctic1-completion`
 - Base commit: `9ec7fe48bb21c38f9d95976b99198c6fb1576e74`
 - Dependencies: [COOP-010](COOP-010.md) two-player Arctic1 development path
-- Last checkpoint: `def38937` native squad message fix and paired cabin parity
+- Last checkpoint: `d859ded8` paired squad movement, host-directed intro and terminal evidence logging
 - Checkpoint location: `.worktrees/COOP-014` and the canonical branch on origin
 - Review/integration: COOP-012 coordinator accepted the claim in ledger `75131f7a`.
 - Pull request: [draft #25](https://github.com/xcntroller/HD2_BaseCoop/pull/25)
@@ -124,9 +124,11 @@ for progression.
   Corrected the ownership at `def38937`, after which incremental link passed
   with zero diagnostics. `build/evidence/merged-paired/` contains the
   subsequent two-process proof of matching aircraft cabin, actor and subtitle
-  presentation, plus native host squad signal pages. The previous paired route
-  attempted the ridge at matching mission state and lost both controlled
-  soldiers while the two squad AI survived. It did not produce a terminal result.
+  presentation, plus native host squad signal pages. The run later reached an original squad-wipe failure on the host. The
+  guest had already closed, so only the host terminal log was captured.
+  The result had success false, objectives 1 through 3 failed, and all
+  four soldiers at zero health. Before shutdown the guest’s shot changed
+  the authoritative ammo count to four and the guest presented the host event.
 - The clean base solo reference used a private 1.12 profile with best original
   campaign progress set to 1 to reveal Arctic1 in Single Mission. In the
   original menu select **Op. Snowball - First Strike**, use automatic squad
@@ -134,10 +136,28 @@ for progression.
   soldier bypassed the early patrol on a route along the southern ridge.
   The original guide spoke at the blue rendezvous marker.
   `build/evidence/original-solo/guide-contact.png` captures the dialogue.
-  Full solo success is pending.
-- Runtime captures so far verify visual subtitles and scene presentation.
-  The private prefixes had native sound output disabled. A repeat with sound
-  enabled is required to verify audible output.
+  The player then advanced through the original guide dialogue into the swamp.
+  Leaving the authored path near the western edge of the swamp killed the active
+  soldier. Full solo success is pending.
+- Enabled sound in the two private Wine prefixes and recorded each game stream
+  independently while the aircraft scene ran. Both 48 kHz stereo streams were
+  non-silent, with peak levels of −2.4 dB on the host and −2.7 dB on the guest.
+  The pair displayed the aircraft exterior and cabin with the native subtitles.
+  Captures and per-process logs are in `build/evidence/audio-failure-paired/`.
+- The private host debugger read the living AI follower's native simulation
+  position at x=1,145 m while the guest still showed that soldier at the spawn.
+  Orders reached the native follower, but its model was disconnected from the
+  host-integrated body. The fix uses the authoritative movement path for the
+  host's whole squad. On the next pair, both AI soldiers followed within about
+  1 m of the host after the first 18 m of travel. Each peer received matching
+  health values. The candidate linked with two units compiled and zero diagnostics
+  and has SHA-256
+  `72ceb8ef72ab4c5578943a6b9b636189ca79a888ad5d301c2a62b851a0656f3b`.
+- In that pair, pressing Escape on the guest left the active aircraft cutscene
+  playing. Pressing Escape on the host ended the cutscene on both peers and
+  activated objective 1 once on each. The guest began its cutscene view at
+  mission time 1,200 ms and left at 43,500 ms. The guest Escape screenshot
+  and runtime evidence are in `build/evidence/grounded-squad-paired/`.
 
 ## PR test instructions and delivery
 
@@ -151,12 +171,11 @@ for progression.
 - Completed: refreshed origin, verified COOP-010 merge `738b124d` is an ancestor of
   the base, checked for duplicate work, and established the canonical worktree.
 - Remaining: original solo and paired completion, failure and terminal state evidence,
-  guest interactions, full cutscene parity and the applicable legacy regressions.
-- Next action: continue the original rendezvous on the solo reference and
-  repeat the southern approach with both peers. Exercise the host squad orders,
-  native door actions and the mission's success and failure boundaries.
-- Blockers: none. Serialize live LAN tests with COOP-012 if the fixed provider port
-  is occupied.
+  guest door interaction, paired terminal failure, and the applicable legacy regressions.
+- Next action: continue the southern approach with both peers and repeat the swamp
+  escort on the solo reference from the private native quicksave. Exercise the
+  native door and the mission’s success and failure boundaries.
+- Blockers: none. Serialize live LAN tests with COOP-013 when the fixed provider port is occupied.
 - Decisions: Use the existing development launch and game data. Base the interaction scope on what the original Arctic1 route exercises.
 - Local state: private build outputs and runtime copies under ignored worktree `build/`.
   Shared pinned MSVC x86 and matching engine builds are available read-only in the
