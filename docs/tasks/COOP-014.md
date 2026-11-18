@@ -2,15 +2,16 @@
 
 ## Coordination
 
-- Status: active
+- Status: review
 - Owner/session: Codex COOP-014, user assignment, thread `01a1ed7a-ddd9-7000-bbec-e292bd129d25`
 - Canonical branch: `feature/coop-014-arctic1-completion`
 - Base commit: `9ec7fe48bb21c38f9d95976b99198c6fb1576e74`
-- Dependencies: [COOP-010](COOP-010.md) two-player Arctic1 development path
+- Dependencies: [COOP-010](COOP-010.md) two-player Arctic1 development path.
+  Integration also exercises the menu deployment from [COOP-013](COOP-013.md).
 - Last source checkpoint: `22763e24` native gameplay integrated with COOP-013
 - Checkpoint location: `.worktrees/COOP-014` and the canonical branch on origin
 - Review/integration: COOP-012 coordinator accepted the claim in ledger `75131f7a`.
-- Pull request: [draft #25](https://github.com/xcntroller/HD2_BaseCoop/pull/25)
+- Pull request: [#25](https://github.com/xcntroller/HD2_BaseCoop/pull/25)
 
 ## Branch authority and completion PR
 
@@ -52,7 +53,7 @@ for the later campaign-wide verification task.
 
 ## Owner playtest
 
-The project owner will run the full original paired mission. The playtest
+**Pending owner playtest.** The project owner will run the full original paired mission. The playtest
 instructions below cover that route. The original mission scripts and objective
 definitions are used unchanged in the playtest build.
 
@@ -88,17 +89,18 @@ the original garrison and signals objective 3; its list deliberately excludes
 one maintenance worker. When objectives 2 and 3 complete, the original
 gathering condition checks all living squad members near the entrance. It
 records the squad count and nearby door state for the next mission. All living
-squad members surviving is a bonus, as is stopping the vehicle. These are
-static findings. Actual solo and paired completion, failure, the native
-interactions encountered in play, and final squad evidence are still pending.
+squad members surviving is a bonus, as is stopping the vehicle.
 
-The VM and AI currently tick on the host. The guest receives a camera, squad poses
-and objective statuses but no final outcome, ambient human motion, or most of the
-scene and HUD events used by Arctic1's scripts. The existing native result hook is
-unwired and campaign teardown can write soldier state independently of mission
-success. COOP-014 will make the original outcome and the captured terminal squad
-available at the native lifecycle boundary, with COOP-015 consuming that result
-for progression.
+At the COOP-010 baseline the host ran the VM and AI, and the guest received
+a camera, squad poses and objective statuses. COOP-014 adds terminal outcome,
+ambient human motion and the scene, audio and HUD events used on the Arctic1
+route. The host captures the original outcome and terminal squad at the
+native lifecycle boundary for COOP-015.
+
+The [campaign-wide verification task](COOP-020.md) should cover the optional
+vehicle objective and interaction families outside these route checks, including
+vehicle operation, ladders, body carrying, medical treatment, resupply and
+special equipment.
 
 ### Implementation checkpoint
 
@@ -249,8 +251,6 @@ for progression.
   clean production x86 build compiled 292 units with zero compiler diagnostics.
   Release executable SHA-256
   `d691fe98f6b01acf9ca38b373ded12c96c3112fffc79b6f2124689053347b9b8`.
-  GCC and MSVC x86 protocol checks each passed 12 suites and 567,550 checks.
-  The GCC controller, mission lifecycle and legacy source suites also passed.
 - **Production deployment.** Two copies of the release entered Arctic1 from
   the standard Co-op Campaign menu. Both players claimed and readied distinct
   soldiers. The host captured a 37,646-byte initial world with CRC32
@@ -279,11 +279,28 @@ for progression.
   attempt left it at status 3. Both peers reached Failure with objective
   states 3 / 2 / 2, and the terminal record contained four soldiers.
   The log verifier passed on `build/evidence/debug-guide-failure/`.
-- The fixture lives in the isolated harness under `_re/harness/campaign_arctic1/`.
-  The production build has no fixture hook. The seeded terminal result is
-  technical evidence for synchronization. The original solo completion
-  is the genuine playthrough evidence. The original paired completion
-  remains for the user's full playtest.
+- **Debug-assisted native objectives.** The checked host supplied the guide's
+  completion signal, placed the host soldier near the entrance, and induced
+  native deaths for all but one original garrison guard. Objective 2 succeeded
+  through the original proximity check while objective 3 stayed open.
+  The last guard's native death completed objective 3. The fixture let the
+  gathering trigger run with the rest of the squad outside its radius,
+  maintained host health during the wait, then moved the other three soldiers
+  into range. The original script completed the gathering and all-survive
+  objectives. Both peers recorded the same terminal Success, and the host
+  captured the script's saved count of four and soldier health of 364, 585,
+  545 and 555. The guest applied the result at mission time 29,300 ms. The
+  checked host compiled and linked with zero compiler diagnostics. All three
+  scenarios passed the log verifier in fresh pairs. The native objective run
+  is in `build/evidence/debug-native-objectives/`.
+- **Simulated component checks.** GCC and MSVC x86 each passed 12 protocol
+  suites and 567,550 checks on constructed message and ownership states.
+  GCC controller, mission lifecycle and legacy source checks also passed.
+- The isolated harness is under `_re/harness/campaign_arctic1/`. The
+  production executable uses the original mission objectives and scripts.
+  Genuine unmodified play reached terminal Success in the solo reference
+  and the guide Success and critical Failure boundaries in paired runs.
+  Full paired success remains an owner playtest.
 
 ## PR test instructions and delivery
 
@@ -323,11 +340,13 @@ separate from that build.
 
 ## Handoff
 
-- Completed: published the integrated x86 build and focused host/guest checks.
-- Remaining: independently exercise the original entrance, garrison and squad gathering
-  triggers. The full original paired route is pending owner playtest.
-- Next action: set up the objective conditions in the checked harness and use the
-  normal build for the owner playtest.
+- Completed: integrated the COOP-013 source on the task branch and verified
+  the production x86 menu deployment, live handoff, and controlled host/guest
+  interaction, objective and terminal boundaries.
+- Remaining: integrate the reviewed technical change. The full original paired
+  route is pending owner playtest using the production x86 build.
+- Next action: review [PR #25](https://github.com/xcntroller/HD2_BaseCoop/pull/25)
+  and run the owner route above when ready for campaign playtesting.
 - Blockers: none.
 - Decisions: Use the existing development launch and game data. Base the interaction scope on what the original Arctic1 route exercises.
 - Local state: private build outputs and runtime copies under ignored worktree `build/`.

@@ -22,7 +22,7 @@ def install(root):
 
     source = target.read_text()
     anchors = {
-        "#include <cstdio>": "#include <cstdio>\n#include <cstdlib>\n#include \"game/items.h\"",
+        "#include <cstdio>": "#include <cstdio>\n#include <cstdlib>\n#include \"game/items.h\"\n#include \"script/script.h\"",
         "void PublishTerminalMissionUpdate(const S_CampaignMissionResult &result, const S_CampaignOwnershipSnapshot &state)\n{":
             "#include \"host_scenarios.inc\"\n\nvoid PublishTerminalMissionUpdate(const S_CampaignMissionResult &result, const S_CampaignOwnershipSnapshot &state)\n{",
         "        if (g_liveSendFailed || !PublishMissionUpdate(Clock::now(), *g_ownership->GetSnapshot())) {":

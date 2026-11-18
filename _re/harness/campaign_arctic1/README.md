@@ -1,10 +1,10 @@
 # Arctic1 controlled host and guest checks
 
-These scenarios run two real game instances. They establish test conditions in
-the host and exercise the production authority, inventory, interaction, and
-terminal replication paths. The success scenario seeds the original objective
-statuses. A pass establishes successful terminal replication in the fixture.
-The full campaign route is a separate playtest.
+These debug-assisted scenarios pair a checked host with an ordinary guest.
+The fixture establishes conditions for the original mission scripts and
+exercises the production authority, inventory, interaction, and terminal
+replication paths. Start each scenario with a fresh Arctic1 deployment. The
+full campaign route is a separate owner playtest.
 
 Use the installed Sabre Squadron 1.12 data, a separate runtime copy per peer, and
 the pinned x86 build setup in [the build guide](../../../docs/build_baseline.md).
@@ -29,6 +29,19 @@ the pinned x86 build setup in [the build guide](../../../docs/build_baseline.md)
      four successful objective statuses. Both peers must enter Ending with
      the same statuses. The host terminal kit must retain the cutters and
      the result must retain the seeded script save value.
+   - `native-objectives` supplies the guide's completion signal and places
+     the host at the entrance with one original garrison guard alive. The
+     entrance succeeds through the original player range check while the
+     garrison stays open. The fixture induces the last guard's native death
+     and keeps the other squad members outside the gathering radius until
+     the original gathering trigger is active. It restores low host health
+     during these waits to keep stray fire from interrupting the setup.
+     It then places the other three living squad members at the entrance.
+     Both peers must record entrance, garrison and gathering success in
+     order, the all-survive bonus, and one successful terminal result. The
+     host must capture four living soldiers and the original script's saved
+     count of four. Allow up to a minute of wall time after skipping the
+     intro for the delayed gathering script to finish.
    - `guide-failure` induces native guide death through the same damage
      entry point the script uses. The original script fails the objective.
      The fixture attempts to complete the failed guide objective once and
