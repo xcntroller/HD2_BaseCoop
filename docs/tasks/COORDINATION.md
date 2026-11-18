@@ -97,3 +97,10 @@ missing fields. COOP-006 was notified explicitly before this stopped-writer hand
 - COOP-007 PR #12 remains draft. GCC and MSVC x86 screen behavior pass; actual LS3D preview/resource audit and native Win32 keyboard/mouse smoke pass at 1024x768 and 800x600 during implementation. Final source/capture review and widescreen repeat are ongoing; no component acceptance or merge approval yet.
 - The private COOP-007 MSVC/SDK/Windows Python, engine/DTA DLLs, Wine prefix and captures stay preserved under ignored build paths; other workers finished borrowing without modifying them. No automated cleanup.
 - Next: publish final review checkpoint and request an independent source/campaign-style/native evidence review, then integrate only after its gates pass.
+
+## COOP-008 kickoff / coordinator acceptance
+
+- COOP-008 accepts stopped-writer handoff at `eb25ab32`. Refreshed origin; main `0fcea78f` includes all 008 prerequisites. No existing 008 branch/PR/worktree at inspection.
+- Accepted claim: COOP-008, Codex thread `01a1ec1f-4589-7051-9994-2a236a14b49b`, `feature/coop-008-controller-adapters`, `.worktrees/COOP-008`, base `0fcea78f`. Scope: campaign_control_adapter, controller/input/presentation consumers and actors_module; own harness/docs. No game_rounds/spawn_point/game_app/profile layout edits.
+- COOP-009 user-assigned concurrent worker notified of reserved lifecycle scope and API sequencing; awaiting owner acknowledgment before claim row. COOP-007 scope/tooling preserved.
+- Controller adapter remains inactive until COOP-010; no live admission, dispatch or playable runtime acceptance is implied.
