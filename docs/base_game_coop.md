@@ -7,45 +7,138 @@ and Carnage. Play the base game's campaign with its original squad, missions, sc
 objectives, equipment, soldier progression, and mission sequence. Other players control
 the squad's soldiers.
 
-The agreed model is a campaign led by the host, with up to four players and AI controlling
-unclaimed soldiers. Joining a session transfers control of an existing soldier. It does
-not create another soldier or give the squad another life. A disconnect returns a living
-soldier to AI control with the same health, inventory, position, and campaign identity.
+The host owns the playthrough, runs the simulation, and commits campaign progress. Up to
+four humans share the squad, including the host. Unclaimed deployed soldiers use squad AI
+when AI is enabled. Guests receive synchronized campaign state. Solo campaign saves and
+progress are isolated from co-op playthroughs.
 
 Each human player selects their own soldier's loadout. The host selects their own loadout
 and the loadouts of unclaimed soldiers controlled by AI. Hosting does not grant ordinary
 editing access to another connected player's loadout.
 
-Preparation needs a new UI that resembles the singleplayer campaign and supports multiple
-players. Reuse the native networking and multiplayer infrastructure where useful, while
-keeping the campaign experience free of the multiplayer loadout flow, scoreboards, and
-round presentation. Reusing the multiplayer loadout UI is a possible fallback to discuss
-if a concrete constraint requires it, rather than the default implementation.
+## Player flow
 
-**Status:** design and source investigation. The fork does not yet implement this mode.
-The runnable port described in the root README is the upstream starting point.
+1. In **Single Player**, select **Co-op Campaign**, then **Join** or **Host**. Join takes
+   the host's IP address. A server browser is a future option.
+2. Host offers **Resume Playthrough**, **New Playthrough**, and **Edit Playthrough**.
+   Resume opens the selected co-op save. New creates a separate playthrough and lets the
+   host choose its rules. Edit opens the editable game rules for the selected save.
+3. A new playthrough uses the campaign soldier picker. Show each human player's display
+   name in the soldier name area and keep the underlying soldier identity available.
+   The host determines the legal mission squad, and each player chooses their own
+   available soldier. With AI on, the host can fill remaining legal slots with AI
+   soldiers. With AI off, leave vacant slots open and let joining players choose their
+   own soldier when the campaign permits selection. The host need not reserve a soldier
+   for an unknown future guest. Preserve the mission's original squad limits. Connected
+   players without an eligible soldier can spectate.
+4. Show the original briefing and co-op preparation at the campaign's normal equipment
+   steps. Players equip their own soldiers and the host can equip AI soldiers. Freeze
+   the committed roster and kits at deployment, then wait for every participating
+   client to load before starting play.
+5. Play the original mission with human-controlled squad members. Keep the campaign
+   objectives, scripts, interactions, and progression. Use the campaign HUD as the
+   starting point for co-op presentation. Omit multiplayer match
+   timers, hit and kill feeds, rounds, ranks, and map rotation. Provide a co-op
+   scoreboard for viewing the squad's mission performance. The scoreboard's fields
+   and presentation remain open.
+6. The host controls cutscene playback and skipping where the original campaign allows
+   it. Guests follow the host's scene transitions. Guest input cannot skip the scene.
+   Resolve scripted events exactly once regardless of playback or skip.
+7. Show the original after-action report with a readiness control and each player's
+   status. Every connected human, including the host and spectators, must be ready
+   before the host can advance. Readiness applies to the current report. Departed
+   players leave the barrier, and there is no host override. Advance once into the
+   original next campaign step.
 
-## Proposed behavior for remaining decisions
+## Co-op interface design
 
-These defaults guide the first prototype. The host-led campaign, four-player limit, AI
-filling empty slots, loadout editing permissions, and campaign-style UI direction above
-are agreed; the following details remain proposals.
+Use the original campaign's art and period character as a visual reference. Co-op menus
+and new HUD elements can use updated layouts, typography, controls, and visual cues where
+they make the game easier to read or navigate. Reuse original components where they fit
+the task. A co-op screen can rearrange or replace controls that make a shared workflow
+hard to follow.
 
-- The host chooses the mission squad, and guests choose an available deployed soldier.
-  Each player then equips their own soldier. Campaign missions that restrict the squad keep
-  those restrictions; players without an eligible soldier spectate.
-- The host runs the simulation and owns campaign progress and saves. Guests receive the
-  campaign state needed for play without overwriting their own campaign progress.
-- Soldier switching remains available for living, unclaimed squadmates. A player cannot
-  take a soldier controlled by another player. A dead soldier stays dead under the
-  campaign's rules; a player can take an available living squadmate or spectate.
-- Host pause and tactical pause stop the shared simulation for everyone. Opening an
-  ordinary guest menu does not pause the session.
-- Mid-mission save and load restore the whole shared mission. Loading reconstructs the
-  world and reassigns players to eligible soldiers before accepting input again.
-- Losing the host ends the session. Host migration is outside the initial implementation.
-- Both host and guests use this mod. The protocol must identify the mod and reject
-  incompatible clients before campaign messages are exchanged.
+- **Menus and preparation.** Give the player a clear primary action and keep the current
+  playthrough, soldier ownership, and readiness easy to find where they are relevant.
+  Group related game rules and explain when a setting takes effect. Keep stock conflicts
+  and disabled actions next to the control they affect, with a short reason or next step.
+- **In-mission HUD.** Give priority to aiming, objectives, subtitles, and interaction
+  prompts. Use compact co-op cues for current needs such as a join pause or waiting to
+  respawn. Put detailed squad performance in the scoreboard on demand. Check new
+  elements alongside campaign overlays at supported resolutions.
+- **Readable states.** Use clear labels, legible type, contrast, and visible focus in
+  menus. Pair colour with text or a distinct icon for ownership, readiness, and blocking
+  states. Check both host and guest views where their actions or waiting states differ.
+
+## Playthrough game rules
+
+Rules belong to the host's co-op save. The following edit boundaries are the initial
+recommendation. Edit from the Host menu while the playthrough is idle. Lock roster and
+death rules after creation. Apply edits to a fresh mission start or session admission as
+indicated, so a mid-mission save resumes with its original simulation rules.
+
+| Rule | Choices | Proposed edit boundary |
+| --- | --- | --- |
+| Respawn timing | **Timed** after a configurable delay, **Checkpoint** when the squad reaches a designated checkpoint, **Next Mission** at the next legal mission deployment, or **Reinforcement** at the original campaign's reinforcement opportunity. | Choose the mode at creation. Apply timed-delay edits at the next fresh mission start. |
+| Permanent soldier death | **On** permanently removes dead soldiers from the playthrough. **Off** keeps a player's chosen soldier assigned through death so that soldier returns at the selected respawn opportunity. | Choose at creation. |
+| Retain gear | **On** returns the full carried kit at death with its remaining ammo and condition. **Off** returns the player without that kit. Applies only to Timed and Checkpoint. | Apply at the next fresh mission start. |
+| Respawn position | **On Host**, **On Start**, or **On Checkpoint** for in-mission respawns. Next Mission and Reinforcement retain their campaign-defined entry points. | Apply at the next fresh mission start. |
+| Squad AI | **On** fills unclaimed deployed slots with AI. **Off** leaves unfilled slots vacant. | Choose at creation. |
+| Drop-in joining | **On** allows first-time join requests during a running mission. **Off** limits first-time joins to pre-deployment preparation. Reconnect is handled separately. | Apply when the host next opens the playthrough for a session. |
+
+### Death and returning to play
+
+- With permanent death on, show a new soldier selection screen after death. The player
+  can choose a living, available replacement and take control at the next legal entry.
+  The host resolves competing claims. The dead soldier stays dead. A player with no available
+  replacement waits or spectates. Running out of soldiers is a risk of this rule
+  and can end a run under the campaign's failure rules.
+- With permanent death off, death keeps the chosen soldier bound to that player.
+  The player waits or spectates until that soldier can return under the selected rule.
+- Checkpoint respawns use explicit campaign checkpoints, which may be tied to objective
+  completion. A checkpoint clears the wait for casualties already waiting when it is
+  reached. **On Checkpoint** uses the latest valid checkpoint. Mission start is the
+  fallback before the first checkpoint. **On Host** uses a legal position near the
+  living host soldier, with the checkpoint or mission start as fallback if the host is
+  unavailable or an adjacent spawn is unsuitable. Use the campaign's original start
+  point for **On Start**. Defer entry if the current script or world state makes every
+  applicable position invalid.
+- The host accounts for retained or lost gear as part of the respawn transaction.
+  Retaining gear cannot also leave a lootable copy or replenish spent ammunition.
+  With gear retention off, normal casualty inventory rules govern the lost kit.
+  Next Mission and Reinforcement use the original campaign's equipment and roster
+  opportunities. The reinforcement implementation must verify when the original
+  campaign offers replacements and how those replacements enter.
+
+### Joining during a mission
+
+After compatibility and admission checks, a new guest synchronizes with the host's
+current world before receiving control. They may claim an eligible existing soldier,
+such as an AI squadmate with AI on. With AI off, a late guest can take over an eligible
+unclaimed soldier already deployed or spectate until the next legal selection opportunity.
+Vacant slots do not deploy a new soldier mid-mission. A disconnect preserves the soldier's
+health, position, and gear. With AI on, the soldier returns to AI. With AI off, the soldier
+remains in the world without autonomous squad control. A returning player may reclaim
+their eligible soldier after synchronization.
+
+Start with a host-controlled freeze during the admitted guest's synchronization. Show
+joining status to the squad, and release the barrier on success, cancellation, disconnect,
+or timeout. A compatibility check or rejected request does not pause play. Continuous
+play is acceptable if host/guest verification shows that snapshot catch-up converges
+without the freeze and the joining player cannot act on stale state.
+
+### Decisions for later review
+
+- Campaign rules to test and tune first include the initial settings for new saves, the
+  timer default and bounds, and checkpoint placement and behavior in constrained missions.
+  Validate the outcome when the whole squad is down and a timed respawn is pending.
+- Verify whether an original reinforcement opportunity can occur inside a mission,
+  and audit how scripted transitions interact with each respawn mode.
+- Possible future rules include friendly-fire handling and whether the host can use
+  tactical pause. Keep existing campaign behavior until those rules are specified.
+- The existing prototype assumptions for host pause, synchronized save/load, host loss,
+  and mod compatibility remain applicable. The host controls shared pause and load,
+  losing the host ends the session, and peers must pass compatibility checks.
 
 ## Existing code and required changes
 
@@ -75,9 +168,9 @@ session flow would retain multiplayer spawning, rounds, disconnect behavior, and
 The new preparation screen should expose the selected squad, each soldier's human owner
 or AI status, and the local player's equipment editor. The host can switch that editor
 between their own soldier and unclaimed AI soldiers. Other players' loadouts may be shown
-for coordination, but editing remains subject to ownership. Show the briefing and campaign
-equipment information in the singleplayer style. A player list or readiness indicator
-should serve preparation; it should not introduce multiplayer ranks or scoring.
+for coordination, but editing remains subject to ownership. Show the original briefing
+and campaign equipment information using the co-op interface guidance above. Keep the
+player list focused on ownership and readiness.
 
 Separate the shared preparation state from its controls and rendering. This lets the UI,
 equipment rules, and transport adapters develop independently. The existing campaign
@@ -85,7 +178,7 @@ equipment panel, soldier preview, item definitions, weight rules, and required-e
 checks are candidates for reuse. Their current direct changes to global squad and stock
 objects need adaptation before simultaneous editors can use them safely.
 
-### Proposed synchronization rules
+### Loadout transactions and transfer requests
 
 Keep the host authoritative over the shared campaign stock and committed loadouts. Players
 select equipment on their own clients; the host validates and commits those requests, so
@@ -102,24 +195,28 @@ equipment, weight, ammunition, and mandatory mission items.
 
 Claiming or releasing a soldier updates editing rights and invalidates outstanding edits
 from the previous owner. A joining player receives the existing loadout and can edit it
-under the preparation rules; disconnecting must not reset equipment or return it to stock
-twice. Auto-equip and other bulk operations use the same permission and transaction path
-as individual item edits.
+under the preparation rules. A disconnect preserves the soldier's equipment. Auto-equip
+and other bulk operations use the same permission and transaction path as individual
+item edits.
 
-Readiness should refer to a committed preparation revision. A relevant loadout or squad
+At an equipment step, allow a player to request an item from another human's loadout.
+The current owner can accept or decline. Only acceptance can move the item. Commit both
+inventory changes atomically after validating ownership, item availability, quantity,
+and destination. A stale request or a lost race leaves both kits intact and refreshes
+the requester's view. Requests leave shared stock available for ordinary first-accepted
+edits. In-mission inventory transfers follow the original gameplay rules.
+
+Preparation readiness refers to a committed revision. Require every deployed human to be
+ready for that revision as the initial preparation policy. A relevant loadout or squad
 change invalidates readiness before deployment. Once deployment begins, freeze preparation
-edits and send the same committed squad state to every client. Ordinary in-mission item
-transfers remain a separate gameplay path and need their own ownership and authority audit.
+edits and send the same committed squad state to every client.
 
 ### Product decisions still open
 
-- Whether players choose roster soldiers themselves or the host assigns the squad first.
-- Whether deployment requires every connected player to be ready, and how a host cancels
-  or resumes preparation when someone leaves.
-- How the UI resolves competition for scarce shared equipment, including whether to add
-  reservations or allow players to request transfers from another soldier.
-- Whether players may change loadouts after deployment or only at the campaign's existing
-  equipment steps; this must not create equipment unavailable in ordinary singleplayer.
+- Confirm preparation readiness for spectators and host cancellation behavior when
+  someone leaves during deployment. The after-action readiness rule applies separately.
+- Set the transfer request UI, including quantity selection, request expiry, and how
+  players handle several requests for the same item.
 
 ## Separate campaign rules from networking
 
@@ -153,10 +250,11 @@ Enforce these invariants at every control transfer:
 
 1. Each deployed soldier has at most one human owner, and each player controls at most
    one soldier at a time.
-2. Unowned eligible soldiers run squad AI on the host. Guests display replicated state
-   for soldiers they do not control.
+2. Unowned eligible soldiers run squad AI on the host when enabled. Guests display
+   replicated state for soldiers they do not control.
 3. Claims target living, available soldiers in the current mission. The host validates
-   requests; clients cannot assign themselves a controller by sending an actor ID.
+   requests. Death replacements and pre-deployment roster selection follow their
+   separate entry rules.
 4. A transfer changes control without respawning, resetting skills, replenishing gear,
    reviving, or clearing persistent mission actions.
 5. Scripted control can temporarily override player control. Releasing scripted control
@@ -214,8 +312,8 @@ private context.
 Use a development launch path for an original base campaign mission with four deployed
 soldiers. The host controls one soldier, one guest controls another, and the remaining two
 use squad AI. Adapt campaign spawn, controller routing, initial state replication, player
-team queries, and campaign mission ticking together. Campaign play must bypass multiplayer
-warmup, round scoring, lives, respawns, and map rotation.
+team queries, and campaign mission ticking together. Campaign play in this gate bypasses
+multiplayer warmup, round scoring, lives, respawns, and map rotation.
 
 **Acceptance:** both players can move, shoot, reload, use inventory, and observe the same
 AI squad and objective progress. Disconnecting the guest returns the same soldier to AI
@@ -234,12 +332,11 @@ reaches the original debrief and following campaign step with the correct squad 
 ### 4 Singleplayer menu and campaign sessions
 
 Add the Co-op Campaign control and required menu resources, host/join setup, soldier claims,
-and a four-player limit. Implement the new campaign-style preparation UI: each player
+and a four-player limit. Implement the new campaign-style preparation UI. Each player
 equips their own soldier, and the host equips their own and unclaimed AI soldiers. Connect
 briefing, squad selection, validated loadout transactions, and subsequent missions to the
 synchronized campaign flow. Handle missions with fewer available soldiers and leaving a
-session at every campaign screen. Reuse campaign presentation components where practical;
-do not make the multiplayer loadout screen or scoreboard part of the normal flow.
+session at every campaign screen. Reuse campaign presentation components where practical.
 
 **Acceptance:** start and continue a base cooperative campaign entirely through the game's
 menus, with one through four connected players and AI filling available empty slots. Two
@@ -264,6 +361,87 @@ missions with constrained squads, transitions, scripted control, and vehicle seq
 
 **Acceptance:** campaign behavior is demonstrated mission by mission. Loading every map
 alone does not establish campaign compatibility.
+
+## Implementation handoff
+
+| Work | Scope and acceptance |
+| --- | --- |
+| [COOP-013](tasks/COOP-013.md) | Continue live preparation and first deployment with AI on. Apply the soldier ownership and stock rules above. Keep the final soldier-picker presentation and cross-player transfer request UI as follow-ups if the native preparation gate does not already require them. |
+| [COOP-014](tasks/COOP-014.md) | Continue Arctic1 interaction and completion. Host-directed scenes and guest skip prevention apply to the cutscenes exercised by this gate. Record additional cutscene coverage for campaign-wide verification. |
+| [COOP-015](tasks/COOP-015.md) | Deliver the original debrief with all-player readiness and one authoritative progression commit. |
+| [COOP-017](tasks/COOP-017.md) | Deliver isolated co-op save discovery, menu resume, and the save boundary for rule persistence. |
+| [COOP-018](tasks/COOP-018.md) and [COOP-019](tasks/COOP-019.md) | Keep reconnect distinct from first-time drop-in. Verify admission policy, synchronized handoff, and recovery from interrupted joins. |
+
+The following work can be scoped as independent follow-up tasks when the corresponding
+contracts are available.
+
+| Follow-up | Depends on | Acceptance |
+| --- | --- | --- |
+| Playthrough menu and rule editing | COOP-012 menu and COOP-017 save lifecycle | Create separate saves, resume a selected save, and edit only the supported rules. Verify that saved rules survive reopening and that live play resumes with its saved mission rules. |
+| Soldier picker and AI-off deployment | COOP-013 roster and deployment | Show human names, let guests claim available soldiers, and verify that vacant slots stay vacant with AI off. Cover constrained squads and returning guests. |
+| Death, replacement, and campaign respawns | COOP-014 mission state, COOP-015 progression, and the playthrough rule model | Exercise all four triggers, roster exhaustion, legal spawn positions, and retained or lost gear. Verify that valid respawns restore control exactly once and follow campaign completion and failure rules. Include save/load coverage when the pending death or respawn state is persisted. |
+| Equipment transfer requests | COOP-013 live transactions | Accept or decline a request and verify exclusive ownership, atomic movement, stale-request handling, and simultaneous acceptance attempts for the same item. |
+| Co-op scoreboard | Authoritative mission stats and outcome | Display campaign squad performance consistently on host and guests. Keep ordinary campaign HUD and transitions intact. |
+
+## Future gameplay ideas
+
+These are candidates for prototypes and playtests. The campaign flow above is the
+baseline for evaluating them.
+
+### Squad coordination and scouting
+
+- **Squad colours and map pings.** Give each human a consistent colour in the soldier
+  picker, tactical map, HUD, and scoreboard. Keep it with the player when they change
+  soldiers. Pair it with their name or slot number. Try short-lived, player-coloured
+  map pings for **Look here**, **Danger**, and **Regroup**.
+- **Binocular marks.** Let a player deliberately mark an enemy in view through
+  binoculars and share the sighting with the squad. After losing sight, keep a fading
+  last-known position on the tactical map. Try about 20 seconds as a starting point.
+  A fresh sighting can update the position. Start with binoculars and test rifle
+  scopes later if they offer a distinct use. The
+  [campaign map](../src/game/interface_map.cpp) already presents seen enemies.
+- **Enemy presence zones.** If individual marks clutter the map, group nearby recent
+  observations into approximate red zones. Use a deeper shade for more reported
+  enemies and fade the zone as reports age. The overlay represents squad observations.
+  Unmarked areas may still contain enemies.
+
+**First playtest.** In a two-player patrol encounter, have one player spot and mark
+through binoculars while the other moves using that information. Check whether both
+can identify each other's pings and tell when a sighting has gone stale.
+
+### Casualties, stealth, and disguise
+
+- **Bleedout and revive.** Try an optional playthrough rule that gives a downed soldier
+  a short rescue window. A teammate spends a first-aid item to revive them wounded.
+  If the soldier dies, apply the selected permanent-death and respawn rules. Test what
+  happens when the whole squad is down under each respawn mode and which scripted
+  deaths go directly to the campaign's death path.
+- **Stealth feedback.** First make the existing AI reactions easier to read. Try a pause
+  or voice line when a guard investigates, with a brief HUD cue when that change would
+  be easy to miss. Test whether players can tell the difference between suspicion and
+  confirmed detection while watching the scene.
+- **Ranked disguises.** First verify the original disguise and
+  [script toggle](../src/script/script_vm.cpp) in co-op. The current
+  [disguise code](../src/game/human_combat.cpp) gates its updates on local play.
+  Then try ordinary and officer uniforms with ordinary guards and officers in one
+  mission. A plausible uniform generally passes casual inspection. Officers build
+  suspicion during prolonged close observation. An officer uniform gives more leeway
+  with ordinary guards, and suspicious behaviour can expose either uniform.
+
+### Mission variants and network quality
+
+- **Two players in Arctic2.** Prototype a mission-specific variant with two players.
+  Keep the original scripted lead role on one soldier and give the second player room
+  to help. Audit the [single-soldier deployment restriction](../src/game/equipment_screen.cpp)
+  and test objective triggers, lead death, failure, and extraction with both players
+  before considering other restricted missions or larger squads.
+- **Network quality.** Run this work alongside gameplay. Establish a repeatable
+  Arctic1 test under simulated latency, jitter, and packet loss. Measure guest input
+  delay and visible movement corrections. Compare doors, inventory, and objectives
+  on host and guest. Preserve host authority and use the measurements to decide
+  whether to improve remote actor interpolation, local input response, or the
+  transport. The [current networking baseline](tasks/COOP-010.md#handoff) records
+  DirectPlay and sequenced state updates.
 
 ## Validation requirements
 

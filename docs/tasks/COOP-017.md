@@ -25,6 +25,11 @@ and mission restart. Restore all participating instances through a synchronized
 load, using the current membership and fresh actor/control bindings. Keep co-op
 saves and last-save tracking separate from solo saves.
 
+Expose resume under **Host → Resume Playthrough**. The save boundary will also
+support the per-playthrough rules described in the
+[campaign design](../base_game_coop.md#playthrough-game-rules). New Playthrough and
+Edit Playthrough beyond the initial save flow belong to the rule-editing follow-up.
+
 ## Files and shared contracts
 
 Own the co-op save format and namespace, campaign menu resume, quick actions
