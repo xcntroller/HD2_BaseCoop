@@ -1,3 +1,4 @@
+#include "game/campaign_control_runtime.h"
 // C_Car: contacts, hits, the wreck and the charges (original 0x004d3ef0 OnCollision with 0x004d3d10
 // TakePush and 0x004de800 IsSimulatedHere; 0x004dba10 Hit with 0x004d3b70 IsTyreHit; 0x004dbf00
 // Wreck with 0x004dc580 BlastAround; 0x004dead0 / 0x004deb50 / 0x004dec10 the charges; 0x004dec60
@@ -199,7 +200,7 @@ void C_Car::OnCollision(C_Actor *other, const S_vector *pos, int a3, int a4, int
 void C_Car::TakePush(int id, const S_vector4 &point)    // 0x004d3d10
 {
     C_Actor *driver = GetSeatOccupant(0);
-    if (!driver || driver->GetNetId() != g_localPlayerSlot) {
+    if (!driver || !IsCampaignOrLegacyLocalActor(driver->GetNetId(), g_localPlayerSlot)) {
         if (!(g_gameRole & GAME_ROLE_SERVER))
             return;
         if (driver) {

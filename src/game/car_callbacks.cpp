@@ -1,3 +1,4 @@
+#include "game/campaign_control_runtime.h"
 // C_Car: the vehicle's callbacks (original 0x004d4130..0x004d4eb0, SetFrame hands them to the
 // vehicle; 0x004d5140 their debris) and the messages they send (0x004e0180 / 0x004e0270
 // CAR_MSG_HIT, 0x004e0540 / 0x004e05b0 CAR_MSG_WHEEL).
@@ -412,7 +413,7 @@ bool __fastcall CarOnWheelOff(void *context, int index, const S_vector *velocity
     }
     // A client: the local driver's tells the server.
     C_Actor *driver = car->GetSeatOccupant(0);
-    if (driver && driver->GetNetId() == g_localPlayerSlot)
+    if (driver && IsCampaignOrLegacyLocalActor(driver->GetNetId(), g_localPlayerSlot))
         car->SendMessageEx(msg);
     return true;
 }

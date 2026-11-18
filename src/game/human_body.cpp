@@ -1,3 +1,4 @@
+#include "game/campaign_control_runtime.h"
 // S_HumanBody, the body part of a human: creates and drives its movement, work and equipment
 // objects (original source 0x005ab330..0x005ac4c0; the objects themselves are declared in
 // human_body.h and not ported yet).
@@ -58,7 +59,7 @@ bool S_HumanBody::Create(C_Human *human, int bodyGroup)
     work->SetLook(0, nullptr);
     crippled = false;
     // Network games: only the humans this machine simulates (or controls) push others.
-    if (!IsLocalGame() && g_localPlayerSlot != owner->GetNetId() && !owner->IsServerSimulated())
+    if (!IsLocalGame() && !IsCampaignOrLegacyLocalActor(owner->GetNetId(), g_localPlayerSlot) && !owner->IsServerSimulated())
         movement->SetUnknown18C(false);
     return true;
 }

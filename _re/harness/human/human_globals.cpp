@@ -43,3 +43,15 @@ void *g_carryAnimTables[7];
 void *g_activityAnimTable;
 #endif
 uint32_t g_surfaceMarksEnabled;
+
+// The original-executable comparison exercises the uninstalled campaign boundary.
+// Live ownership/queue behavior is covered by harness/campaign_control instead.
+#include "game/campaign_control_runtime.h"
+bool CampaignControlsActive() { return false; }
+T_CampaignOwnershipSnapshot GetCampaignControlSnapshot() { return nullptr; }
+std::optional<S_CampaignOwnershipRecord> FindCampaignActorControl(int) { return std::nullopt; }
+bool IsCampaignLocalActor(int) { return false; }
+std::optional<int> FindCampaignPlayerSlot(int) { return std::nullopt; }
+bool CampaignInputAuthorized(int) { return false; }
+E_CampaignReason HandleCampaignScripted(int, bool) { return E_CampaignReason::WrongSession; }
+void NotifyCampaignDeath(int) {}

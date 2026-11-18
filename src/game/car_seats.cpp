@@ -1,3 +1,4 @@
+#include "game/campaign_control_runtime.h"
 // C_Car: the seats (original 0x004d93c0..0x004da2a0 C_Actor's seat slots, 0x004d11c0 SetDriver,
 // 0x004d1200 SetDriven, 0x004da2f0 PutOutside, 0x004da420 GetSeatEntry): the vehicle's seats
 // (S_VehicleSeat), who sits in them and the seat weapons (game/seat_weapon.h).
@@ -203,7 +204,7 @@ bool C_Car::ExitSeat(int seat)                          // 0x004d9be0
         return false;
     C_Human *human = static_cast<C_Human *>(occupant);
 #ifndef HD2_DEDICATED   // the server has only the server's side
-    if (IsNetClient() && human->GetNetId() == g_localPlayerSlot && seat == 0)
+    if (IsNetClient() && IsCampaignOrLegacyLocalActor(human->GetNetId(), g_localPlayerSlot) && seat == 0)
         SendFuel();
 #endif
     m_vehicle.SetSeatLoad(seat, 0.0f);

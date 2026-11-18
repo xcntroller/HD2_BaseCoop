@@ -397,7 +397,7 @@ template <class P, class O> int DiffCall(const char *what, P port, O original)
         *g_sharedWords[i].first = sharedBefore[i];
     // The port's result in the original's layout.
     ToOriginal();
-    static alignas(16) uint8_t bh[sizeof o_human], bm[sizeof o_movement], bw[sizeof o_work];
+    alignas(16) static uint8_t bh[sizeof o_human], bm[sizeof o_movement], bw[sizeof o_work];
     std::memcpy(bh, o_human, sizeof bh);
     std::memcpy(bm, o_movement, sizeof bm);
     std::memcpy(bw, o_work, sizeof bw);

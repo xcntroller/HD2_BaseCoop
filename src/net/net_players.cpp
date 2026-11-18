@@ -1,3 +1,4 @@
+#include "game/campaign_control_runtime.h"
 // The network game's players, teams and scores (part 10d-ii): the kills scored, the ranks, the kicks, the scores'
 // messages, the teams counted and balanced, a server's status for a query, the net library's quantisation table.
 // See net_game.h.
@@ -104,6 +105,7 @@ C_str S_NetPlayerState::GetRankName() const
 
 void C_NetGame::OnPlayerKilled(int victim, int killer)
 {
+    if (CampaignControlsActive()) return; // actor damage never enters MP slot/rank scoring
     m_playersLock.Enter();
     const size_t count = m_players.size();
     if (static_cast<size_t>(victim) >= count || victim == -1) {
@@ -576,6 +578,13 @@ bool IsPlayerAdmin(int slot)
 
 C_Human *C_NetGame::GetLocalHuman()
 {
+    if (CampaignControlsActive()) {
+        const auto state = GetCampaignControlSnapshot();
+        for (const auto &record : state->m_Soldiers)
+            if (record.m_Actor && IsCampaignLocalActor(static_cast<int>(record.m_Actor->m_Actor.Value())))
+                return static_cast<C_Human *>(g_actorsModule.GetHuman(static_cast<int>(record.m_Actor->m_Actor.Value())));
+        return nullptr;
+    }
     if (static_cast<size_t>(g_localPlayerSlot) < m_players.size())
         return m_players[static_cast<size_t>(g_localPlayerSlot)].human;
     return nullptr;
