@@ -7,8 +7,8 @@
 - Canonical branch: `feature/coop-007-preparation-screen`
 - Base commit: `dbc9a85a7161d8844f2907dbaf6586c7f3b67d19`
 - Dependencies: COOP-002, COOP-003, COOP-011 (merged shared declarations)
-- Last checkpoint: none
-- Checkpoint location: `.worktrees/COOP-007`; canonical branch (publication pending)
+- Last checkpoint: claim `7ea491e0`; current presenter/native harness checkpoint is `HEAD`
+- Checkpoint location: `.worktrees/COOP-007`; `origin/feature/coop-007-preparation-screen`
 - Review/integration: none
 - Pull request: none
 
@@ -70,3 +70,23 @@ fake; no COOP-005 model implementation dependency is needed. Coordinate any `equ
   this task's runtime component evidence and campaign-style review.
 - Decisions: new campaign-style UI, with existing singleplayer components reused when suitable.
 - Validation: none for this task.
+
+## Implementation checkpoint (2026-11-18)
+
+- Added snapshot-driven C++ screen/presenter, semantic controls, focus traversal,
+  equipment/ownership/ready/deploy queued proposals, explicit loading/frozen/disconnected
+  gates, session/generation/token correlation and close/reopen handling. No legacy edits.
+- Fake-backed behavior harness passes native GCC and intended MSVC x86 `/W4 /WX`.
+  Commands: `python _re/harness/campaign_preparation_ui/run.py --compiler gcc`; Windows
+  Python with `HD2_VCVARS32`: same script `--compiler msvc`.
+- Native LS3D preview compiles and launches using the port's texture-font methods and
+  original procedural panels. First native capture exposed missing alpha state; fixed.
+  Visual/input acceptance remains INCOMPLETE; not a playable/connected feature.
+- COOP-001 ignored compiler/artifact directories disappeared externally during work.
+  Reconstructed MSVC 14.44.35207 / SDK 10.0.26100.0 / Python 3.13.9 under this worktree's
+  ignored `build/tooling/`; compiled LS3DF (78 TUs, existing C4127) and rw_data successfully.
+  Other workers may borrow the tools read-only with their own prefixes/outputs. Preserve
+  these resources while active. Private prefix: `build/wine-prefix`; engine outputs
+  isolated below `build/isolated/`. No compiler, binary, or game data committed.
+- Next: inspect corrected native glyph output, complete preview/assets and keyboard/mouse
+  scenario evidence, review full diff, update detailed reproduction/handoff and request review.
