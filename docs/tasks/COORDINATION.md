@@ -211,3 +211,4 @@ missing fields. COOP-006 was notified explicitly before this stopped-writer hand
 
 - COOP-010 owns the host-side movement integration in `human_body.cpp`, `human_movement.cpp` and the corresponding `C_Human` predicates. The remote-owned soldier still needs to move through the original body controller even when the host never renders it. The test driver remains outside tracked source.
 - COOP-010 owns a narrow squad-controller attach change in `squad_controller.cpp` and `squad_actions.cpp`. The live disconnect after a native inventory swap exposed an equipment change during the original AI controller's attach. The handoff must preserve the committed inventory before normal AI decisions resume.
+- COOP-010 also owns the related `human_locomotion.cpp` branches for player collision and terrain contact. Paired movement showed that the native remote-actor ground path cannot stand in for the host's simulation of a guest-owned player.
