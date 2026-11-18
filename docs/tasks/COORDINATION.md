@@ -10,7 +10,7 @@ creating or updating the operational branch. Do not merge its WIP ledger into `m
 - Contact/shared channel: this ledger and the canonical COOP-015 branch.
 - Integrator: Codex COOP-015 after separate review and acceptance checks.
 - Latest checkpoint: `HEAD` on `origin/coord/coop-work-queue`.
-- Next action: COOP-015 claims the campaign debrief and progression scope.
+- Next action: COOP-015 is integrated and coordination writes have stopped. COOP-016 is ready. The separately claimed owner menu fix is awaiting integration review.
 
 ## Accepted task claims
 
@@ -32,7 +32,7 @@ creating or updating the operational branch. Do not merge its WIP ledger into `m
 | COOP-014 | Codex COOP-014, user assignment, thread `01a1ed7a-ddd9-7000-bbec-e292bd129d25` | `feature/coop-014-arctic1-completion` | done | PR #25 merged `619d6aec`; completion PR #30 merged `ca5ae2f8` | Technical delivery is integrated. The full paired route remains an owner playtest. |
 | COOP-013 | Codex COOP-013, explicit user assignment on 2026-11-18 | `feature/coop-013-live-preparation` | done | PR #28 merged `73d518a5`; completion PR #29 merged `e4344dfc` | First menu deployment and recovery integrated. COOP-015 still awaits COOP-014. |
 
-| COOP-015 | Codex COOP-015, assigned by user, thread `01a1eead-4d91-7b52-a8d5-cd1a32cce6d3` | `feature/coop-015-campaign-progression` | active | PR #31 | Verify paired debrief, readiness and deployment into Arctic2. |
+| COOP-015 | Codex COOP-015, assigned by user, thread `01a1eead-4d91-7b52-a8d5-cd1a32cce6d3` | `feature/coop-015-campaign-progression` | done | PR #31 merge `09b498a3`, metadata PR #33 merge `21f42fc0` | Owner playtest pending. COOP-016 is ready. |
 
 Only the coordinator adds or reassigns claims. A missing row is not sufficient evidence
 of availability: check worktrees and existing task branches as well. Task records carry
@@ -279,3 +279,10 @@ missing fields. COOP-006 was notified explicitly before this stopped-writer hand
 
 - Acknowledged the Fedora/Windows owner playtest thread `01a1eeaa-caff-7150-83a4-bfcd24bfa60d` for `fix/coop-playtest-menus`, based on integrated `ca5ae2f8`. Scope is campaign Escape and pause menu input, plus native preparation layout and control affordances in its own worktree.
 - COOP-015 leaves `game.cpp` and `game_menu.cpp` available for this fix. COOP-015 also changes the preparation presenter to admit spectators and the native UI to display the active mission's briefing and image. Keep visual changes in separable commits so both changes can integrate. Coordinate mission exit or session teardown edits in `campaign_dev.cpp` and `game_app.cpp` before changing them.
+
+## COOP-015 integration and stopped-writer handoff
+
+- PR #31 merged as `09b498a3895f2bd9675b346e82cbec91914bd2b7`. Its tree matches the reviewed head `c0b22379`. Metadata PR #33 merged as `21f42fc097b71bd3c870f4c6c4c337462b411f4a`. COOP-016 is ready and unassigned.
+- The separate review confirmed the two- and three-peer evidence, stale input and acknowledgment ordering, host-only progress, and the solo and native LAN regressions. The full genuine owner playtest remains documented. Evidence and private test outputs stay in `.worktrees/COOP-015/build/`.
+- Owner playtest menu fix PR #32 is awaiting independent integration review. Its preparation UI files overlap with COOP-015. Reconcile it against integrated main and rerun the affected paired checks before merge. Its claim and worktree remain with the Fedora/Windows owner playtest thread.
+- COOP-015 stops ledger writes after this published checkpoint. A successor may accept the coordinator role from this record.
