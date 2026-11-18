@@ -104,6 +104,17 @@ adapters merge. Tests must reject pre-admission mutation without claiming a live
   data, artifacts or shared declaration edits. Own separate review pass checked
   bounds/UTF8/float/counter schemas, early decode whitelist, role/sender direction,
   authority tuple, exact-base immutable installation and chunk integrity/timeout.
+- Separate review refinement: regression reproduced acceptance of a preparation
+  actor reference from another session/generation (`gcc-ukn2hg4s`, expected failure),
+  then checked all prep/ownership actor fences and duplicate actor coordinates
+  including distinct slot-use values. Corrected WrongSession fixture to remain
+  internally coherent. COOP-005 confirmed result metadata/generation equality for
+  attached state variants; codec now enforces it, preserving cached duplicate
+  state+metadata. No schema/golden-fixture changes. Expanded **541,799 checks** pass
+  GCC (`gcc-dskpzcou`); latest target/sanitizer repeats pending.
+- Independent reviewer: COOP-001 session accepted full read-only review after its
+  completed task. Reviewer caught the transient WrongSession fixture race; fixed
+  as above before checkpoint. No reviewer approval inferred until final report.
 - Remaining: independent review, resolve any findings, mark PR ready and coordinator integration handoff. Ordinary
   runtime/game build not claimed; this independently testable component does not
   attach a live campaign handshake or world synchronization.

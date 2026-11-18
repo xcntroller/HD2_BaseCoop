@@ -193,11 +193,21 @@ void Malformed() {
     snap = Snapshot(); snap.m_Loadouts[0].m_Weight = std::numeric_limits<float>::infinity(); CHECK(Encode(snap, bytes) == R::Malformed);
     snap = Snapshot(); snap.m_Participants.assign(5, Participant()); CHECK(Encode(snap, bytes) == R::Malformed);
     snap = Snapshot(); snap.m_Soldiers.push_back(snap.m_Soldiers[0]); snap.m_Loadouts.push_back(snap.m_Loadouts[0]); CHECK(Encode(snap, bytes) == R::Malformed);
+    snap = Snapshot(); snap.m_Soldiers[0].m_Ownership.m_Actor->m_Session = SessionId(1); CHECK(Encode(snap, bytes) == R::Malformed);
+    snap = Snapshot(); snap.m_Soldiers[0].m_Ownership.m_Actor->m_Generation = MissionGeneration(2); CHECK(Encode(snap, bytes) == R::Malformed);
+    auto duplicateActor = Ownership(); auto secondSoldier = Soldier(); secondSoldier.m_Soldier = SoldierId(102); secondSoldier.m_Owner.reset();
+    duplicateActor.m_Soldiers.push_back(secondSoldier); CHECK(Encode(duplicateActor, bytes) == R::Malformed);
+    duplicateActor.m_Soldiers[1].m_Actor->m_SlotUse = ActorSlotUse(1); CHECK(Encode(duplicateActor, bytes) == R::Malformed);
     snap = Snapshot(); snap.m_Slots[1].m_Soldier = SoldierId(101); CHECK(Encode(snap, bytes) == R::Malformed);
     snap = Snapshot(); snap.m_Loadouts[0].m_Items[0].m_State.m_Quantity = kMaxQuantity + 1; CHECK(Encode(snap, bytes) == R::Malformed);
     snap = Snapshot(); snap.m_Findings.resize(kMaxCollection + 1); CHECK(Encode(snap, bytes) == R::Malformed);
     auto result = std::get<S_CampaignRequestResult>(Messages()[8]); result.m_State = T_CampaignPreparationSnapshot{}; CHECK(Encode(result, bytes) == R::Malformed);
     result = std::get<S_CampaignRequestResult>(Messages()[8]); result.m_OriginalOutcome.reset(); CHECK(Encode(result, bytes) == R::Malformed);
+    result = std::get<S_CampaignRequestResult>(Messages()[8]); result.m_ViewRevision = ViewRevision(11); CHECK(Encode(result, bytes) == R::Malformed);
+    result = std::get<S_CampaignRequestResult>(Messages()[8]); result.m_MissionGeneration.reset(); CHECK(Encode(result, bytes) == R::Malformed);
+    result = std::get<S_CampaignRequestResult>(Messages()[8]); result.m_PreparationGeneration = PreparationGeneration(99); CHECK(Encode(result, bytes) == R::Malformed);
+    result = std::get<S_CampaignRequestResult>(Messages()[23]); result.m_OwnershipRevision = OwnershipRevision(99); CHECK(Encode(result, bytes) == R::Malformed);
+    result = std::get<S_CampaignRequestResult>(Messages()[24]); result.m_ViewRevision = ViewRevision(99); CHECK(Encode(result, bytes) == R::Malformed);
     CHECK(Encode(S_Reject{static_cast<R>(65536)}, bytes) == R::Malformed);
     auto input = Input(); input.m_Payload.resize(kMaxInputBytes + 1); CHECK(Encode(input, bytes) == R::Malformed);
     auto chunk = Chunk(); chunk.m_Count = UINT32_MAX; CHECK(Encode(chunk, bytes) == R::Malformed);
@@ -333,7 +343,7 @@ void Replicas() {
     CHECK(replica.Install(future) == R::SnapshotGap); CHECK(!replica.GetView().m_Snapshot);
     future = s; future.m_Generation = PreparationGeneration(5); future.m_ViewRevision = ViewRevision(1); future.m_PreparationRevision = PreparationRevision(1);
     CHECK(replica.Install(future) == R::None);
-    auto wrong = s; wrong.m_Context.m_Session = SessionId(1); CHECK(replica.Install(wrong) == R::WrongSession);
+    auto wrong = s; wrong.m_Context.m_Session = SessionId(1); wrong.m_Soldiers[0].m_Ownership.m_Actor->m_Session = SessionId(1); CHECK(replica.Install(wrong) == R::WrongSession);
 }
 void Chunks() {
     const T_Bytes body(kMaxChunkBytes + 3, 0x9a); const auto crc = Crc32(body);

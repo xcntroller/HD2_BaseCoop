@@ -133,7 +133,12 @@ not an incoming client's context.
 The decoder enforces structural validity and transport limits, unique roster,
 loadout, stock and participant IDs, exclusive human ownership, declared participant
 membership, matching loadout roster, valid slot membership and actor/session
-fences where those snapshots supply a baseline. It does **not** establish catalog
+fences where those snapshots supply a baseline. One actor coordinate cannot be
+bound to two soldiers at a single baseline, even with different slot-use values.
+Result metadata equals every corresponding baseline present in its attached
+authoritative state; duplicates retain the original metadata and original state
+together. Optional result generations describe the full returned state epoch,
+including a retained mission epoch during preparation. It does **not** establish catalog
 membership, current model revisions, permission, content authenticity, actor
 existence or equipment rules. Every decoded request still passes the serialized
 authority/model validator and COOP-004's cross-family request journal; repeats,

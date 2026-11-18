@@ -393,11 +393,14 @@ bool Catalog(const std::vector<S_CampaignOwnershipRecord> &soldiers, const std::
     }
     return true;
 }
-bool Valid(const S_CampaignOwnershipSnapshot &x) {
-    if (!Id(x.m_Revision) || !Catalog(x.m_Soldiers, x.m_Participants)) return false;
-    for (const auto &s : x.m_Soldiers) if (s.m_Actor && (s.m_Actor->m_Session != x.m_Context.m_Session ||
-        s.m_Actor->m_Generation != x.m_Context.m_MissionGeneration)) return false;
+bool ConsistentActors(const std::vector<S_CampaignOwnershipRecord> &soldiers, const S_CampaignSessionContext &context) {
+    std::set<std::uint32_t> actors;
+    for (const auto &s : soldiers) if (s.m_Actor && (s.m_Actor->m_Session != context.m_Session ||
+        s.m_Actor->m_Generation != context.m_MissionGeneration || !actors.insert(s.m_Actor->m_Actor.Value()).second)) return false;
     return true;
+}
+bool Valid(const S_CampaignOwnershipSnapshot &x) {
+    return Id(x.m_Revision) && Catalog(x.m_Soldiers, x.m_Participants) && ConsistentActors(x.m_Soldiers, x.m_Context);
 }
 bool Valid(const S_CampaignControlToken &x) {
     return Id(x.m_Session) && Id(x.m_Generation) && Id(x.m_Player) && Id(x.m_Soldier) &&
@@ -452,7 +455,7 @@ bool Valid(const S_CampaignPreparationSnapshot &x) {
         !Roster(x.m_Soldiers, x.m_Loadouts) || !Unique(x.m_Stock, [](const auto &s) { return s.m_Entry; })) return false;
     std::vector<S_CampaignOwnershipRecord> records;
     for (const auto &s : x.m_Soldiers) records.push_back(s.m_Ownership);
-    if (!Catalog(records, x.m_Participants)) return false;
+    if (!Catalog(records, x.m_Participants) || !ConsistentActors(records, x.m_Context)) return false;
     std::set<SoldierId> slots;
     for (const auto &slot : x.m_Slots) if (slot.m_Soldier &&
         (!slots.insert(*slot.m_Soldier).second || std::none_of(x.m_Soldiers.begin(), x.m_Soldiers.end(),
@@ -481,14 +484,29 @@ bool Valid(const S_CampaignDeployRequest &) { return true; }
 bool Valid(const S_CampaignResyncDescriptor &x) {
     return Id(x.m_Session) && OptionalId(x.m_PreparationGeneration) && OptionalId(x.m_MissionGeneration) && OptionalId(x.m_Snapshot);
 }
+template<class T> bool CurrentGeneration(const std::optional<T> &returned, T current) {
+    return current.IsValid() ? returned && *returned == current : !returned;
+}
 bool Valid(const S_CampaignRequestResult &x) {
     if (!OptionalId(x.m_PreparationGeneration) || !OptionalId(x.m_MissionGeneration) ||
         (x.m_Outcome == E_CampaignRequestOutcome::Duplicate) != x.m_OriginalOutcome.has_value() ||
         (x.m_OriginalOutcome && *x.m_OriginalOutcome != E_CampaignRequestOutcome::Accepted && *x.m_OriginalOutcome != E_CampaignRequestOutcome::Rejected)) return false;
+    // Baselines/generations describe the attached immutable state, including an
+    // original cached duplicate. Never mix new metadata with an old publication.
     return std::visit([&](const auto &state) {
         using T = std::decay_t<decltype(state)>;
-        if constexpr (std::is_same<T, S_CampaignResyncDescriptor>::value) return state.m_Session == x.m_Context.m_Session;
-        else return state && state->m_Context.m_Session == x.m_Context.m_Session;
+        if constexpr (std::is_same<T, S_CampaignResyncDescriptor>::value) {
+            return state.m_Session == x.m_Context.m_Session && state.m_PreparationGeneration == x.m_PreparationGeneration &&
+                state.m_MissionGeneration == x.m_MissionGeneration && state.m_OwnershipRevision == x.m_OwnershipRevision &&
+                state.m_PreparationRevision == x.m_PreparationRevision && state.m_ViewRevision == x.m_ViewRevision;
+        } else {
+            if (!state || state->m_Context.m_Session != x.m_Context.m_Session ||
+                !CurrentGeneration(x.m_MissionGeneration, state->m_Context.m_MissionGeneration)) return false;
+            if constexpr (std::is_same<T, T_CampaignPreparationSnapshot>::value) {
+                return CurrentGeneration(x.m_PreparationGeneration, state->m_Generation) && state->m_OwnershipRevision == x.m_OwnershipRevision &&
+                    state->m_PreparationRevision == x.m_PreparationRevision && state->m_ViewRevision == x.m_ViewRevision;
+            } else return state->m_Revision == x.m_OwnershipRevision;
+        }
     }, x.m_State);
 }
 bool Valid(const S_CampaignActorBinding &x) { return Id(x.m_Soldier) && Id(x.m_ControlRevision); }
@@ -498,10 +516,10 @@ bool Valid(const S_CampaignMissionManifest &x) {
         !Roster(x.m_Soldiers, x.m_Loadouts) || x.m_Bindings.size() > kMaxSoldiers || x.m_RequiredParticipants.size() > kMaxParticipants ||
         !Unique(x.m_Bindings, [](const auto &b) { return b.m_Soldier; }) ||
         !Unique(x.m_RequiredParticipants, [](const auto &p) { return p; })) return false;
-    std::set<std::pair<std::uint32_t, std::uint32_t>> actors;
+    std::set<std::uint32_t> actors;
     for (const auto &b : x.m_Bindings) if (b.m_Actor.m_Session != x.m_Context.m_Session ||
         b.m_Actor.m_Generation != x.m_Context.m_MissionGeneration ||
-        !actors.insert({b.m_Actor.m_Actor.Value(), b.m_Actor.m_SlotUse.Value()}).second ||
+        !actors.insert(b.m_Actor.m_Actor.Value()).second ||
         std::none_of(x.m_Soldiers.begin(), x.m_Soldiers.end(), [&](const auto &s) { return s.m_Soldier == b.m_Soldier; })) return false;
     return std::all_of(x.m_RequiredParticipants.begin(), x.m_RequiredParticipants.end(), [](const auto &p) { return Id(p); });
 }
