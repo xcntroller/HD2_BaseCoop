@@ -236,7 +236,9 @@ bool ApplyWorldAction(const S_CampaignControlToken &token, Wire::E_InputKind kin
 void StoreDevelopmentControls(const Wire::S_Input &input)
 {
     if (input.m_Kind == Wire::E_InputKind::DoorAction || input.m_Kind == Wire::E_InputKind::WireCut) {
-        ApplyWorldAction(input.m_Control, input.m_Kind, input.m_Payload);
+        if (!ApplyWorldAction(input.m_Control, input.m_Kind, input.m_Payload))
+            LogDevelopmentCampaign("host rejected guest world action", input.m_Control.m_Actor.m_Actor.Value(),
+                                   static_cast<unsigned>(input.m_Kind));
         return;
     }
     if (input.m_Kind == Wire::E_InputKind::ActorAction) {
@@ -726,16 +728,19 @@ bool InWorldActionReach(const C_Human &human, const C_Actor &target, float reach
         return false;
     // The local roll menu tests the picked surface. On the host, check its
     // reach against the nearest point in the authored object's local bound.
-    const auto &box = frame->GetBound().bbox;
+    I3D_bbox hierarchy;
+    const auto *box = I3DGetDriver()->GetHierarchyBBox(hierarchy, frame);
+    if (!box || !(box->min.x <= box->max.x && box->min.y <= box->max.y && box->min.z <= box->max.z))
+        return false;
     const auto position = human.GetBodyFrame()->GetWorldPos();
     const auto &matrix = frame->GetMatrix();
     S_matrix inverse;
     if (!inverse.Inverse(matrix))
         return false;
     const S_vector local = position * inverse;
-    const S_vector nearest(std::clamp(local.x, box.min.x, box.max.x),
-                           std::clamp(local.y, box.min.y, box.max.y),
-                           std::clamp(local.z, box.min.z, box.max.z));
+    const S_vector nearest(std::clamp(local.x, box->min.x, box->max.x),
+                           std::clamp(local.y, box->min.y, box->max.y),
+                           std::clamp(local.z, box->min.z, box->max.z));
     return (nearest * matrix - position).Square() <= reach * reach;
 }
 

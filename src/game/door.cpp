@@ -650,8 +650,21 @@ void C_Door::StartMission(bool server)                  // 0x00600cc0 (DS 0x0062
     m_startRot = m_frame->GetRot();
     m_initialMotion = m_motion;
     m_initialLocked = m_locked;
-    if (IsServer() && m_motion == DOOR_OPEN)
-        SetState(DOOR_ACTION_OPEN, true, false, 0);
+    if (m_motion == DOOR_OPEN) {
+        if (IsServer()) {
+            SetState(DOOR_ACTION_OPEN, true, false, 0);
+        } else if (IsCampaignMission() && !m_locked) {
+            // Campaign replicas load the authored state without the legacy door messages.
+            m_motion = DOOR_OPENING;
+            m_opened = m_openAngle;
+            if (m_kind == DOOR_HINGED)
+                TurnTo();
+            else
+                SlideTo();
+            m_motion = DOOR_OPEN;
+            SetPortalsClosed(false);
+        }
+    }
     m_started = true;
     m_autoCloseTime = 0;
     MakeFrameBoxVolume(m_volume, m_invMatrix, m_frame, COLLISION_TYPE_ACTOR_DOOR, this);
