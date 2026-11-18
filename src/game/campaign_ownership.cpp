@@ -367,7 +367,12 @@ E_CampaignReason C_CampaignOwnership::StartPreparation() {
 E_CampaignReason C_CampaignOwnership::Freeze() {
     auto session = m_Session;
     auto reason = session.Freeze();
-    return reason == E_CampaignReason::None ? Commit(std::move(session), m_State, true) : reason;
+    if (reason != E_CampaignReason::None) return reason;
+    // Preparation has no effective input. Preserve the ownership/control cut
+    // captured by preparation's frozen manifest; only the phase gate changes.
+    m_State.m_Context.m_Phase = session.GetContext().m_Phase;
+    m_Session = std::move(session);
+    return E_CampaignReason::None;
 }
 E_CampaignReason C_CampaignOwnership::BeginMissionGeneration(MissionKey mission) {
     auto session = m_Session;
@@ -391,8 +396,12 @@ E_CampaignReason C_CampaignOwnership::StartSimulation() {
     }
     auto session = m_Session;
     auto reason = session.StartSimulation();
-    // Loading already fenced controls; completion opens that exact revision.
-    return reason == E_CampaignReason::None ? Commit(std::move(session), m_State) : reason;
+    if (reason != E_CampaignReason::None) return reason;
+    // Open exactly the catalog/control baseline reconstructed and acknowledged
+    // by the world barrier. This does not transfer or rebind a controller.
+    m_State.m_Context.m_Phase = session.GetContext().m_Phase;
+    m_Session = std::move(session);
+    return E_CampaignReason::None;
 }
 E_CampaignReason C_CampaignOwnership::EndMission() {
     auto session = m_Session;

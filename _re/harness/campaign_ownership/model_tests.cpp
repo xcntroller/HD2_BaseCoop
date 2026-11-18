@@ -118,11 +118,19 @@ struct C_Fixture {
         }
     }
     void Run() {
+        auto frozenCut = m_Model.GetSnapshot();
         CHECK(m_Model.Freeze() == R::None);
+        CHECK(m_Model.GetSnapshot()->m_Revision == frozenCut->m_Revision);
+        for (const auto &record : frozenCut->m_Soldiers)
+            CHECK(Target(record.m_Soldier).m_ExpectedControlRevision == record.m_ControlRevision);
         CHECK(m_Model.BeginMissionGeneration(MissionKey("base.sicily2.step1.v1")) == R::None);
         CHECK(m_Model.StartSimulation() == R::ActorUnavailable);
         BindAll();
+        auto acknowledgedCut = m_Model.GetSnapshot();
         CHECK(m_Model.StartSimulation() == R::None);
+        CHECK(m_Model.GetSnapshot()->m_Revision == acknowledgedCut->m_Revision);
+        for (const auto &record : acknowledgedCut->m_Soldiers)
+            CHECK(Target(record.m_Soldier).m_ExpectedControlRevision == record.m_ControlRevision);
         Invariants(m_Model);
     }
 };

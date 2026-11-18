@@ -114,7 +114,9 @@ only ownership/catalog values, with no engine pointers or effect callbacks.
 
 `StartPreparation` advances its generation, including reopening after Frozen/Loading
 abort. `Freeze` is a trusted hook after the preparation owner has validated equipment,
-policy, expected revision and its immutable manifest. `BeginMissionGeneration` advances
+policy, expected revision and its immutable manifest. Freeze preserves the captured
+ownership/control revisions: Preparation already has no effective input, so only the
+phase gate changes. `BeginMissionGeneration` advances
 the session-scoped mission generation, clears every actor binding/script override,
 revalidates owner eligibility/presence and advances all control revisions. It is
 allowed from Frozen, Running (authorized future restart/load) or Setup (explicit
@@ -129,7 +131,8 @@ camera/inventory/selection; then acknowledges that exact revision. An obsolete c
 is rejected. Loading requires every living eligible deployed soldier to be bound and
 its controller handoff completed before `StartSimulation` succeeds. The caller must
 **also** verify the full initial-world snapshot and required-peer acknowledgment barrier;
-this module deliberately does not implement it. Membership changes during Frozen/Loading
+this module deliberately does not implement it. StartSimulation opens exactly that
+acknowledged ownership/control baseline without incrementing or rewriting it. Membership changes during Frozen/Loading
 advance the catalog revision; the adapter must abort/re-evaluate its manifest/barrier.
 A departure is never an acknowledgment. Host-loss policy remains external/unresolved.
 

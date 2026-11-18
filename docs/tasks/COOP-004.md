@@ -2,14 +2,14 @@
 
 ## Coordination
 
-- Status: review
+- Status: active (review correction applied; final target rerun pending)
 - Owner/session: Codex COOP-004 / thread `01a1ebf9-60c7-74d0-9d39-cd09295875b0`, 2026-11-18
 - Canonical branch: `feature/coop-004-ownership`
 - Base commit: `0f367ed62af337633941bca0d22d3ff1932129ba`
 - Dependencies: COOP-002, COOP-011 (merged shared declarations)
-- Last checkpoint: implementation and validated harness `68bb0bc1`; current merge synchronizes integrated main `1b9b307f`
+- Last checkpoint: initial validated implementation `68bb0bc1`; integrated main `e86cc8c4`; phase-baseline correction is this checkpoint
 - Checkpoint location: `.worktrees/COOP-004`; `origin/feature/coop-004-ownership`
-- Review/integration: separate local implementation/API/scope review and COOP-005 journal consumer review passed; final peer review requested; not merged
+- Review/integration: COOP-005 full review found phase-baseline composition issue; correction applied and native regression passed; target rerun pending; not merged
 - Pull request: https://github.com/xcntroller/HD2_BaseCoop/pull/9 (draft pending independent review)
 
 ## Branch authority and completion PR
@@ -126,8 +126,8 @@ model behavior only, and do not imply the later adapters or campaign mode are pl
   Deployed flags identify the selected preparation squad, before actor construction.
 - Remaining: final review, address findings, ready PR and integration;
   record actual merge SHA after acceptance. No outstanding implementation/toolchain blocker.
-- Next action: review published checkpoint/PR #9 against current `main`, reproduce native
-  model harness and inspect target logs; integrate only after acceptance gates pass.
+- Next action: use COOP-007 reprovisioned private toolchain for the corrected-head MSVC
+  x86 harness, then complete peer review and integration. Native corrected suites pass.
 - Decisions: no new product policy. Selection/switching fixture permissions are proposals;
   production policy, peer/world barriers, host-loss and live adapter composition stay explicit.
 - Uncommitted work: none at the implementation checkpoint. All build/runtime evidence
@@ -155,4 +155,22 @@ model behavior only, and do not imply the later adapters or campaign mode are pl
   and borrowed toolchain removed externally. Our native/MSVC logs and fixture remain
   intact in COOP-004 build outputs. The historical target run is valid evidence; a fresh
   target compile needs reprovisioning via the merged build guide or an MSVC x86 developer
-  environment. No source changed after target validation except comments/docs.
+  environment. The phase-baseline correction below now requires a fresh target run.
+
+### Full review correction: preserve captured phase baselines
+
+COOP-005 full read-only review and this worker's reciprocal composition review independently
+identified that phase-only Freeze had advanced ownership/control revisions after preparation
+captured its manifest. StartSimulation likewise advanced the ownership catalog after the
+acknowledged world cut. Neither operation transfers ownership or rebinds a controller.
+The corrected implementation publishes only the context phase at these two boundaries,
+preserving the exact captured/acknowledged catalog and control revisions. Actual world
+reconstruction, bindings, transfers, script changes and other invalidations still advance
+revisions as before. Both workers agreed this contract interpretation before composition.
+
+Focused regressions retain each frozen/loading cut and assert identical ownership and all
+control revisions after Freeze/StartSimulation. Corrected native run:
+`python3 _re/harness/campaign_ownership/run.py --compiler gcc`, exit **0**, nine suites,
+**10,654 checks**, output `build/campaign_ownership/gcc-3hftx_t9/`. Final intended-target
+rerun is pending toolchain reprovisioning; earlier 10,618-check target evidence above does
+not validate this subsequent source change. PR remains draft until that check and review pass.
