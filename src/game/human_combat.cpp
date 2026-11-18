@@ -187,7 +187,7 @@ void C_Human::SetChatText(const char *text)
 
 void C_Human::ShowHitMessage(int type, int zone, int killerId)
 {
-    if (IsLocalGame() || type == HIT_SCRIPT_KILL || type == 0)
+    if (IsLocalGame() || CampaignControlsActive() || type == HIT_SCRIPT_KILL || type == 0)
         return;
     if (type == HIT_THROWN_OBJECT && m_stats[STAT_HEALTH] > 0)
         return;

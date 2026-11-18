@@ -158,6 +158,22 @@ for progression.
   activated objective 1 once on each. The guest began its cutscene view at
   mission time 1,200 ms and left at 43,500 ms. The guest Escape screenshot
   and runtime evidence are in `build/evidence/grounded-squad-paired/`.
+- In the same run, both controlled soldiers reached the original rendezvous
+  with the two AI followers still alive. The guest identified the guide,
+  Sygurd Vesaah, through the native crosshair. Two guest rifle shots produced
+  two accepted host fire events and two guest presentations. The host rifle
+  state reported four rounds after the first shot and three after the second.
+  Guide health went from 545 to 55 to 0 on the host.
+- The original guide death set objective 1 to critical failure (3) and objectives
+  2 and 3 to failure (2) on both peers. The guest applied the terminal Failure
+  result at mission time 903,400 ms. The host captured four original squad
+  records, with health 515, 585, 545, and 555 and their native equipment slots.
+  See `host-running-and-result.log` and `guest-running-and-result.log` in
+  `build/evidence/grounded-squad-paired/`. The prior squad-wipe case recorded
+  all four health values at zero. The result stayed in Ending for COOP-015.
+- Campaign co-op suppresses the legacy multiplayer hit and kill messages
+  within the original HUD. The isolated x86 relink for that change compiled
+  one unit and reported zero diagnostics.
 
 ## PR test instructions and delivery
 
@@ -170,8 +186,9 @@ for progression.
 
 - Completed: refreshed origin, verified COOP-010 merge `738b124d` is an ancestor of
   the base, checked for duplicate work, and established the canonical worktree.
-- Remaining: original solo and paired completion, failure and terminal state evidence,
-  guest door interaction, paired terminal failure, and the applicable legacy regressions.
+- Remaining: original solo and paired success,
+  guest door interaction, changed equipment at the terminal boundary and the
+  applicable legacy regressions.
 - Next action: continue the southern approach with both peers and repeat the swamp
   escort on the solo reference from the private native quicksave. Exercise the
   native door and the mission’s success and failure boundaries.
