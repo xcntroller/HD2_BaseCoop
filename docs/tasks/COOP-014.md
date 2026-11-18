@@ -7,7 +7,7 @@
 - Canonical branch: `feature/coop-014-arctic1-completion`
 - Base commit: `9ec7fe48bb21c38f9d95976b99198c6fb1576e74`
 - Dependencies: [COOP-010](COOP-010.md) two-player Arctic1 development path
-- Last checkpoint: `7cf9650b` native wire cutting and paired terminal outcome
+- Last checkpoint: `46f06f19` native interaction reach and guest door motion
 - Checkpoint location: `.worktrees/COOP-014` and the canonical branch on origin
 - Review/integration: COOP-012 coordinator accepted the claim in ledger `75131f7a`.
 - Pull request: [draft #25](https://github.com/xcntroller/HD2_BaseCoop/pull/25)
@@ -217,6 +217,22 @@ for progression.
   killed the three east gate sentries. Both players lost their soldiers inside
   the factory before reaching the underground entrance, and one AI soldier
   survived that attempt. The pair did not reach a terminal result.
+- A live guest door request exposed an obsolete input-kind limit in the control
+  gate. The gate now shares the codec's limit. The regression checks admit and
+  sequence valid door and wire-cut input and reject a repeated sequence and
+  an unknown kind. GCC and MSVC x86 each passed 12 suites and 567,516 checks.
+  The guest's right mouse button now runs the local native aiming view. The
+  ordinary rifle view, iron sights and return to the ordinary view were
+  captured in `build/evidence/authorized-actions-paired/`.
+- The native door and fence reach check now uses the local hierarchy bounds.
+  For the initially open hut door, the guest begins its authored opening
+  motion after the initial-world pose check. The candidate linked with no
+  compiler diagnostics and has SHA-256
+  `4d03fd04e835040f0f1d96b65d040d52803b240062eacd378bbc81e2ed6c55c1`.
+  In `build/evidence/doors-running-paired/`, the guest selected Close and Open
+  for door 38 using the original action menu. The host accepted each request
+  once. Both instances finished closing at angle 0 after the guest stepped
+  back, and both started reopening in the subsequent check.
 
 ## PR test instructions and delivery
 
@@ -229,9 +245,9 @@ for progression.
 
 - Completed: refreshed origin, verified COOP-010 merge `738b124d` is an ancestor of
   the base, checked for duplicate work, and established the canonical worktree.
-- Remaining: paired success, guest door interaction and the live fence cut.
-- Next action: clear the hut patrol before the guest approaches its door.
-  Verify the native door and cut, approach the complex with cover, clear the original
+- Remaining: paired success and the live fence cut.
+- Next action: follow the guide, exercise the native fence cut on both peers,
+  approach the complex with cover, and clear the original
   garrison, and gather the surviving squad at the underground entrance.
 - Blockers: none. Serialize live LAN tests with COOP-013 when the fixed provider port is occupied.
 - Decisions: Use the existing development launch and game data. Base the interaction scope on what the original Arctic1 route exercises.
