@@ -10,8 +10,9 @@ On one serialized nonreentrant authority queue, construct
 `C_CampaignControlAdapter(ownership, sink)`, where `ownership` is the merged
 `C_CampaignOwnership` and `sink` is `C_CampaignNativeControlSink` in the engine.
 Install the same ownership view with `InstallCampaignControlRuntime(&ownership,
-&adapter)` only at the later explicit integration boundary. Uninstall before
-teardown. The default global view and adapter are null; legacy session/transport
+&adapter)` only at the later explicit integration boundary. Keep this view installed through
+physical actor/controller retirement, then uninstall before destroying the
+view/adapter. The default global view and adapter are null; legacy session/transport
 predicates and serialized layouts keep their meanings.
 
 After committing ownership/binding/script/death changes, call

@@ -3,6 +3,7 @@
 // AI human, saved games, the car driving the scripts ask for and the small slots. The senses
 // are in ai_senses.cpp, the combat in ai_combat.cpp, the movement in ai_movement.cpp; the
 // parts it is built from in ai_parts.cpp.
+#include "game/campaign_mission_adapter.h"
 #include "game/human_controller.h"
 
 #include <cmath>
@@ -174,7 +175,9 @@ void C_AIController::ReleaseTask()
 void C_AIController::UpdateNetwork(int frameTime)
 {
     // Only co-operative network games replicate the AI.
-    if (IsLocalGame() || g_mpSettings->gameType != MP_GAME_COOPERATIVE)
+    if (IsCampaignMission()) {
+        if (!IsCampaignSimulationAuthority() || !CanCampaignSimulate()) return;
+    } else if (IsLocalGame() || g_mpSettings->gameType != MP_GAME_COOPERATIVE)
         return;
     const S_vector4 pos = reinterpret_cast<const S_vector4 &>(m_human->GetFrame()->GetMatrix().m[3]);
     const S_vector &viewDir = GetViewDir();

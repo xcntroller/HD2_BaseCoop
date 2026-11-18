@@ -2,15 +2,15 @@
 
 ## Coordination
 
-- Status: ready
-- Owner/session: unassigned
+- Status: review
+- Owner/session: Codex COOP-009, user assignment 2026-11-18; coordinator COOP-007 acknowledged claim; COOP-009 accepted its stopped-writer handoff at ledger `9e051608`
 - Canonical branch: `feature/coop-009-campaign-adapters`
-- Base commit: not started
+- Base commit: `0fcea78f85d0fe9348c3b8e13d1a0f23f50a482a`
 - Dependencies: COOP-001, COOP-004, COOP-005, COOP-006
-- Last checkpoint: none
-- Checkpoint location: none
-- Review/integration: none
-- Pull request: none
+- Last checkpoint: source `6375ccad`, integrated-main sync `3a257b90`; final evidence in this documentation commit
+- Checkpoint location: `.worktrees/COOP-009`, canonical branch on origin
+- Review/integration: independent COOP-008 complete/final source review PASS; exact-head integration pending
+- Pull request: https://github.com/xcntroller/HD2_BaseCoop/pull/19 (draft)
 
 ## Branch authority and completion PR
 
@@ -62,13 +62,66 @@ and repeats affected checks; do not merge an unfinished dependency branch.
 
 ## Handoff
 
-- Completed: legacy start/stop/spawn coupling mapped in the design.
-- Remaining: exact file split, campaign adapters, synchronization hooks, focused regressions.
-- Next action: obtain coordinator claim acknowledgment, review merged contracts/models,
-  and agree on overlapping edits with COOP-008.
-- Blockers: none for the isolated adapter task. COOP-006 protocol merged at
-  `59cb8944`; COOP-004 ownership merged at `59a480c8`,
-  COOP-005 preparation merged at `06d999d7`, and COOP-001 build/runtime baseline
-  merged at `15b572ff`. Prerequisites and commands are in [the guide](../build_baseline.md).
-- Decisions: original campaign spawning and mission behavior; multiplayer infrastructure reuse.
-- Validation: none for this task.
+- Completed: engine-independent frozen manifest/generation/actor binding/loading barrier,
+  reconstruction acknowledgment/start hooks, original-point native spawn conversion,
+  dormant lifecycle/profile/script/AI guards and source-extracted legacy regressions.
+  Native file split `campaign_mission_native.{h,cpp}` was acknowledged by COOP-007.
+- Peer review: COOP-008 found an unguarded guest Running publication; native
+  ticking now additionally requires an explicitly installed reconstruction receipt
+  and matching accepted Start. Reordered Running-before-Start remains gated.
+  Adapter copies are disabled and SessionId lifetime is explicit in its header.
+  Pre-generation retirement callback drains prior physical controllers before
+  advancing ownership generation; failed/missing prior-world retirement does not
+  advance the mission generation. Host simulation also requires its own successful
+  lifecycle Start receipt for the exact sealed session/generation. Final COOP-008
+  review PASS through `3a257b90` / source `6375ccad`: independently reproduced
+  GCC 409 + 104 checks (`gcc-kqvcy9yg`), inspected matching final MSVC/sanitizer
+  and 282-unit full game evidence. Durable review comment is on PR #19.
+  No source fixes remain.
+- Remaining: final exact-head independent review and integration of PR #19.
+  COOP-008 implementation and actual-done metadata are merged (`d34b6900`, `934143aa`);
+  the agreed public progress setter is now called after native mission initialization.
+  No live attachment/menu or two-player campaign gameplay claim; COOP-010 owns those.
+- Next action: record final independent review and perform exact-head PR #19
+  integration gates, then actual-done/dependent-task metadata follow-up.
+- Validation run on final combined source `3a257b90` (own source `6375ccad`):
+  strict GCC / ASan+UBSan and intended MSVC 19.44.35230 x86 `/W4 /WX` each PASS
+  11 lifecycle/model-composition suites / 409 checks and 4 actual-source native
+  regression suites / 104 checks. Final directories: `gcc-o6ovgh19` (sanitized),
+  `msvc-mz0i94pz`; earlier regular GCC `gcc-y_90vbg1` passes the same suites.
+  Exact commands, environment, compiler and execution logs are in those directories.
+  Private sanitizer libraries use process-local LD_LIBRARY_PATH and
+  `--sanitizer-library-dir`; no machine-global changes.
+- Final build: `build/accepted-combined-game.log`: 282 translation units, zero
+  compiler messages, link 0, LAA yes, MSVC x86/x87 flags. This includes finished
+  COOP-008/007, both pickup guards, the committed progress setter and host/guest
+  Start receipts. The focused combined fixture runs real session, ownership,
+  host/guest control and protocol modules through world acknowledgment, reordered
+  Running/Start, input, disconnect and pre-generation retirement.
+- Diff/document checks: `git diff --check`, complete final scope/history review,
+  Python runner syntax and local Markdown file links PASS.
+- Runtime evidence: a private copied 1.12 installation launched intro/main menu on
+  Xvfb :101, original campaign flow was attempted but no mission-play acceptance is
+  claimed. Focused source regressions establish dormant solo/native settings and
+  departure behavior; full live campaign acceptance remains COOP-010.
+- Resources: original COOP-007 toolchain/worktree disappeared externally after its
+  completion; 007/008/009 confirmed absence; none reports deleting it. Historical
+  passing evidence remains accurate. Restored private 009 compiler/SDK/WinPython
+  is `build/tooling/run-python.bat` (same 14.44.35207/10.0.26100.0/3.13.9), with own
+  Wine prefix and isolated outputs. Read-only borrowing authorized for 008.
+  A second preserved, reconfigured launcher is at root-checkout ignored
+  `build/coop-shared-tooling/run-python.bat`; matching engine imports/DLLs are in
+  its `engine/` directory. Final logs, executable and component outputs are copied
+  to root-checkout ignored `build/coop-009-evidence/`. These paths survive loss of
+  the task worktree; they remain local prerequisites/artifacts, never Git content.
+- API: native callback hooks bind 008 `SynchronizeCommitted`,
+  `FindCampaignTransportPlayer(int slot)`, `HandleCampaignDisconnect(PlayerId)`;
+  resolve authenticated incarnation before connection cleanup. All world/snapshot
+  and input dispatch obligations are in the [harness guide](../../_re/harness/campaign_mission/README.md).
+- Scope: sole lifecycle writer; 008 retains all human/controller/actor consumers.
+  Narrow scope expansion acknowledged by COOP-008 after its merge: exactly two
+  actors_module.cpp pickup-respawn guards now exclude explicit campaign sessions,
+  and its composition guide clarifies retaining views until physical retirement.
+  No shared DTO/legacy layout/wire changes or generated tier1 edits.
+- Prerequisites: 001 `15b572ff`, 004 `59a480c8`, 005 `06d999d7`, 006 `59cb8944` are merged.
+  Final 009 source includes only merged dependencies; no draft branch is stacked.

@@ -671,7 +671,7 @@ void C_TemporaryActorsList::StartMission(bool server)
         frame->SetRot(placement.rot);
         auto *actor = static_cast<C_ItemActor *>(g_temporaryActors.CreateActor(ACTOR_ITEM, frame, -1));
         actor->SetupItem(item, S_vector(0.0f, 0.0f, 0.0f));
-        if (!IsLocalGame() && GetItemBehaviour(item) == ITEM_BEHAVIOUR_RESPAWNING)
+        if (!IsLocalGame() && !CampaignControlsActive() && GetItemBehaviour(item) == ITEM_BEHAVIOUR_RESPAWNING)
             m_respawnItems.push_back(placement);
     }
     g_itemsModule.FreePlacements();
@@ -993,7 +993,7 @@ int C_TemporaryActorsList::DropItem(C_Human *human, int itemUid, const S_vector 
     frame->Update();
     auto *actor = static_cast<C_ItemActor *>(g_temporaryActors.CreateActor(ACTOR_ITEM, frame, -1));
     actor->SetupItem(item, dir);
-    if (!IsLocalGame() && GetItemBehaviour(item) == ITEM_BEHAVIOUR_RESPAWNING)
+    if (!IsLocalGame() && !CampaignControlsActive() && GetItemBehaviour(item) == ITEM_BEHAVIOUR_RESPAWNING)
         actor->SetRespawnTime(ITEM_RESPAWN_TIME);
     return actor->GetNetId();
 }

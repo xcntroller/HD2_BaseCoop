@@ -5,6 +5,7 @@
 //  * a few commands stall the script (return without advancing) on bad input;
 //  * some debug commands advance but report "not handled" (derived script classes
 //    then run their own handler, which may advance a second time).
+#include "game/campaign_mission_adapter.h"
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -59,6 +60,7 @@ bool StrictlyInside(const S_vector &p, const S_vector &min, const S_vector &max)
 // Team whose members count as "players" for the current game mode.
 C_TeamBase *GetPlayerTeamForMode()
 {
+    if (IsCampaignMission()) return g_teamManager.GetPlayerTeam();
     if (g_gameProfile.IsCooperativeGame())
         return g_teamManager.GetCoopTeam();
     return g_teamManager.GetPlayerTeam();

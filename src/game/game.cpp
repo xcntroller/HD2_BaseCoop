@@ -4,6 +4,7 @@
 // the saved games in game_save.cpp.
 #include "game/first_person_view.h"
 #include "game/game.h"
+#include "game/campaign_mission_native.h"
 
 #include <cmath>
 #include <cstdarg>
@@ -131,6 +132,8 @@ bool C_game::Start(void *arg)                       // 0x00698c80 (DS 0x006d99e0
     C_MissionDef *mission = static_cast<C_MissionDef *>(arg);
     if (m_state == GAME_STATE_STARTING)
         return false;
+    if (IsCampaignMission() && (!mission || !GetCampaignMissionSnapshot() ||
+        GetCampaignMissionSnapshot()->m_Context.m_Phase != E_CampaignPhase::Loading)) return false;
     const int campaign = g_campaign->GetCurrentIndex();
     if (campaign == 0)
         m_campaignMissionNumber = g_campaign->GetMissionNumber(0);
@@ -194,7 +197,12 @@ bool C_game::Start(void *arg)                       // 0x00698c80 (DS 0x006d99e0
     m_state = GAME_STATE_STARTING;
     m_fadeTime = 500;
     m_endDelay = 0;
-    if (IsLocalGame()) {
+    if (IsCampaignMission()) {
+        if (IsCampaignSimulationAuthority() && !SpawnCampaignMissionSquad()) {
+            GetIGraph()->SetFlags(graphFlags);
+            return false;
+        }
+    } else if (IsLocalGame()) {
         // The squad chosen in the menus appears at the spawn points.
         std::vector<S_SquadSoldier *> &squad = g_missionSquad->states;
         for (size_t i = 0; i < squad.size(); ++i) {
@@ -220,13 +228,13 @@ bool C_game::Start(void *arg)                       // 0x00698c80 (DS 0x006d99e0
     m_hasVipObjective = false;
     m_vipSlot = -1;
     m_respawnRequest = 0;
-    m_roundState = IsLocalGame() || !IsServer() ? ROUND_PLAYING : ROUND_WARMUP;
+    m_roundState = IsLocalGame() || IsCampaignMission() || !IsServer() ? ROUND_PLAYING : ROUND_WARMUP;
     m_respawnWaveTime = 0;
     m_cameraMode = GAME_CAMERA_FOLLOW;
     m_spectatedSlot = -1;
     m_unknown94 = false;
     m_inRestrictedArea = false;
-    if (!IsLocalGame()) {
+    if (!IsLocalGame() && !IsCampaignMission()) {
         for (int i = 0; i < m_mission->GetObjectiveCount(); ++i) {
             if (GetMpObjective(m_mission, i)->type == OBJECTIVE_TYPE_VIP) {
                 m_hasVipObjective = true;
@@ -249,7 +257,9 @@ bool C_game::Start(void *arg)                       // 0x00698c80 (DS 0x006d99e0
 
 bool C_game::Stop()                                 // 0x00699250 (DS 0x006d9f50)
 {
-    if (IsLocalGame()) {
+    if (IsCampaignMission()) {
+        CommitCampaignMissionSoldiers();
+    } else if (IsLocalGame()) {
         // The squad's soldiers go back to the campaign's records (the players have the
         // first actor ids).
         for (int id = 0;; ++id) {
@@ -347,7 +357,9 @@ void C_game::EndMission(int)                        // 0x0069a7d0
     m_state = GAME_STATE_ENDING;
     m_fadeTime = 500;
     m_endDelay = 1000;
-    if (!IsLocalGame()) {
+    if (IsCampaignMission()) {
+        PublishCampaignMissionResult(!m_missionFailed && AreObjectivesDecided());
+    } else if (!IsLocalGame()) {
         g_netGame.Close(false);
         if (IsServer())
             GetGameApp()->SendGameMessage(GAME_MSG_GAME_ENDED, 0, 0, 0, false);
@@ -397,7 +409,7 @@ void C_game::Render()                               // 0x0069bb40
 
 bool C_game::HandleInput(float *held, float *pressed)   // 0x0069a830 (DS 0x006db860)
 {
-    if (m_fadeTime > 0 || m_inputDelay != 0)
+    if (!CanCampaignSimulate() || m_fadeTime > 0 || m_inputDelay != 0)
         return true;
     if (IsClient())
         m_interface->FilterInput(held, pressed);
@@ -424,9 +436,9 @@ bool C_game::HandleInput(float *held, float *pressed)   // 0x0069a830 (DS 0x006d
         }
     }
 #ifdef HD2_DEDICATED   // the server has no respawn screen to test
-    if (!IsLocalGame())
+    if (!IsLocalGame() && !IsCampaignMission())
 #else
-    if (!IsLocalGame() && !m_interface->IsRespawnScreenShown())
+    if (!IsLocalGame() && !IsCampaignMission() && !m_interface->IsRespawnScreenShown())
 #endif
         UpdateSpectatorCamera(held, pressed);
 
@@ -486,7 +498,7 @@ bool C_game::HandleInput(float *held, float *pressed)   // 0x0069a830 (DS 0x006d
         }
         if (!pressed)
             return true;
-        if (pressed[INPUT_MP_MENU] != 0.0f) {
+        if (!IsCampaignMission() && pressed[INPUT_MP_MENU] != 0.0f) {
             m_state = GAME_STATE_MP_GAME_MENU;
             return true;
         }

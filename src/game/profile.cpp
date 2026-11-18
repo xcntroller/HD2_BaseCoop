@@ -1,4 +1,5 @@
 // The game profile (see profile.h).
+#include "game/campaign_mission_adapter.h"
 #include "game/profile.h"
 
 #include <cstring>
@@ -219,6 +220,7 @@ bool C_GameProfile::IsCooperativeGame() const           // 0x006b69d0
 
 int C_GameProfile::GetDifficulty() const                // 0x006b6a20
 {
+    if (IsCampaignMission()) return static_cast<int>(GetCampaignMissionSnapshot()->m_Context.m_Rules.m_Difficulty);
     if (IsCooperativeGame())
         return m_mpSettings->coopDifficulty;
     if (!IsLocalGame())

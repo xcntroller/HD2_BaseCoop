@@ -11,6 +11,7 @@
 
 class C_Human;
 struct S_SoldierState;
+struct S_SquadSoldier;
 
 class alignas(16) C_SpawnPoint : public C_Actor {       // "SpawnPoint", vtable 0x008138e0
     friend class C_GameApp;                             // the game commands (net/net_commands.cpp)
@@ -22,6 +23,8 @@ public:
     // null in single player). The state is an S_SquadSoldier (the squad's or the network's):
     // without a uniform it gets the point's, its stacks are split.
     void Spawn(int slot, S_SoldierState *state, int *stats);   // 0x00611c90
+    C_Human *SpawnCampaign(S_SquadSoldier &state, const int *stats);
+    void NotifyCampaignSpawned();
     C_Actor *GetSpawnedActor() const { return m_spawned; }     // +0xA8 (the last one)
     int GetTeam() const { return m_team; }              // +0x90
     // Which spawns it accepts; 2 = any (C_ActorsModule::FindRandomSpawnPoint).

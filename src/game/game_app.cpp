@@ -1,3 +1,4 @@
+#include "game/campaign_mission_adapter.h"
 #include "game/game_app.h"
 
 #include <cstdio>
@@ -224,6 +225,9 @@ bool C_GameApp::Close()                                 // 0x006c0c40
 
 bool C_GameApp::StartStep(C_CampaignNode *step, int /*unused*/)   // 0x006c1210
 {
+    if (IsCampaignMission() && (!step || step->GetType() != CAMPAIGN_NODE_PLAY ||
+        !GetCampaignMissionSnapshot() || GetCampaignMissionSnapshot()->m_Context.m_Phase != E_CampaignPhase::Loading))
+        return false; // COOP-010 owns synchronized step dispatch; no solo editor fallback
     if (!step) {
         if (m_state) {
             m_state->Stop();
@@ -544,6 +548,7 @@ bool C_GameApp::OnMovieFinished()
 
 void C_GameApp::StartNextMap()
 {
+    if (IsCampaignMission()) return; // campaign steps are selected by host lifecycle, never MP rotation
     if (g_mpSettings->sessionType == 0)
         return;
     if (m_state->GetTypeId() == GAME_STATE_TYPE_GAME_MENU)
