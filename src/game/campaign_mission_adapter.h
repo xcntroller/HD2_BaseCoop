@@ -85,6 +85,7 @@ void InstallCampaignMissionReconstruction(const C_CampaignMissionReconstruction 
 T_CampaignOwnershipSnapshot GetCampaignMissionSnapshot();
 bool IsCampaignMission();
 bool IsCampaignSimulationAuthority();
+bool IsCampaignInitialReplica();
 bool CanCampaignSimulate();
 
 #endif

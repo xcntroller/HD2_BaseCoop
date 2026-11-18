@@ -88,6 +88,7 @@ public:
     void AddRespawningItem(C_Item *item);               // 0x007ddcc0
     void RemoveRespawningItem(C_Item *item);            // 0x007dde70
     const std::vector<C_Item *> &GetRespawningItems() const { return m_respawningItems; }
+    const std::vector<C_Item *> &GetInstances() const { return m_instances; }
 
     // --- inventory rules ----------------------------------------------------------
     // Moves `item` from container `fromContainer` of `from` (null: a new / free item)

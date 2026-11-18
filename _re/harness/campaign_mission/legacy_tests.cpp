@@ -162,6 +162,13 @@ void TestOriginalPointSpawn() {
     point.NotifyCampaignSpawned();CHECK(script.uses==1);
     CHECK(point.SpawnCampaign(state,stats.data())==nullptr);
     point.m_free=true;point.m_npc=1;CHECK(point.SpawnCampaign(state,stats.data())!=nullptr);CHECK(C_SpawnPoint::npc);
+    g_server=false;view.state.m_Context.m_IsTransportServer=false;
+    view.state.m_Context.m_IsTransportClient=true;view.state.m_Context.m_Phase=E_CampaignPhase::Loading;
+    point.m_free=true;point.m_npc=0;CHECK(point.SpawnCampaign(state,stats.data())!=nullptr);
+    point.NotifyCampaignSpawned();CHECK(script.uses==2);
+    view.state.m_Context.m_Phase=E_CampaignPhase::Running;
+    point.m_free=true;CHECK(point.SpawnCampaign(state,stats.data())==nullptr);
+    g_server=true;
     InstallCampaignMissionView(nullptr);point.m_free=true;CHECK(point.SpawnCampaign(state,stats.data())==nullptr);CHECK(point.m_free);
 }
 void TestConversion() {

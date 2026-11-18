@@ -2,6 +2,7 @@
 #include "game/first_person_view.h"
 #include "game/interface.h"
 #include "game/items_module.h"
+#include "game/campaign_mission_adapter.h"
 
 #include <windows.h>
 
@@ -277,8 +278,11 @@ void C_ItemsModule::StartMission(bool server)
     EnsureItemsLoaded();
     m_missionActive = true;
     ResetUids();
-    if (IsServer() && !LoadMissionItems())
+    if (IsCampaignInitialReplica()) {
+        LoadMissionItems();
+    } else if (IsServer() && !LoadMissionItems()) {
         DeleteMissionItemsFile();
+    }
 }
 
 void C_ItemsModule::StopMission(bool server)

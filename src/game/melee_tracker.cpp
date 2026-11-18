@@ -14,6 +14,7 @@
 #include "common/object_pool.h"
 #include "game/actors_module.h"                         // g_actorsModule (resolve saved actor ids)
 #include "game/app.h"                                   // MicrosecondsNow
+#include "game/campaign_mission_adapter.h"
 #include "game/game.h"                                  // GetGame()->Print
 #include "game/game_internal.h"                         // IsClient
 #include "game/human.h"                                 // C_Human (role / health of a target)
@@ -793,7 +794,7 @@ const char HEAD_BONE_NAME[] = "f";                      // 0x008390ec (also via 
 void C_MeleeTracker::StartMission(bool server)          // 0x005d5290
 {
     Activate(server);
-    if (!server)
+    if (!server && !IsCampaignInitialReplica())
         return;
     // The animation table is shared by every tracker; the first one to start loads it.
     if (!g_meleeTrackerAnims[1].anim && !LoadAnimTable())
@@ -828,7 +829,7 @@ void C_MeleeTracker::ReleaseSightings()
 void C_MeleeTracker::StopMission(bool server)           // 0x005d5390
 {
     Deactivate(server);
-    if (!server)
+    if (!server && (!IsCampaignMission() || IsServer()))
         return;
     ReleaseHeadOverrides();
     // Fix: the original detaches the controller without checking there is one.

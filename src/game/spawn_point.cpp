@@ -234,7 +234,9 @@ void C_SpawnPoint::Spawn(int slot, S_SoldierState *state, int *stats)   // 0x006
 
 C_Human *C_SpawnPoint::SpawnCampaign(S_SquadSoldier &state, const int *stats)
 {
-    if (!IsCampaignSimulationAuthority() || !IsServer() || !m_frame || !m_free || !stats)
+    if (!(IsCampaignSimulationAuthority() && IsServer()) && !IsCampaignInitialReplica())
+        return nullptr;
+    if (!m_frame || !m_free || !stats)
         return nullptr;
     const int actorSlot = g_actorsModule.FindFreePlayerSlot();
     if (actorSlot < 0) return nullptr;
@@ -247,7 +249,8 @@ C_Human *C_SpawnPoint::SpawnCampaign(S_SquadSoldier &state, const int *stats)
     C_Human *human = CreateSoldier(-1, actorSlot, pos, dir, &state, stats, -1, m_npc != 0);
     if (!human) return nullptr;
     m_free = false; m_spawned = human;
-    human->StartMission(true);
+    if (IsServer())
+        human->StartMission(true);
     if (IsClient()) human->StartMission(false);
     human->SetCampaignProgress(state.progress);
     if (!g_teamManager.GetPlayerTeam()->IsMember(human))
@@ -259,7 +262,7 @@ C_Human *C_SpawnPoint::SpawnCampaign(S_SquadSoldier &state, const int *stats)
 
 void C_SpawnPoint::NotifyCampaignSpawned()
 {
-    if (!IsCampaignSimulationAuthority() || !m_spawned || !m_frame) return;
+    if ((!IsCampaignSimulationAuthority() && !IsCampaignInitialReplica()) || !m_spawned || !m_frame) return;
     // Ownership must already bind this actor before a point script can suspend
     // its control. Controller reconciliation follows after the script stack exits.
     if (const S_FrameData *data = m_frame->GetData()) {

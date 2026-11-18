@@ -1,3 +1,4 @@
+#include "game/campaign_mission_adapter.h"
 #include "script/script.h"
 
 #include <windows.h>
@@ -67,7 +68,7 @@ S_ScriptHandler *FindHandler(const std::vector<S_ScriptHandler *> &handlers, int
 
 bool AddHandler(std::vector<S_ScriptHandler *> &handlers, int id, int label)
 {
-    if (!IsServer() || FindHandler(handlers, id))
+    if ((!IsServer() && !IsCampaignInitialReplica()) || FindHandler(handlers, id))
         return false;
     handlers.push_back(new S_ScriptHandler{id, label});
     return true;
@@ -150,8 +151,6 @@ C_Script::~C_Script()
 
 void C_Script::Clear()
 {
-    if (!IsServer())
-        return;
     m_pendingSignals = 0;
     m_disabledSignals = 0;
     m_numbers.clear();
@@ -379,7 +378,7 @@ void C_Script::Stop()
 
 void C_Script::Restart()
 {
-    if (!IsServer())
+    if (!IsServer() && !IsCampaignInitialReplica())
         return;
     m_waitAnimLabel = -1;
     m_waitAnimModel = nullptr;
@@ -438,7 +437,7 @@ void C_Script::OnDeath()
 
 void C_Script::OnUse(int /*unused*/)
 {
-    if (!IsServer())
+    if (!IsServer() && !IsCampaignInitialReplica())
         return;
     if (m_running && (m_ip == m_onDeath || m_ip == m_onAlarm))
         return;
@@ -547,7 +546,7 @@ void C_Script::OnActionDone(int label)
 
 int C_Script::AddCommand(S_ScriptCommand *cmd)
 {
-    if (!IsServer())
+    if (!IsServer() && !IsCampaignInitialReplica())
         return -1;
     m_commands.push_back(cmd);
     return CommandCount() - 1;
@@ -555,7 +554,7 @@ int C_Script::AddCommand(S_ScriptCommand *cmd)
 
 void C_Script::AddExpression(C_ScriptExpression *expr)
 {
-    if (!IsServer())
+    if (!IsServer() && !IsCampaignInitialReplica())
         return;
     m_expressions.push_back(expr);
     expr->FreeTokens();

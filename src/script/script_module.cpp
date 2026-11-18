@@ -332,7 +332,7 @@ bool C_ScriptModule::ReadSaveGameValues(C_chunk &chunk)
 
 void C_ScriptModule::StartMission(bool server)
 {
-    if (!server || m_started)
+    if ((!server && !IsCampaignInitialReplica()) || m_started)
         return;
     m_fakeCutscene = false;
     LoadScriptList((g_gameRole & GAME_ROLE_LOCAL) != GAME_ROLE_LOCAL && !IsCampaignMission());
@@ -399,7 +399,7 @@ void C_ScriptModule::RestoreAnimatedModel(I3D_model *model)
 
 void C_ScriptModule::StopMission(bool server)
 {
-    if (!m_started || !server)
+    if (!m_started || (!server && (!IsCampaignMission() || IsCampaignSimulationAuthority())))
         return;
 
     m_soundFrames.clear();

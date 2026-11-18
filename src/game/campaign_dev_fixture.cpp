@@ -224,7 +224,7 @@ R IssueRequiredEquipment(const C_CampaignEquipmentRules &rules, const S_Campaign
     return R::CapacityExceeded;
 }
 
-R ImportFixture(const C_CampaignOwnership &ownership, int missionNumber, S_CampaignNativeCatalog &native,
+R ImportFixture(const C_CampaignSession &session, int missionNumber, S_CampaignNativeCatalog &native,
     S_CampaignEquipmentRuleCatalog &catalog, S_CampaignPreparationSnapshot &snapshot, std::uint64_t &entry)
 {
     C_MissionItems missionItems;
@@ -242,8 +242,7 @@ R ImportFixture(const C_CampaignOwnership &ownership, int missionNumber, S_Campa
     for (int stat = STAT_HEALTH; stat <= STAT_LOCKPICK; ++stat)
         native.m_Skills.emplace(SkillKey("original-stat/" + std::to_string(stat)), stat);
 
-    const auto current = ownership.GetSnapshot();
-    const auto &roster = ownership.GetSession().GetRoster();
+    const auto &roster = session.GetRoster();
     if (roster.size() != kKitLimit)
         return R::InvalidSoldier;
     for (std::size_t i = 0; i < roster.size(); ++i) {
@@ -277,7 +276,6 @@ R ImportFixture(const C_CampaignOwnership &ownership, int missionNumber, S_Campa
         presentation.m_Soldier = record.m_Soldier;
         presentation.m_Profile = SoldierProfileKey("original-roster/" + std::to_string(record.m_ProfileIndex));
         presentation.m_DisplayName = profile->fullName.c_str();
-        presentation.m_Ownership = current->m_Soldiers[i];
         snapshot.m_Soldiers.push_back(std::move(presentation));
         snapshot.m_Slots[i].m_Soldier = record.m_Soldier;
         catalog.m_Soldiers.push_back({record.m_Soldier, profile->stats[STAT_STRENGTH], {}});
@@ -317,9 +315,11 @@ R FreezeDevelopmentCampaign(C_CampaignOwnership &ownership, C_CampaignRequestJou
     snapshot.m_ViewRevision = ViewRevision(1);
     snapshot.m_OwnershipRevision = ownershipCut->m_Revision;
     std::uint64_t entry = 0;
-    reason = ImportFixture(ownership, missionNumber, native, catalog, snapshot, entry);
+    reason = ImportFixture(ownership.GetSession(), missionNumber, native, catalog, snapshot, entry);
     if (reason != R::None)
         return reason;
+    for (std::size_t i = 0; i < snapshot.m_Soldiers.size(); ++i)
+        snapshot.m_Soldiers[i].m_Ownership = ownershipCut->m_Soldiers[i];
 
     try {
         C_CampaignEquipmentRules rules(std::move(catalog));
@@ -359,4 +359,54 @@ R FreezeDevelopmentCampaign(C_CampaignOwnership &ownership, C_CampaignRequestJou
         LogDevelopmentCampaign(error.what());
         return R::InvalidItem;
     }
+}
+
+E_CampaignReason ImportDevelopmentReplica(const C_CampaignSession &roster, int missionNumber,
+    const S_CampaignMissionManifest &manifest, S_CampaignNativeCatalog &native,
+    std::vector<S_CampaignNativeSpawn> &spawns)
+{
+    S_CampaignPreparationSnapshot local;
+    S_CampaignEquipmentRuleCatalog rules;
+    std::uint64_t entry = 0;
+    const auto reason = ImportFixture(roster, missionNumber, native, rules, local, entry);
+    if (reason != R::None)
+        return reason;
+    // Reject quantities, placements, and equipment outside this agreed fixture.
+    for (std::size_t i = 0; i < local.m_Soldiers.size(); ++i) {
+        local.m_Soldiers[i].m_Ownership.m_Soldier = local.m_Soldiers[i].m_Soldier;
+        local.m_Soldiers[i].m_Ownership.m_Deployed = true;
+    }
+    try {
+        C_CampaignEquipmentRules equipment(std::move(rules));
+        const auto issued = IssueRequiredEquipment(equipment, native, local, entry);
+        if (issued != R::None)
+            return issued;
+    } catch (const std::invalid_argument &) {
+        return R::InvalidItem;
+    }
+    if (local.m_Loadouts.size() != manifest.m_Loadouts.size() || local.m_Soldiers.size() != manifest.m_Soldiers.size())
+        return R::ContentMismatch;
+    for (std::size_t i = 0; i < local.m_Loadouts.size(); ++i) {
+        const auto &expected = local.m_Loadouts[i];
+        const auto &received = manifest.m_Loadouts[i];
+        if (expected.m_Soldier != received.m_Soldier || expected.m_Items.size() != received.m_Items.size() ||
+            expected.m_Skills.size() != received.m_Skills.size() ||
+            local.m_Soldiers[i].m_Profile != manifest.m_Soldiers[i].m_Profile)
+            return R::ContentMismatch;
+        for (std::size_t j = 0; j < expected.m_Skills.size(); ++j) {
+            if (expected.m_Skills[j].m_Key != received.m_Skills[j].m_Key ||
+                expected.m_Skills[j].m_Value != received.m_Skills[j].m_Value)
+                return R::ContentMismatch;
+        }
+        for (std::size_t j = 0; j < expected.m_Items.size(); ++j) {
+            const auto &a = expected.m_Items[j];
+            const auto &b = received.m_Items[j];
+            if (a.m_Entry != b.m_Entry || a.m_Placement.m_Slot != b.m_Placement.m_Slot ||
+                a.m_Placement.m_Position != b.m_Placement.m_Position || a.m_State.m_Item != b.m_State.m_Item ||
+                a.m_State.m_Quantity != b.m_State.m_Quantity || b.m_State.m_AmmoType || b.m_State.m_Rounds ||
+                b.m_State.m_Charges || b.m_State.m_Condition)
+                return R::ContentMismatch;
+        }
+    }
+    return BuildCampaignNativeSpawns(manifest, roster, native, spawns);
 }
