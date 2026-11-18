@@ -42,6 +42,38 @@ With one agent, complete ready tasks in dependency order. With more agents, clai
 independent tasks or split a larger task into smaller complete deliverables. There is
 no required team size and no permanent UI, networking, or integration agent.
 
+## Follow-up tasks
+
+[COOP-010](COOP-010.md) established the two-player Arctic1 development gate. These
+tasks build the menu flow, complete the mission, then carry the session through
+progression and recovery. See the [campaign roadmap](../base_game_coop.md#implementation-milestones)
+for the full milestone sequence.
+
+| Task | Deliverable | Dependencies | Canonical branch |
+| --- | --- | --- | --- |
+| [COOP-012](COOP-012.md) | Campaign session setup and menu entry | COOP-010 | `feature/coop-012-session-setup` |
+| [COOP-013](COOP-013.md) | Live campaign preparation and first deployment | COOP-005, COOP-007, COOP-012 | `feature/coop-013-live-preparation` |
+| [COOP-014](COOP-014.md) | Arctic1 mission completion and interaction parity | COOP-010 | `feature/coop-014-arctic1-completion` |
+| [COOP-015](COOP-015.md) | Campaign debrief and next mission | COOP-013, COOP-014 | `feature/coop-015-campaign-progression` |
+| [COOP-016](COOP-016.md) | Current-world capture and reconstruction | COOP-015 | `feature/coop-016-current-world` |
+| [COOP-017](COOP-017.md) | Isolated campaign saves, load and restart | COOP-016 | `feature/coop-017-save-load` |
+| [COOP-018](COOP-018.md) | Reconnect to a running campaign | COOP-016 | `feature/coop-018-reconnect` |
+| [COOP-019](COOP-019.md) | First-time join during a running mission | COOP-018 | `feature/coop-019-running-join` |
+| [COOP-020](COOP-020.md) | Base campaign verification | COOP-017, COOP-019 | `docs/coop-020-campaign-verification` |
+
+COOP-012 and COOP-014 are ready for claims once these records are integrated. Their
+menu/setup and in-mission work can proceed independently after the coordinator
+agrees on any shared dispatch and launch-file edits. COOP-013 delivers the first
+menu-to-mission flow. COOP-015 joins that flow with the original mission outcome
+and campaign sequence.
+
+COOP-016 establishes a shared current-world boundary for saves and reconnect.
+COOP-017 and COOP-018 can proceed after that boundary merges, with coordination
+on any shared lifecycle edits. New players remain subject to the Running admission
+restriction until COOP-019. Open product decisions are tracked in the
+[campaign design](../base_game_coop.md#product-decisions-still-open) and in the
+records that depend on them.
+
 ## Claiming and resuming work
 
 Once assigned, the agent has full control of its task branch, including editing,
@@ -77,9 +109,3 @@ individual workers update their task files rather than rewriting the shared queu
 COOP-002 should refine or split the downstream adapter tasks after the coupling audit.
 Preserve IDs for existing results and record replacements or follow-up IDs explicitly.
 Resolve genuinely blocking product decisions before their dependent work becomes ready.
-
-Later tasks will cover the production menu entry and session setup, live preparation
-synchronization, campaign transitions and debrief, save/load and reconnect, joining a
-running mission, and full mission verification. Create their bounded records as the
-contracts and first playable mission expose the actual work; the full goal remains in
-the [campaign roadmap](../base_game_coop.md#implementation-milestones).
