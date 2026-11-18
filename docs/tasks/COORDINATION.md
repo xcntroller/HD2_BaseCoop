@@ -189,3 +189,5 @@ missing fields. COOP-006 was notified explicitly before this stopped-writer hand
 - COOP-009 stopped ledger writes at `3ff21e72`. COOP-010 accepts the transfer and acknowledges the user's assignment. No other active writer or COOP-010 branch, worktree, or PR was found after refreshing origin.
 - Main and origin/main agree at `6f1bdd96`; COOP-008 `d34b6900` and COOP-009 `ce306626` are both ancestors. Shared build tooling and previous evidence are available for read-only use.
 - COOP-010 owns the development launch, live admission and initial-world reconstruction, and the scoped legacy adapter changes required by the playable gate. Record any scope expansion here before editing shared files.
+
+- Transport scope: COOP-010 owns the new campaign network attachment and the narrow DirectPlay session and callback changes in `net_session.cpp`, `net_messages.cpp`, `net_game.cpp`, `net_game.h` and `dplay8.h`. Campaign traffic uses the provider's reliable ordered channel and its connection identity. Live campaign paths will bypass native UDP, GameSpy and voice; ordinary sessions retain their routes.
