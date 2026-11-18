@@ -51,7 +51,10 @@ refresh and preservation of soldier health/equipment/skills. It composes the act
 sink with the real ownership model to regress unbind-then-drain and verifies that
 retained scripts regain their handler contexts. A third executable extracts and
 compiles the actual team death/environment methods to check solo, native multiplayer,
-campaign host and campaign guest authority, including living AI squad members. It does not substitute
+campaign host and campaign guest authority, including living AI squad members.
+The same executable extracts actual human GetTeam/SetPlayerTeam methods to regress
+campaign role semantics when actor ID differs from the connection slot and native
+co-op settings are inactive. It does not substitute
 for the real host/guest campaign runtime gate.
 
 The existing human differential suites can be built/run with isolated outputs:

@@ -7,7 +7,7 @@
 - Canonical branch: `feature/coop-008-controller-adapters`
 - Base commit: `0fcea78f85d0fe9348c3b8e13d1a0f23f50a482a`
 - Dependencies: COOP-001, COOP-004, COOP-006
-- Last checkpoint: source `1a992bba`; integrated-main sync `26303c03`
+- Last checkpoint: source `b3f240c2`; integrated-main sync `26303c03`
 - Checkpoint location: `.worktrees/COOP-008` / canonical branch on origin
 - Review/integration: independent review requested; not merged
 - Pull request: https://github.com/xcntroller/HD2_BaseCoop/pull/17
@@ -69,7 +69,7 @@ Full vehicle gameplay acceptance remains a later interaction gate.
   the merged ownership/protocol models. Native ownership, scoring/class, damage,
   progression, inventory/view and driver consumers are adapted behind an uninstalled
   explicit campaign boundary. See [the coupling audit and composition guide](../coop_control_adapters.md).
-- Source checkpoint: `1a992bba` (independent review fixes); `26303c03` merges finished main `577c04d8` with no
+- Source checkpoint: `b3f240c2` (review fixes and final team-role audit); `26303c03` merges finished main `577c04d8` with no
   COOP-008 source changes. This documentation checkpoint records the final evidence.
 - Delivery: **Source-only**, inactive adapter component. No production context,
   admission, opcode, transport dispatch or menu entry is enabled. Trial-linked
@@ -97,14 +97,14 @@ GCC/MinGW is 16.2.1. Only this worktree's private Wine prefix and outputs are us
 
 | Check | Command / evidence | Result |
 | --- | --- | --- |
-| Ownership/protocol composition + actual native sink with instrumented engine | `python _re/harness/campaign_control/run.py --compiler gcc`; `build/campaign_control/gcc-u8xwbefx/` | 1,272 model/control + 232 native sink + 22 actual-source team checks PASS |
-| Intended x86 component execution | Same runner `--compiler msvc` using Windows Python; `build/campaign_control/msvc-cy92fi0m/` | 1,272 + 232 + 22 checks PASS; zero compiler diagnostics |
+| Ownership/protocol composition + actual native sink with instrumented engine | `python _re/harness/campaign_control/run.py --compiler gcc`; `build/campaign_control/gcc-orpzz7a7/` | 1,272 model/control + 232 native sink + 36 actual-source team checks PASS |
+| Intended x86 component execution | Same runner `--compiler msvc` using Windows Python; `build/campaign_control/msvc-r1f2y6tn/` | 1,272 + 232 + 36 checks PASS; zero compiler diagnostics |
 | Full hand-port target compile | Windows Python `_re/tools/build_isolated.py check`; `build/coop008/full-check-restored.log` | 279 translation units PASS, 0 errors/warnings |
 | Final native changes | Same isolated `check` for the 17 native consumers/sink; exact list in `build/coop008/final-native-check.log` and build command record | 17 files PASS, 0 errors/warnings |
 | Finished-main synchronization | Isolated `check src/game/campaign_preparation_screen.cpp`; `build/coop008/main-sync-check.log` | Integrated COOP-007 source compiled separately; no COOP-008 code changed by merge |
 | Whole-port trial link | Private `build/coop008/link-final.py` wraps tracked `link_check` using own isolated check objects and read-only COOP-009 engine import libraries; `build/coop008/link-final.log` | 279 objects, 0 unresolved symbols, 0 other linker messages, exit 0; main-sync extra object repeated separately |
 | Final review fixes | Isolated target `check` for native sink/adapter/team/human combat; `build/coop008/retirement-final-compile.log`; whole-port link `retirement-final-link.log` | 4 files, 0 errors/warnings; 280 objects, 0 unresolved symbols |
-| ASan/UBSan | `LIBRARY_PATH=.../COOP-009/build/tooling/gccsan/usr/lib64 LD_LIBRARY_PATH=.../COOP-009/build/tooling/gccsan/usr/lib64 python _re/harness/campaign_control/run.py --compiler gcc --sanitize`; `build/campaign_control/gcc-na4zcj7t/` | All 1,526 checks PASS |
+| ASan/UBSan | `LIBRARY_PATH=.../COOP-009/build/tooling/gccsan/usr/lib64 LD_LIBRARY_PATH=.../COOP-009/build/tooling/gccsan/usr/lib64 python _re/harness/campaign_control/run.py --compiler gcc --sanitize`; `build/campaign_control/gcc-lbm9w2cq/` | All 1,540 checks PASS |
 | Dormant human control regression | Existing `_re/harness/human/build_control.bat` translated to isolated Linux MinGW invocation; `build/coop008/legacy-control/commands.json` and `execute-isolated-dlls.log` | 149,953 original-executable comparisons, 0 failures |
 | Dormant native player/input regression | `python _re/harness/campaign_control/run_legacy.py --suite playernet ...`; `build/campaign_control_legacy/playernet-fjtjr35l/commands.json` and `execute.log` | 154,818 comparisons, 0 failures |
 | Dormant remote-controller regression | Same runner `--suite remote`; `build/campaign_control_legacy/remote-tr004q5f/` | 80,002 comparisons, 0 failures |
@@ -147,3 +147,10 @@ native plans against the exact committed control revision, adds pre-reconstructi
 retirement seams, restores original address comments to their original signatures,
 and records legacy runner environment/compiler versions. Independent final-delta
 review is pending; no integration approval is inferred from these fixes.
+
+Final source `b3f240c2` also guards `C_Human::GetTeam`/`SetPlayerTeam` against native
+player-slot indexing when campaign transport settings are not native co-op, with
+actual-source role/index regressions. Control adapters are noncopyable so sequence
+and revision fences cannot be cloned accidentally. Final GCC/MSVC/ASan suites each
+pass 1,272 + 232 + 36 checks; final affected 3-unit target repeat passes with zero
+diagnostics (`build/coop008/roles-final-compile.log`).
