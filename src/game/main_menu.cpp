@@ -78,6 +78,9 @@ bool C_MainMenu::OnStart(void *)
 
 void C_MainMenu::OnStop()
 {
+#ifndef HD2_DEDICATED
+    m_campaignPreparation.reset();
+#endif
     m_campaignSetup.reset();
     DrainFoundServers();
     delete m_mpSettings;

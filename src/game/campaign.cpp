@@ -1224,6 +1224,33 @@ int C_Campaign::GetMissionId(int campaign, int missionNumber)   // 0x006b9040
     return mission ? mission->GetId() : -1;
 }
 
+const C_CampaignScreen *C_Campaign::GetInitialEquipmentScreen(int campaign, int missionNumber)
+{
+    int operationIndex = 0;
+    int missionIndex = 0;
+    if (campaign < 0 || campaign >= GetCount() || !FindMission(campaign, missionNumber, &operationIndex, &missionIndex))
+        return nullptr;
+    auto *operation = static_cast<C_CampaignContainer *>(
+        m_campaigns[campaign]->GetChildOfType(CAMPAIGN_NODE_OPERATION, operationIndex, false));
+    if (!operation)
+        return nullptr;
+    const auto *mission = GetMissionDefinition(campaign, missionNumber);
+    const C_CampaignScreen *equipment = nullptr;
+    const auto rememberEquipment = [&equipment](const C_CampaignNode *node) {
+        if (node->GetType() == CAMPAIGN_NODE_SCREEN) {
+            const auto *screen = static_cast<const C_CampaignScreen *>(node);
+            if (screen->GetKind() == C_CampaignScreen::KIND_EQUIPMENT)
+                equipment = screen;
+        }
+    };
+    for (int i = 0; i < operation->GetChildCount() && operation->GetChild(i) != mission; ++i)
+        rememberEquipment(operation->GetChild(i));
+    if (mission)
+        for (int i = 0; i < mission->GetChildCount() && mission->GetChild(i)->GetType() != CAMPAIGN_NODE_PLAY; ++i)
+            rememberEquipment(mission->GetChild(i));
+    return equipment;
+}
+
 const C_str &C_Campaign::GetMissionImage(int campaign, int missionNumber)   // 0x006b90e0
 {
     static const C_str none;                            // 0x008aea48

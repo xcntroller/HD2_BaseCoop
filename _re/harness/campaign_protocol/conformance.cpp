@@ -273,7 +273,7 @@ void Negotiation() {
         CHECK(!server.Receive(Frame(Hello()), 2).m_Reply); // terminal, no amplification
     }
     {
-        auto server = Server(); auto h = Hello(); h.m_Offered |= 0x80; h.m_MaxMinor = 9;
+        auto server = Server(); auto h = Hello(); h.m_Offered |= 0x100; h.m_MaxMinor = 9;
         auto offer = server.Receive(Frame(h), 1); CHECK(offer.m_Reply);
         CHECK(std::get<S_Accept>(*offer.m_Reply).m_Features == kFeatures);
         CHECK(std::get<S_Accept>(*offer.m_Reply).m_Minor == 0);
@@ -426,6 +426,29 @@ void InventoryEvents() {
     invalid.m_Move.m_Slot = 0;
     invalid.m_Move.m_ItemUid = UINT32_MAX;
     CHECK(EncodeItemMove(invalid.m_Move, bytes) == R::Malformed);
+}
+
+void PreparationResync() {
+    const S_PreparationResync request{Context().m_Session, PlayerId(5)};
+    auto local = Hello();
+    local.m_Offered |= kLivePreparation;
+    local.m_Required |= kLivePreparation;
+    auto server = C_Admission(E_CampaignSessionKind::CampaignCoop, true, local, Context().m_Session, PlayerId(5), 0);
+    auto client = C_Admission(E_CampaignSessionKind::CampaignCoop, false, local, {}, {}, 0);
+    Admit(server, client);
+    const auto frame = Frame(request);
+    S_FrameInfo info;
+    CHECK(Inspect(frame.data(), frame.size(), info) == R::None && info.m_Type == E_Message::PreparationResync);
+    CHECK(Hex(frame) == "4832435001000000150000001000000088776655443322110500000000000000");
+    const auto got = server.Receive(frame, 5);
+    CHECK(got.m_Payload && std::get_if<S_PreparationResync>(&*got.m_Payload));
+    CHECK(client.Receive(frame, 5).m_Reason == R::Malformed);
+    CHECK(server.Receive(Frame(S_PreparationResync{request.m_Session, PlayerId(6)}), 6).m_Reason == R::Malformed);
+
+    server = Server();
+    client = Client();
+    Admit(server, client);
+    CHECK(server.Receive(frame, 5).m_Reason == R::Malformed);
 }
 void Inputs() {
     const S_PlayerControls controls{kMoveForward | kLeanRight, kFire | kReload, {1, 0, 0}};
@@ -644,6 +667,6 @@ void Hostile() {
 int main(int argc, char **argv) {
     CHECK(argc >= 2);
     RoundTrips(argv[1], argc == 3 && std::string(argv[2]) == "--write-fixtures");
-    Malformed(); Negotiation(); MissionUpdates(); WeaponEvents(); InventoryEvents(); Inputs(); Replicas(); Chunks(); WorldSendSchedule(); TransportBits(); Hostile();
+    Malformed(); Negotiation(); MissionUpdates(); WeaponEvents(); InventoryEvents(); PreparationResync(); Inputs(); Replicas(); Chunks(); WorldSendSchedule(); TransportBits(); Hostile();
     std::cout << "campaign protocol: 12 suites, " << g_Checks << " checks passed\n";
 }

@@ -21,6 +21,7 @@ constexpr std::uint32_t kJoin = kSetupScreen | 0x600000;
 constexpr std::uint32_t kLeave = kSetupScreen | 0x700000;
 constexpr std::uint32_t kBack = kSetupScreen | 0x800000;
 constexpr std::uint32_t kStatus = kSetupScreen | 0x900000;
+constexpr std::uint32_t kPrepare = kSetupScreen | 0xA00000;
 
 I3D_visual *ButtonFace(I3D_frame *button)
 {
@@ -120,7 +121,7 @@ void C_MainMenu::DescribeCampaignSetup(S_ScreenDesc *desc, I3D_frame *model)
 {
     // The original button frames also supply the normal and active faces for
     // the native address edit box.
-    for (const char *name : {"blone wolf01", "carnage01", "bsingle mission",
+    for (const char *name : {"carnage01", "bsingle mission",
                              "bsingle mission- carnage", "single side", "text00"}) {
         if (auto *frame = model->FindChildFrame(name, kFrames))
             frame->SetOn(false);
@@ -146,6 +147,9 @@ void C_MainMenu::DescribeCampaignSetup(S_ScreenDesc *desc, I3D_frame *model)
     for (auto *button : {host, join, leave, back})
         AddDescMessage(button, 0, CONTROL_MSG_ADD_CALLBACK, CONTROL_NOTIFY_CLICK, self, buttonCallback);
     AddText(desc, kText, "text_HD2datadisk", "", kTextStyle);
+    auto *prepare = AddText(desc, kButton, "blone wolf01", "Prepare Mission", kButtonStyle);
+    AddDescMessage(prepare, 0, CONTROL_MSG_HIDE, 0);
+    AddDescMessage(prepare, 0, CONTROL_MSG_ADD_CALLBACK, CONTROL_NOTIFY_CLICK, self, buttonCallback);
 }
 
 bool C_MainMenu::OnCampaignPicker(void *menu, void *, C_Control *, uint32_t notification, uint32_t)
@@ -183,6 +187,9 @@ void C_MainMenu::RefreshCampaignSetup()
         if (!idle)
             SetText(*this, kLeave, state == State::Hosting ? "End Session" :
                     state == State::Joining ? "Cancel Join" : "Leave Session", kButtonStyle);
+        visibility.target = kPrepare;
+        visibility.id = state == State::Hosting ? CONTROL_MSG_SHOW : CONTROL_MSG_HIDE;
+        HandleMessage(&visibility);
         m_campaignSetupState = state;
     }
 
@@ -208,12 +215,78 @@ void C_MainMenu::RefreshCampaignSetup()
         SetText(*this, kStatus, status);
         m_campaignSetupStatus = C_str(status);
     }
+#ifndef HD2_DEDICATED
+    if (state == State::Guest && session.GetPreparation() &&
+        session.GetPreparation()->GetSnapshot().m_Status == E_CampaignSyncStatus::Current)
+        OpenCampaignPreparation();
+#endif
 }
+
+#ifndef HD2_DEDICATED
+bool C_MainMenu::OpenCampaignPreparation()
+{
+    auto *model = m_campaignSetup->GetPreparation();
+    if (!model)
+        return false;
+    if (!m_campaignPreparation) {
+        auto screen = std::make_unique<C_CampaignPreparationNativeUI>(*model);
+        if (!screen->IsUsable()) {
+            m_campaignSetup->Close();
+            m_campaignSetupError = C_str("Campaign preparation could not load its font.");
+            return false;
+        }
+        m_campaignPreparation = std::move(screen);
+    }
+    return true;
+}
+
+bool C_MainMenu::HandleInput(float *held, float *pressed)
+{
+    if (!m_campaignPreparation)
+        return C_MenuState::HandleInput(held, pressed);
+    if (!m_keyboardOff)
+        m_campaignPreparation->KeyInput(pressed);
+    return true;
+}
+
+void C_MainMenu::Update(int timeDelta)
+{
+    if (!m_campaignPreparation) {
+        C_MenuState::Update(timeDelta);
+        return;
+    }
+    m_campaignSetup->Update();
+    if (m_campaignSetup->GetState() != State::Idle) {
+        m_campaignPreparation->Update();
+        if (!m_keyboardOff && m_cursor)
+            m_campaignPreparation->MouseInput(*m_cursor, timeDelta);
+        if (!m_campaignPreparation->LeaveRequested()) {
+            GetSoundModule()->Update(timeDelta);
+            return;
+        }
+    }
+    m_campaignPreparation.reset();
+    if (m_campaignSetup->GetState() != State::Idle)
+        m_campaignSetup->Close();
+    RefreshCampaignSetup();
+}
+
+bool C_MainMenu::OnRender()
+{
+    if (!m_campaignPreparation)
+        return false;
+    m_campaignPreparation->Render();
+    return true;
+}
+#endif
 
 bool C_MainMenu::OnCampaignSetup(void *menu, void *, C_Control *, uint32_t notification, uint32_t)
 {
     auto &self = *static_cast<C_MainMenu *>(menu);
     if (notification == CONTROL_NOTIFY_HIDDEN) {
+#ifndef HD2_DEDICATED
+        self.m_campaignPreparation.reset();
+#endif
         self.m_campaignSetup.reset();
         return true;
     }
@@ -257,6 +330,14 @@ bool C_MainMenu::OnCampaignSetupButton(void *menu, void *, C_Control *control, u
     }
     case kLeave:
         session.Close();
+        break;
+    case kPrepare:
+#ifndef HD2_DEDICATED
+        if (session.BeginPreparation() != Reason::None)
+            error = "The original mission equipment could not be loaded.";
+        else if (!self.OpenCampaignPreparation())
+            error = self.m_campaignSetupError.c_str();
+#endif
         break;
     case kBack:
         PostMenuAction(MENU_MSG_BACK);
