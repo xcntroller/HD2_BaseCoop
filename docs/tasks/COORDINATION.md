@@ -6,11 +6,11 @@ creating or updating the operational branch. Do not merge its WIP ledger into `m
 
 ## Coordinator
 
-- Owner/session: Codex COOP-010, assigned by the user on 2026-11-18. Accepts the stopped-writer handoff at `3ff21e72`.
-- Contact/shared channel: this published ledger and the COOP-010 task branch/PR.
-- Integrator: Codex COOP-010 for this session, subject to the review and runtime acceptance gates.
+- Owner/session: Codex COOP-012, user assignment on 2026-11-18, thread `01a1ed7a-8dcb-7ee1-8de0-23710cb94c81`.
+- Contact/shared channel: this published ledger and the COOP-012 task branch/PR.
+- Integrator: Codex COOP-012 for this session, subject to the review and runtime acceptance gates.
 - Latest checkpoint: `HEAD` on `origin/coord/coop-work-queue`.
-- Next action: COOP-010 has merged and its completion record is published.
+- Next action: Create and checkpoint the acknowledged COOP-012 task branch.
 
 ## Accepted task claims
 
@@ -28,6 +28,7 @@ creating or updating the operational branch. Do not merge its WIP ledger into `m
 | COOP-001 | Codex / 2026-11-18 user assignment | `feature/coop-001-build-baseline` | done | PR #2 merge `15b572ff`; completion metadata PR #11 merge `1b9b307f` | Build/solo/native host-guest baseline and isolation accepted; guide/evidence integrated. Firing/reload/completion remain unverified downstream gates. |
 
 | COOP-010 | Codex COOP-010 (2026-11-18), user assignment | `feature/coop-010-two-player-mission` | done | PR #22 merged `738b124d`, completion PR #23 merged `dc41c6b7`, `.worktrees/COOP-010` | Arctic1 playable gate and original mode regressions recorded. |
+| COOP-012 | Codex COOP-012 (2026-11-18), user assignment | `feature/coop-012-session-setup` | active | base `9ec7fe48`; `.worktrees/COOP-012` | Gated singleplayer menu and campaign setup/admission/teardown. |
 
 
 Only the coordinator adds or reassigns claims. A missing row is not sufficient evidence
@@ -220,3 +221,8 @@ missing fields. COOP-006 was notified explicitly before this stopped-writer hand
 - Separate integration review: PR #22 head `fd1572a33c15445e7fdd66a0950d9ead305420e1` was reviewed against `main` at `6f1bdd96`. Verified the transport and authority fences, the two-instance start barrier, paired controls, original objectives and forest patrol route, exact changed-kit takeover, ordinary Tutorial and Sicily2 regressions, matching runtime logs, x86 build, and controller/lifecycle/protocol/ownership harnesses. The review added the actor/navigation/sound fingerprint inputs and verified rejection of different navigation data and successful admission after restoration. The merge rehearsal produced the exact feature tree.
 
 - Integration complete: feature PR #22 merged the reviewed head as `738b124d57a85901c167cebf9b07ca079aac2ac9`. Documentation PR #23 recorded done and merged as `dc41c6b7bb920dbaf61522f92ce2cc5cb6670122`. The task worktree and local runtime evidence are retained.
+
+## COOP-012 coordinator acceptance
+
+- The last coordinator's published COOP-010 checkpoint `c6ae9ea2` records completed integration. The user assigned COOP-012. As the sole current worker, COOP-012 acknowledges the claim and takes coordination for this task. Refreshed origin, checked branches/worktrees and open PRs, and verified the COOP-010 integration ancestor of base `9ec7fe48`. No competing writer or COOP-012 branch was found.
+- Reserved scope: singleplayer mode picker and setup resources, admitted session lifetime and campaign transport setup/teardown, and scoped application entry/return as needed. COOP-013 will consume the admitted setup session. COOP-014 is unclaimed and retains Running replication, mission interaction and completion. Keep development-world dispatch changes confined to separating the setup entry from the existing dev launch and record the seam before review.
