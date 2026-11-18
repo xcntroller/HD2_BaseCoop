@@ -7,9 +7,9 @@
 - Canonical branch: `feature/coop-006-protocol`
 - Base commit: `dbc9a85a7161d8844f2907dbaf6586c7f3b67d19`
 - Dependencies: COOP-002, COOP-011 (merged shared declarations)
-- Last checkpoint: `08a2f5e2` implementation; `5bcdae38` main sync; `f4ed401c` validation/attachment evidence
+- Last checkpoint: source `5c562770`; current-main sync `135efd77`; final review/evidence in this record
 - Checkpoint location: `.worktrees/COOP-006`, `origin/feature/coop-006-protocol` (after push)
-- Review/integration: independent review requested from coordinator; component validation passed; no integration yet
+- Review/integration: independent COOP-001 full implementation + focused final review PASS; final GCC/MSVCx86/sanitizer checks PASS; awaiting PR merge
 - Pull request: [#13](https://github.com/xcntroller/HD2_BaseCoop/pull/13) (ready for independent review)
 
 ## Branch authority and completion PR
@@ -62,73 +62,67 @@ adapters merge. Tests must reject pre-admission mutation without claiming a live
 ## Handoff
 
 - Completed: coordinator claim acknowledgment `95b46fcc`; canonical branch/worktree
-  created at `dbc9a85a`; read-only native dispatch/channel/bitstream/socket audit;
-  version 1.0 explicit DTO codecs, bounded admission and sender/direction checks,
-  safe unaligned bit bridge, preliminary input gate, immutable replica and bounded
-  CRC world assembler. No legacy dispatch or shared DTO header edits.
+  created at `dbc9a85a`; read-only dispatch/channel/bitstream/socket audit; version
+  1.0 explicit DTO codecs, compatibility/admission and sender/direction checks,
+  safe unaligned bit bridge, preliminary input gate, immutable preparation replica
+  and bounded CRC world assembler. No native dispatch/shared DTO header edits.
 - Scope: `src/net/campaign_protocol.{h,cpp}`, `_re/harness/campaign_protocol/`
-  (README normative schema/attachment plan, explicit fields, 27 golden fixtures,
-  standalone header and eight-suite conformance runner), this task record only.
-- Contract: reserved positive 32-bit command `0x434f4f50`, existing five-bit native
-  GAME type unchanged. Full envelope <=24576 bytes, chunk <=16384, world <=8 MiB;
-  native packet signed16 and 0x8000 socket buffer require aggregate send budgeting.
-  Delta is exact base view revision plus complete replacement snapshot. Descriptor
-  SHA-256 manifests and all wire encodings/limits are explicit in harness README.
-- Model consumers: COOP-004 confirmed its private handoff barrier additionally
-  requires authoritative `ValidateInput` at enqueue/application. COOP-005 confirmed
-  native quantity cap32767 (stricter than wire1e6); live composition must configure
-  <=256 collection entries or review a larger/chunked protocol after catalog audit.
-  Codec never commits/retries/deduplicates model requests. No product policy chosen.
-- Validation (2026-11-18), implementation `08a2f5e2`: final **8 suites,
-  541,790 checks passed** separately on GCC16.2.1, MSVC19.44.35230 **x86** /W4 /WX
-  with SDK10.0.26100.0 and GCC ASan+UBSan (leak detection, fail-fast UB). Standalone
-  header and independent Python scalar golden fixtures pass. No runtime diagnostics.
-  Source/fixtures unchanged by main sync `5bcdae38`.
-- Reproduce portable target: `python3 _re/harness/campaign_protocol/run.py --compiler gcc`
-  (`build/campaign_protocol/gcc-d_6v167o/` logs/argv/environment). Required Windows
-  command: `python _re\harness\campaign_protocol\run.py --compiler msvc` with
-  VS2022 x86/SDK setup or `HD2_VCVARS32`. Actual local run:
+  (normative schema/attachment plan, 53 explicit field schemas, 27 golden fixtures,
+  standalone header and eight-suite runner), this task record only.
+- Contract: reserved positive 32-bit command `0x434f4f50`, native five-bit GAME type
+  unchanged. Envelope <=24576 bytes, chunk <=16384, world <=8 MiB; native signed16
+  packets and 0x8000 socket buffer require live aggregate send budgeting. Delta is
+  exact base view plus complete replacement snapshot. SHA-256 content manifests,
+  scalar/container encodings, limits and concrete live hook/test gates are in
+  `_re/harness/campaign_protocol/README.md`.
+- Consumers: COOP-004 confirms private handoff barrier still requires authoritative
+  `ValidateInput` at enqueue AND application. COOP-005 confirms result metadata
+  matches attached state/full current epoch, native quantity cap32767 is stricter
+  than wire1e6, and live model collection limits must be <=256 or agree a reviewed
+  larger/chunked protocol after catalog audit. Codec never retries/commits or
+  deduplicates model requests. No product policy chosen.
+- Final source checkpoint `5c562770`; sync `135efd77` includes integrated COOP-004/005
+  main `5f561496`, protocol/header/harness byte-for-byte unchanged by sync.
+- Validation (2026-11-18): **8 suites / 541,811 checks PASS** separately on GCC16.2.1,
+  MSVC19.44.35230 **x86** /W4 /WX, SDK10.0.26100.0, and GCC ASan+UBSan with leak
+  detection and fail-fast undefined-behavior checks. Standalone header and independent
+  Python scalar golden fixtures pass. No compiler/sanitizer diagnostics. Logs/argv/
+  environment are local ignored artifacts; no game/engine artifact supplied.
+- Native command: `python3 _re/harness/campaign_protocol/run.py --compiler gcc`;
+  final output `build/campaign_protocol/gcc-ihns3m_g/`. Standard intended target:
+  `python _re\harness\campaign_protocol\run.py --compiler msvc` with VS2022 x86
+  developer environment or `HD2_VCVARS32`. Actual local Wine command:
   `env -u WAYLAND_DISPLAY DISPLAY=:99 WINEPREFIX="$PWD/build/wine-prefix" WINEDEBUG=-all wine64 cmd /c 'Z:\home\control\Documents\Projects\HD2SS\HD2_BaseCoop\.worktrees\COOP-007\build\tooling\run-python.bat' 'Z:\home\control\Documents\Projects\HD2SS\HD2_BaseCoop\.worktrees\COOP-006\_re\harness\campaign_protocol\run.py' --compiler msvc`.
-  Read-only compiler borrowing acknowledged by COOP-007; own prefix and newly unique
-  outputs `build/campaign_protocol/msvc-nauerudj/`; no shared global temp paths.
-- Sanitizer check: normal hosts use `python3 _re/harness/campaign_protocol/run.py --compiler gcc --sanitize`.
-  This Fedora image lacked GCC sanitizer shared objects. Downloaded/extracted only
-  local matching libasan/libubsan16.2.1-3.fc44 RPMs under ignored `build/tooling/`;
-  no system packages/settings changed. Actual compile:
+  Final target output `build/campaign_protocol/msvc-q8vheuxf/`; COOP-007 compiler
+  borrowed read-only with acknowledgment, own Wine prefix and unique build output.
+- Standard sanitizer command:
+  `python3 _re/harness/campaign_protocol/run.py --compiler gcc --sanitize`.
+  This Fedora image lacked shared sanitizer objects; matching libasan/libubsan
+  16.2.1-3.fc44 RPMs were extracted under ignored local `build/tooling/`, without
+  system changes. Actual compile:
   `g++ -std=c++17 -Wall -Wextra -Werror -pedantic -g -O1 -fsanitize=address,undefined -fno-omit-frame-pointer -L build/tooling/sanitizers/usr/lib64 src/net/campaign_protocol.cpp _re/harness/campaign_protocol/conformance.cpp -o build/campaign_protocol/sanitized`.
   Actual execution:
   `env LD_LIBRARY_PATH="$PWD/build/tooling/sanitizers/usr/lib64" ASAN_OPTIONS=detect_leaks=1 UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1 build/campaign_protocol/sanitized _re/harness/campaign_protocol/fixtures`.
-  Passed same 541,790 checks, no sanitizer findings. Earlier seven-suite checks also
-  passed GCC/MSVCx86/sanitizers; final evidence supersedes them.
-- `git diff --check` passed; complete diff scope reviewed, no legacy/generated code,
-  data, artifacts or shared declaration edits. Own separate review pass checked
-  bounds/UTF8/float/counter schemas, early decode whitelist, role/sender direction,
-  authority tuple, exact-base immutable installation and chunk integrity/timeout.
-- Separate review refinement: regression reproduced acceptance of a preparation
-  actor reference from another session/generation (`gcc-ukn2hg4s`, expected failure),
-  then checked all prep/ownership actor fences and duplicate actor coordinates
-  including distinct slot-use values. Corrected WrongSession fixture to remain
-  internally coherent. COOP-005 confirmed result metadata/generation equality for
-  attached state variants; codec now enforces it, preserving cached duplicate
-  state+metadata. No schema/golden-fixture changes. Expanded **541,799 checks** pass
-  GCC (`gcc-dskpzcou`); latest target/sanitizer repeats pending.
-- Independent reviewer: COOP-001 session accepted full read-only review after its
-  completed task. Reviewer caught the transient WrongSession fixture race; fixed
-  as above before checkpoint. No reviewer approval inferred until final report.
-- Independent review findings resolved in next checkpoint: replica retains minimum
-  observed preparation generation/view after a gap; delayed pre-gap full snapshots
-  cannot re-enable edits. Manifest nested actors share context/unique-coordinate
-  checks and must agree with a matching binding's ActorRef/control revision when
-  both present; reconstruction absence remains valid. README qualifies duplicate
-  Hello handling to AwaitAck. Focused regressions pass **541,811 checks** on GCC
-  (`gcc-ihns3m_g`); prior 6f4ea658 MSVCx86/ASan repeats passed541799. Final target/
-  sanitizer repeat and review of this focused delta pending.
-- Remaining: independent review, resolve any findings, mark PR ready and coordinator integration handoff. Ordinary
-  runtime/game build not claimed; this independently testable component does not
-  attach a live campaign handshake or world synchronization.
-- Next action: independent COOP-004 review through coordinator; resolve findings,
-  publish final review/evidence and request integration of PR #13.
-- Blockers: none. COOP-010 installs the exact live admission/dispatch/replication
-  and reconstruction hooks described in harness README after downstream adapters.
-- Source-only: no runnable game/engine artifact, installed data, compiler or build
-  output is supplied or committed. Local fixture executable is validation only.
+  Same final 541,811 checks passed, zero sanitizer findings.
+- Independent review: COOP-001 thread `01a1ebd1-3990-7553-920e-7cfee0148527`
+  read complete protocol/header/harness/schema/contracts and native attachment paths,
+  reproduced final GCC header/fixtures/eight suites (541,811 checks;
+  `build/campaign_protocol/gcc-4_7_4vha/`), whitespace clean. Full review + focused
+  delta PASS at `5c562770`; reviewer confirmed main sync `135efd77` changes none of
+  that source. Reviewer did not claim MSVC/sanitizer/runtime checks.
+- Findings resolved: actor session/generation and duplicate-coordinate coherence;
+  result metadata equals attached state; replica retains highest observed generation/
+  view after a gap so delayed full snapshots cannot re-enable edits; manifest actors
+  and corresponding bindings agree when both present; absent reconstruction actors
+  remain valid. Duplicate Hello wording accurately limited to AwaitAck.
+- `git diff --check` and full scope/history inspection pass. Ad-hoc checks confirmed
+  all 53 normative field schemas match codec source and local task/harness Markdown
+  links resolve. Malformed decode/extraction outputs/positions remain unchanged.
+- Remaining: merge reviewed PR #13; record actual merge and downstream readiness in
+  a reviewed completion follow-up. No component implementation work remains.
+- Next action: final exact-head PR gate, merge, then completion metadata review.
+- Blockers: none. COOP-010 installs live admission/dispatch/replication and world
+  reconstruction hooks after COOP-008/009. No live handshake, world synchronization,
+  ordinary-game runtime regression or full game build is claimed by this component.
+- Delivery: **Source-only**. Local fixture executables are validation only; no game
+  binaries/data, compiler, installed resources or build outputs are committed.
