@@ -7,7 +7,7 @@
 - Canonical branch: `feature/coop-006-protocol`
 - Base commit: `dbc9a85a7161d8844f2907dbaf6586c7f3b67d19`
 - Dependencies: COOP-002, COOP-011 (merged shared declarations)
-- Last checkpoint: none
+- Last checkpoint: `12625f6c` claim; implementation checkpoint follows below
 - Checkpoint location: `.worktrees/COOP-006`, `origin/feature/coop-006-protocol` (after push)
 - Review/integration: none
 - Pull request: none
@@ -61,10 +61,36 @@ adapters merge. Tests must reject pre-admission mutation without claiming a live
 
 ## Handoff
 
-- Completed: task scope and dependencies; COOP-002 merged `9f59ff47`, COOP-011 merged `0f367ed6`;
-  native transport available for investigation.
-- Remaining: extension audit, codecs, compatibility component, fixtures, adapter documentation.
-- Next action: implement bounded version 1 codecs/negotiation and deterministic hostile-input harness after read-only dispatch audit. No native/shared-header edits.
-- Blockers: none for this isolated component; production integration remains downstream.
-- Decisions: reuse networking infrastructure; keep campaign semantics explicit.
-- Validation: none for this task.
+- Completed: coordinator claim acknowledgment `95b46fcc`; canonical branch/worktree
+  created at `dbc9a85a`; read-only native dispatch/channel/bitstream/socket audit;
+  version 1.0 explicit DTO codecs, bounded admission and sender/direction checks,
+  safe unaligned bit bridge, preliminary input gate, immutable replica and bounded
+  CRC world assembler. No legacy dispatch or shared DTO header edits.
+- Scope: `src/net/campaign_protocol.{h,cpp}`, `_re/harness/campaign_protocol/`
+  (README normative schema/attachment plan, explicit fields, 27 golden fixtures,
+  standalone header and eight-suite conformance runner), this task record only.
+- Contract: reserved positive 32-bit command `0x434f4f50`, existing five-bit native
+  GAME type unchanged. Full envelope <=24576 bytes, chunk <=16384, world <=8 MiB;
+  native packet signed16 and 0x8000 socket buffer require aggregate send budgeting.
+  Delta is exact base view revision plus complete replacement snapshot. Descriptor
+  SHA-256 manifests and all wire encodings/limits are explicit in harness README.
+- Model consumers: COOP-004 confirmed its private handoff barrier additionally
+  requires authoritative `ValidateInput` at enqueue/application. COOP-005 confirmed
+  native quantity cap32767 (stricter than wire1e6); live composition must configure
+  <=256 collection entries or review a larger/chunked protocol after catalog audit.
+  Codec never commits/retries/deduplicates model requests. No product policy chosen.
+- Validation so far (2026-11-18): first 7 suites, 71,322 checks passed GCC16.2.1,
+  MSVC19.44.35230 x86 /W4 /WX with SDK10.0.26100.0 and ASan/UBSan. Final bit bridge
+  added eighth suite: 512,891 checks passed GCC; nested truncation expansion and
+  final GCC/MSVC/sanitizer repeats pending before review. Logs under ignored
+  `build/campaign_protocol/`; target runner uses own `build/wine-prefix` and
+  read-only COOP-007 portable compiler/Python launcher, with owner acknowledgment.
+- Remaining: final checks, separate review, published PR/review handoff. Ordinary
+  runtime/game build not claimed; this independently testable component does not
+  attach a live campaign handshake or world synchronization.
+- Next action: rerun final eight-suite GCC, MSVCx86 and ASan/UBSan checks; inspect
+  complete diff, commit/push checkpoint, request independent review and PR to main.
+- Blockers: none. COOP-010 installs the exact live admission/dispatch/replication
+  and reconstruction hooks described in harness README after downstream adapters.
+- Source-only: no runnable game/engine artifact, installed data, compiler or build
+  output is supplied or committed. Local fixture executable is validation only.
