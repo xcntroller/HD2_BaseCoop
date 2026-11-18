@@ -3,6 +3,8 @@
 #include "campaign_control_adapter.h"
 #include <functional>
 
+class C_Human;
+
 // Concrete engine handoff port. COOP-010 supplies negotiated, bounded action
 // decoding; the native untagged net-object/reliable routes stay quarantined.
 class C_CampaignNativeControlSink final : public I_CampaignControlSink {
@@ -19,6 +21,7 @@ public:
     E_CampaignReason MoveInventory(const ActorRef &actor, CampaignProtocol::S_ItemMove &move) const;
     bool ApplyInventoryEvent(const CampaignProtocol::S_InventoryEvent &event) const;
 private:
+    C_Human *Resolve(const ActorRef &actor) const;
     T_Dispatch m_Dispatch;
     std::map<SoldierId, ActorRef> m_AppliedBindings;
 };
