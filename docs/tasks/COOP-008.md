@@ -2,13 +2,13 @@
 
 ## Coordination
 
-- Status: ready
-- Owner/session: unassigned
+- Status: active
+- Owner/session: Codex COOP-008 / thread `01a1ec1f-4589-7051-9994-2a236a14b49b`
 - Canonical branch: `feature/coop-008-controller-adapters`
-- Base commit: not started
+- Base commit: `0fcea78f85d0fe9348c3b8e13d1a0f23f50a482a`
 - Dependencies: COOP-001, COOP-004, COOP-006
 - Last checkpoint: none
-- Checkpoint location: none
+- Checkpoint location: `.worktrees/COOP-008` / canonical branch on origin
 - Review/integration: none
 - Pull request: none
 
@@ -74,3 +74,9 @@ Full vehicle gameplay acceptance remains a later interaction gate.
   `15b572ff`; prerequisites and commands are in [the guide](../build_baseline.md).
 - Decisions: preserve soldier identity and explicit simulation authority.
 - Validation: none for this task.
+
+## 2026-11-18 kickoff
+
+- Claim acknowledged on `coord/coop-work-queue`; accepted COOP-006 stopped-writer coordinator handoff and notified COOP-007/009.
+- Declared scope follows COOP-002 reservations above. COOP-009 alone edits lifecycle/spawn files and consumes explicit adapter helpers; no live attachment before COOP-010.
+- Next checkpoint: engine-independent committed controller plan and input queue boundary, with real ownership/protocol composition regressions; then legacy consumer adapters and target build checks.
