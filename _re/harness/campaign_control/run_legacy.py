@@ -33,6 +33,15 @@ def main():
     args.output_root.mkdir(parents=True, exist_ok=True)
     output = Path(tempfile.mkdtemp(prefix=args.suite + "-", dir=args.output_root.resolve()))
     print("Output:", output, flush=True)
+    (output / "environment.json").write_text(json.dumps({
+        "compiler": str(args.compiler.resolve()), "flags": args.cxxflag,
+        "original": str(args.original.resolve()), "game_dir": str(args.game_dir.resolve()),
+        "wine_prefix": str(args.wine_prefix.resolve()) if args.wine_prefix else os.environ.get("WINEPREFIX"),
+        "display": os.environ.get("DISPLAY"), "suite": args.suite
+    }, indent=2) + "\n")
+    version = subprocess.run([str(args.compiler.resolve()), "--version"], stdout=subprocess.PIPE,
+                             stderr=subprocess.STDOUT, text=True, check=True)
+    (output / "compiler-version.log").write_text(version.stdout)
     recipe = (ROOT / "_re/harness/human" / ("build_" + args.suite + ".bat")).read_text()
     variables = {}
     for line in recipe.splitlines():

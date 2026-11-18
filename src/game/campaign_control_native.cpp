@@ -13,9 +13,10 @@
 #include "net/net_object.h"
 
 namespace {
-C_Human *Resolve(const ActorRef &actor) {
-    const auto record = FindCampaignActorControl(static_cast<int>(actor.m_Actor.Value()));
-    if (!record || record->m_Actor != actor) return nullptr;
+C_Human *ResolvePhysical(const ActorRef &actor) {
+    const auto state = GetCampaignControlSnapshot();
+    if (!state || state->m_Context.m_Session != actor.m_Session ||
+        state->m_Context.m_MissionGeneration != actor.m_Generation) return nullptr;
     const int id = static_cast<int>(actor.m_Actor.Value());
     // The initial native spawn adapter reserves the 32 stable player-role actor
     // slots. Dynamic compacted actor IDs have no incarnation counter yet.
@@ -23,10 +24,20 @@ C_Human *Resolve(const ActorRef &actor) {
         static_cast<std::uint8_t>(g_actorsModule.GetPlayerSlotUse(id)) != actor.m_SlotUse.Value()) return nullptr;
     return static_cast<C_Human *>(g_actorsModule.GetHuman(id));
 }
+C_Human *Resolve(const ActorRef &actor) {
+    const auto record = FindCampaignActorControl(static_cast<int>(actor.m_Actor.Value()));
+    return record && record->m_Actor == actor ? ResolvePhysical(actor) : nullptr;
+}
 }
 bool C_CampaignNativeControlSink::Drain(const ActorRef &actor) {
     // A retired generation must never resolve a new occupant of the same slot.
     C_Human *human = Resolve(actor);
+    if (!human) {
+        // Unbind has already removed the catalog entry. Retire only an exact
+        // binding this sink previously applied, in the same physical world.
+        for (const auto &binding : m_AppliedBindings)
+            if (binding.second == actor) { human = ResolvePhysical(actor); break; }
+    }
     if (!human) return true;
     if (human->m_controller) {
         human->m_controller->ClearMessagesToServer();
@@ -58,7 +69,12 @@ bool C_CampaignNativeControlSink::Drain(const ActorRef &actor) {
 bool C_CampaignNativeControlSink::Apply(const S_CampaignControllerPlan &plan) {
     if (!plan.m_Record.m_Actor) return false;
     C_Human *human = Resolve(*plan.m_Record.m_Actor);
-    if (!human) return false;
+    const auto current = FindCampaignActorControl(static_cast<int>(plan.m_Record.m_Actor->m_Actor.Value()));
+    const auto state = GetCampaignControlSnapshot();
+    if (!human || !current || !state || current->m_Soldier != plan.m_Record.m_Soldier ||
+        current->m_ControlRevision != plan.m_Record.m_ControlRevision) return false;
+    const auto expected = C_CampaignControlAdapter::Plan(state->m_Context, *current);
+    if (expected.m_Controller != plan.m_Controller || expected.m_LocalView != plan.m_LocalView) return false;
     E_HumanController type = HUMAN_CONTROLLER_REMOTE;
     switch (plan.m_Controller) {
     case E_CampaignController::LocalPlayer:
@@ -71,13 +87,20 @@ bool C_CampaignNativeControlSink::Apply(const S_CampaignControllerPlan &plan) {
     const bool preserveScript = type == HUMAN_CONTROLLER_AI && human->m_controller &&
         human->m_controller->GetType() == HUMAN_CONTROLLER_AI;
     human->CreateController(type, !preserveScript);
+    if (preserveScript) {
+        if (auto *object = g_netReplication->FindObject(human->GetNetId(), false)) {
+            object->SetMessageFactory(NetCreateMessage, human->m_controller);
+            object->SetStateHandlers(NetReadControlBits, NetWriteControlBits, human->m_controller);
+        }
+    }
     human->m_body.SetPlayerControlled(plan.m_LocalView);
+    m_AppliedBindings[plan.m_Record.m_Soldier] = *plan.m_Record.m_Actor;
     return true;
 }
 bool C_CampaignNativeControlSink::Present(const std::optional<ActorRef> &actor) {
     auto *team = g_teamManager.GetPlayerTeam();
     C_Human *human = actor ? Resolve(*actor) : nullptr;
-    if (actor && !human) return false;
+    if (actor && (!human || !IsCampaignLocalActor(human->GetNetId()))) return false;
     if (human && !team->IsMember(human)) return false;
     team->SelectCampaignMember(human);
 #ifndef HD2_DEDICATED

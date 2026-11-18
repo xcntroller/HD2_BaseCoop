@@ -246,6 +246,9 @@ void ActorReuseAndGeneration() {
     CHECK(adapter.ApplyNext() == R::StaleRevision);
     CHECK(adapter.SynchronizeCommitted() == R::None);
     CHECK(adapter.Enqueue(f.m_Host, stale) == R::StaleRevision);
+    CHECK(adapter.RetireBeforeReconstruction() == R::None);
+    CHECK(!adapter.IsSynchronized() && !sink.m_View);
+    CHECK(adapter.SynchronizeCommitted() == R::None);
     CHECK(f.m_Model.EndMission() == R::None);
     CHECK(adapter.SynchronizeCommitted() == R::None);
     CHECK(f.m_Model.ReturnToSetup(MissionKey("base.sicily2.step1.v1")) == R::None);
@@ -272,6 +275,9 @@ void GuestReconciliation() {
     const auto events = sink.m_Events.size();
     CHECK(replica.InstallCommitted(old) == R::None);
     CHECK(sink.m_Events.size() == events);
+    CHECK(replica.RetireBeforeReconstruction() == R::None);
+    CHECK(!replica.IsSynchronized() && !sink.m_View);
+    CHECK(replica.InstallCommitted(old) == R::None);
     CHECK(f.m_Model.SetScripted(f.m_B, true) == R::None);
     sink.m_Fail = true;
     CHECK(replica.InstallCommitted(f.m_Model.GetSnapshot()) == R::PendingTransaction);

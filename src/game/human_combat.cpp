@@ -529,10 +529,10 @@ void C_Human::OnDeath()
         }
     }
     if (m_role == HUMAN_ROLE_PLAYER || m_role == HUMAN_ROLE_NPC_TEAM) {
-        if (IsLocalGame()) {
+        if (IsLocalGame() || CampaignControlsActive()) {
             if (g_teamManager.GetPlayerTeam()->IsMember(this)) {
                 g_teamManager.GetPlayerTeam()->OnMemberDied(this);
-                GetSoundModule()->PlayMusic(MUSIC_SOLDIER_DIED);
+                if (!CampaignControlsActive() || IsClient()) GetSoundModule()->PlayMusic(MUSIC_SOLDIER_DIED);
             }
         } else if (g_gameProfile.IsCooperativeGame()) {
             g_teamManager.GetCoopTeam()->OnMemberDied(this);

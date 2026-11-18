@@ -35,6 +35,10 @@ def main():
         "python": os.sys.version, "platform": os.sys.platform,
         "sources": str(SOURCES), "output": str(output)
     }, indent=2) + "\n")
+    team_source = (ROOT / "src/game/team.cpp").read_text()
+    begin = team_source.index("void C_Team::OnMemberDied(")
+    end = team_source.index("bool C_Team::HasItem(", begin)
+    (output / "team_source.inc").write_text(team_source[begin:end])
     commands = []
     print("Output:", output, flush=True)
 
@@ -76,6 +80,9 @@ def main():
         run("native", ["cl", *flags, "/I" + str(SOURCES / "stub"), *native_sources,
                        "/Fenative.exe", "/link", "/MACHINE:X86", "/SUBSYSTEM:CONSOLE", "/INCREMENTAL:NO"], use_vcvars=True)
         run("native-execute", [str(output / "native.exe")])
+        run("team", ["cl", *flags, "/I" + str(output), str(SOURCES / "team_tests.cpp"),
+                     "/Feteam.exe", "/link", "/MACHINE:X86", "/SUBSYSTEM:CONSOLE", "/INCREMENTAL:NO"], use_vcvars=True)
+        run("team-execute", [str(output / "team.exe")])
     else:
         compiler = shutil.which("g++")
         if not compiler:
@@ -88,6 +95,8 @@ def main():
         native_sources = [str(SOURCES / "native_tests.cpp"), *sources[1:], str(ROOT / "src/game/campaign_control_native.cpp")]
         run("native", [compiler, *flags, "-I" + str(SOURCES / "stub"), *native_sources, "-o", "native"])
         run("native-execute", [str(output / "native")])
+        run("team", [compiler, *flags, "-I" + str(output), str(SOURCES / "team_tests.cpp"), "-o", "team"])
+        run("team-execute", [str(output / "team")])
     print("PASS: campaign controller/input composition suites")
     print("Commands and compiler diagnostics:", output)
 

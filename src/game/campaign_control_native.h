@@ -15,5 +15,6 @@ public:
     void Execute(const CampaignProtocol::S_Input &input) override;
 private:
     T_Dispatch m_Dispatch;
+    std::map<SoldierId, ActorRef> m_AppliedBindings;
 };
 #endif

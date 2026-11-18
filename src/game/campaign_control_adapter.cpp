@@ -190,3 +190,22 @@ E_CampaignReason C_CampaignReplicaControlAdapter::InstallCommitted(T_CampaignOwn
     m_Ready = true;
     return E_CampaignReason::None;
 }
+
+E_CampaignReason C_CampaignControlAdapter::RetireBeforeReconstruction() {
+    m_Ready = false;
+    m_Inputs.clear();
+    if (m_Applied) for (const auto &record : m_Applied->m_Soldiers)
+        if (record.m_Actor && !m_Sink.Drain(*record.m_Actor)) return E_CampaignReason::PendingTransaction;
+    if (!m_Sink.Present(std::nullopt)) return E_CampaignReason::PendingTransaction;
+    m_Applied.reset(); // retries in the same world must reinstall cleared handlers
+    return E_CampaignReason::None;
+}
+
+E_CampaignReason C_CampaignReplicaControlAdapter::RetireBeforeReconstruction() {
+    m_Ready = false;
+    if (m_Applied) for (const auto &record : m_Applied->m_Soldiers)
+        if (record.m_Actor && !m_Sink.Drain(*record.m_Actor)) return E_CampaignReason::PendingTransaction;
+    if (!m_Sink.Present(std::nullopt)) return E_CampaignReason::PendingTransaction;
+    m_Applied.reset();
+    return E_CampaignReason::None;
+}

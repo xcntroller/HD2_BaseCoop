@@ -38,6 +38,8 @@ public:
     // Reconcile a committed ownership cut, drain every old binding before applying
     // any new binding, then presentation, then the exact-revision ownership barrier.
     E_CampaignReason SynchronizeCommitted();
+    // Call before advancing mission generation or tearing down the physical world.
+    E_CampaignReason RetireBeforeReconstruction();
     E_CampaignReason OnDisconnected(PlayerId exactIncarnation);
     E_CampaignReason OnScripted(SoldierId soldier, bool scripted);
     E_CampaignReason OnDeath(SoldierId soldier);
@@ -62,6 +64,7 @@ public:
         : m_Session(session), m_LocalPlayer(localPlayer), m_Sink(sink) {}
     T_CampaignOwnershipSnapshot GetSnapshot() const override { return m_View; }
     E_CampaignReason InstallCommitted(T_CampaignOwnershipSnapshot snapshot);
+    E_CampaignReason RetireBeforeReconstruction();
     bool IsSynchronized() const { return m_Ready; }
 private:
     SessionId m_Session;

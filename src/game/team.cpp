@@ -670,13 +670,13 @@ void C_Team::OnMemberDied(C_Human *human)               // 0x0045e790 (DS 0x0047
         if (member->IsAlive() && member->GetRole() != HUMAN_ROLE_NPC_TEAM)
             return;
     }
-    if (IsLocalGame())
+    if (IsLocalGame() || (CampaignControlsActive() && IsServer()))
         GetGame()->FailMission(false);
 }
 
 void C_Team::CheckEnvironment()                         // 0x0045ef00 (DS 0x0047a3b0)
 {
-    if (!IsLocalGame())
+    if (!IsLocalGame() && !(CampaignControlsActive() && IsServer()))
         return;
     if (const C_MissionDef *mission = GetGame()->GetMission()) {
         if (mission->AreObjectivesDecided())
