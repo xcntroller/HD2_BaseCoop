@@ -873,7 +873,7 @@ bool StartDevelopmentCampaign(C_GameApp &app)
 
 void TickDevelopmentCampaign(C_GameApp &app)
 {
-    if (!IsCampaignNet())
+    if (!IsCampaignNet(E_CampaignLanRoute::DevelopmentMission))
         return;
     if (app.m_state->GetTypeId() == GAME_STATE_TYPE_CONSOLE &&
         GetForegroundWindow() == GetIGraph()->GetHWND() && (GetAsyncKeyState(VK_END) & 0x8000)) {

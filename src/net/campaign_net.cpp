@@ -209,6 +209,11 @@ bool IsCampaignNet()
     return g_enabled.load();
 }
 
+bool IsCampaignNet(E_CampaignLanRoute route)
+{
+    return IsCampaignNet() && g_config.m_Route == route;
+}
+
 bool QueueCampaignPeer(std::uint32_t connection, int slot)
 {
     std::lock_guard<std::mutex> lock(g_queueLock);

@@ -26,6 +26,7 @@ struct S_CampaignNetConfig {
 bool BeginCampaignNet(const S_CampaignNetConfig &config, bool host);
 void EndCampaignNet();
 bool IsCampaignNet();
+bool IsCampaignNet(E_CampaignLanRoute route); // game thread
 bool QueueCampaignPeer(std::uint32_t connection, int slot);
 void QueueCampaignJoinFailure(E_CampaignReason reason);
 void QueueCampaignDeparture(std::uint32_t connection);
