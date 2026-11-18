@@ -383,6 +383,66 @@ contracts are available.
 | Equipment transfer requests | COOP-013 live transactions | Accept or decline a request and verify exclusive ownership, atomic movement, stale-request handling, and simultaneous acceptance attempts for the same item. |
 | Co-op scoreboard | Authoritative mission stats and outcome | Display campaign squad performance consistently on host and guests. Keep ordinary campaign HUD and transitions intact. |
 
+## Future gameplay ideas
+
+These are candidates for prototypes and playtests. The campaign flow above is the
+baseline for evaluating them.
+
+### Squad coordination and scouting
+
+- **Squad colours and map pings.** Give each human a consistent colour in the soldier
+  picker, tactical map, HUD, and scoreboard. Keep it with the player when they change
+  soldiers. Pair it with their name or slot number. Try short-lived, player-coloured
+  map pings for **Look here**, **Danger**, and **Regroup**.
+- **Binocular marks.** Let a player deliberately mark an enemy in view through
+  binoculars and share the sighting with the squad. After losing sight, keep a fading
+  last-known position on the tactical map. Try about 20 seconds as a starting point.
+  A fresh sighting can update the position. Start with binoculars and test rifle
+  scopes later if they offer a distinct use. The
+  [campaign map](../src/game/interface_map.cpp) already presents seen enemies.
+- **Enemy presence zones.** If individual marks clutter the map, group nearby recent
+  observations into approximate red zones. Use a deeper shade for more reported
+  enemies and fade the zone as reports age. The overlay represents squad observations.
+  Unmarked areas may still contain enemies.
+
+**First playtest.** In a two-player patrol encounter, have one player spot and mark
+through binoculars while the other moves using that information. Check whether both
+can identify each other's pings and tell when a sighting has gone stale.
+
+### Casualties, stealth, and disguise
+
+- **Bleedout and revive.** Try an optional playthrough rule that gives a downed soldier
+  a short rescue window. A teammate spends a first-aid item to revive them wounded.
+  If the soldier dies, apply the selected permanent-death and respawn rules. Test what
+  happens when the whole squad is down under each respawn mode and which scripted
+  deaths go directly to the campaign's death path.
+- **Stealth feedback.** First make the existing AI reactions easier to read. Try a pause
+  or voice line when a guard investigates, with a brief HUD cue when that change would
+  be easy to miss. Test whether players can tell the difference between suspicion and
+  confirmed detection while watching the scene.
+- **Ranked disguises.** First verify the original disguise and
+  [script toggle](../src/script/script_vm.cpp) in co-op. The current
+  [disguise code](../src/game/human_combat.cpp) gates its updates on local play.
+  Then try ordinary and officer uniforms with ordinary guards and officers in one
+  mission. A plausible uniform generally passes casual inspection. Officers build
+  suspicion during prolonged close observation. An officer uniform gives more leeway
+  with ordinary guards, and suspicious behaviour can expose either uniform.
+
+### Mission variants and network quality
+
+- **Two players in Arctic2.** Prototype a mission-specific variant with two players.
+  Keep the original scripted lead role on one soldier and give the second player room
+  to help. Audit the [single-soldier deployment restriction](../src/game/equipment_screen.cpp)
+  and test objective triggers, lead death, failure, and extraction with both players
+  before considering other restricted missions or larger squads.
+- **Network quality.** Run this work alongside gameplay. Establish a repeatable
+  Arctic1 test under simulated latency, jitter, and packet loss. Measure guest input
+  delay and visible movement corrections. Compare doors, inventory, and objectives
+  on host and guest. Preserve host authority and use the measurements to decide
+  whether to improve remote actor interpolation, local input response, or the
+  transport. The [current networking baseline](tasks/COOP-010.md#handoff) records
+  DirectPlay and sequenced state updates.
+
 ## Validation requirements
 
 The upstream [build instructions](../README.md#building) use MSVC x86 and x87 floating-point
