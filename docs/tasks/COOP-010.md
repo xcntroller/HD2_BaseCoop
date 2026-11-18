@@ -2,14 +2,14 @@
 
 ## Coordination
 
-- Status: ready
-- Owner/session: unassigned
+- Status: active
+- Owner/session: Codex COOP-010, user assignment on 2026-11-18
 - Canonical branch: `feature/coop-010-two-player-mission`
-- Base commit: not started
+- Base commit: `6f1bdd96075b074a6a7b958257af5f56f8374fb5`
 - Dependencies: COOP-008, COOP-009 and their transitive merged dependencies
-- Last checkpoint: none
-- Checkpoint location: none
-- Review/integration: none
+- Last checkpoint: branch kickoff and transport integration plan (this commit)
+- Checkpoint location: `.worktrees/COOP-010` and the canonical branch on origin
+- Review/integration: claim acknowledged by coordination ledger commit `69cb6361`
 - Pull request: none
 
 ## Branch authority and completion PR
@@ -65,10 +65,18 @@ roster/loadouts/policies as fixtures, not approved production menu behavior.
 
 ## Handoff
 
-- Completed: task scope only; no cooperative campaign run exists yet.
+- Completed: refreshed origin, verified both adapter merges, accepted the stopped
+  coordinator handoff and published the claim. Created the canonical worktree
+  from integrated main. Read the protocol, controller and lifecycle composition
+  guides. Found the Steam installation and its Proton prefix, plus the shared
+  x86 toolchain and engine DLL/import libraries.
 - Remaining: live attachment, startup synchronization, host/guest verification and fixes.
-- Next action: obtain coordinator claim acknowledgment, inspect the merged adapter
-  composition guides, and choose a baseline mission exercised by COOP-001.
+- Next action: add bounded framing for the reserved campaign command and attach to
+  the DirectPlay session. Use reliable ordered DirectPlay messages to keep campaign
+  traffic on the provider-identified connection. Suppress the separate native UDP
+  game-data path in campaign mode. Audit the original H&D2 Tutorial spawn and
+  startup script as a campaign fixture candidate. Keep native Sicily2 as a
+  separate regression route.
 - Blockers: no adapter dependency blocker. COOP-008 merged at `d34b6900` and
   COOP-009 at `ce306626`, with their transitive prerequisites integrated. This task
   still requires actual runnable host/guest instances, a complete initial-world
@@ -81,4 +89,4 @@ roster/loadouts/policies as fixtures, not approved production menu behavior.
   Confirm these local paths exist before borrowing read-only with separate prefixes
   and isolated build outputs. No game installation/data is supplied by Git.
 - Decisions: use the agreed four-soldier host-led model and preserve original campaign rules.
-- Validation: none for this task.
+- Validation: branch/dependency checks passed. No game build or runtime validation has run for this task.
