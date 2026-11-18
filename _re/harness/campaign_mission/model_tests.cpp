@@ -1,4 +1,5 @@
 #include "../../../src/game/campaign_mission_adapter.h"
+#include "../../../src/game/campaign_control_adapter.h"
 #include <cstdlib>
 #include <iostream>
 #include <stdexcept>
@@ -16,17 +17,31 @@ struct Policy : I_CampaignPolicyView {
             {E_CampaignPolicy::SwitchingAndSpectating, E_CampaignPolicyState::Permitted, TextKey("fixture")}}};
     }
 };
+S_CampaignSessionSetup Setup() {
+    S_CampaignSessionSetup setup{SessionId(90),CampaignId(8),MissionKey("original/step/version"),{},true};
+    setup.m_Rules.m_Difficulty=2;
+    setup.m_Rules.m_Content={"sha256:"+std::string(64,'a'),"sha256:"+std::string(64,'b'),
+        "sha256:"+std::string(64,'c'),"sha256:"+std::string(64,'d'),"sha256:"+std::string(64,'e')};
+    return setup;
+}
 struct Fixture {
     Policy policy;
     C_CampaignRequestJournal journal{SessionId(90)};
-    C_CampaignOwnership ownership{C_CampaignSession({SessionId(90), CampaignId(8), MissionKey("original/step/version"), {}, true}, {17,0,9,4}), policy, journal};
+    C_CampaignOwnership ownership{C_CampaignSession(Setup(), {17,0,9,4}), policy, journal};
     C_CampaignMissionAdapter adapter{ownership};
     PlayerId guest;
     S_CampaignMissionManifest frozen;
-    Fixture() {
+    explicit Fixture(bool claimHumans=false) {
         CHECK(ownership.Admit("guest", guest) == R::None);
         for (auto s : {SoldierId(1),SoldierId(2),SoldierId(3),SoldierId(4)}) CHECK(ownership.SetAvailability(s,true,true) == R::None);
         CHECK(ownership.StartPreparation() == R::None);
+        if(claimHumans) for(auto peer:{PlayerId(1),guest}) {
+            const auto state=ownership.GetSnapshot();const auto &soldier=state->m_Soldiers[peer==PlayerId(1)?0:1];
+            S_CampaignOwnershipRequest r;r.m_Context={SessionId(90),peer,RequestId(1)};
+            r.m_PreparationGeneration=ownership.GetSession().GetPreparationGeneration();r.m_ExpectedOwnershipRevision=state->m_Revision;
+            r.m_Operation=S_CampaignClaim{{soldier.m_Soldier,soldier.m_ControlRevision}};
+            CHECK(ownership.ApplyRequest(peer,r).m_Reason==R::None);
+        }
         CHECK(ownership.Freeze() == R::None);
         auto state = ownership.GetSnapshot();
         frozen.m_Context = state->m_Context;
@@ -214,9 +229,51 @@ void TestGuestNativeGate() {
     InstallCampaignMissionReconstruction(nullptr);InstallCampaignMissionView(nullptr);
 }
 
+void TestMergedControllerComposition() {
+    struct Sink:I_CampaignControlSink {
+        int drains=0,executions=0;
+        bool Drain(const ActorRef &) override{++drains;return true;}
+        bool Apply(const S_CampaignControllerPlan &) override{return true;}
+        bool Present(const std::optional<ActorRef> &) override{return true;}
+        void Execute(const CampaignProtocol::S_Input &) override{++executions;}
+    } hostSink,guestSink;
+    Fixture f(true);C_CampaignControlAdapter control(f.ownership,hostSink);
+    int retirements=0;
+    f.adapter.SetRetirementHook([&]{++retirements;return control.RetireBeforeReconstruction();});
+    CHECK(f.adapter.Begin(f.frozen)==R::None);CHECK(retirements==1);f.BindAll(false);
+    CHECK(control.SynchronizeCommitted()==R::None);CHECK(f.adapter.SealInitialWorld()==R::None);
+    C_CampaignReplicaControlAdapter guest(SessionId(90),f.guest,guestSink);
+    C_CampaignMissionReconstruction reconstruction(SessionId(90),f.guest,guest);
+    const auto manifest=*f.adapter.GetManifest();
+    CHECK(reconstruction.Reconstruct(manifest,{1,2,3},[&](const auto &,const auto &){return guest.InstallCommitted(f.ownership.GetSnapshot());})==R::None);
+    CHECK(reconstruction.GetAcknowledgment());
+    CHECK(f.adapter.Acknowledge(f.guest,*reconstruction.GetAcknowledgment())==R::None);
+    CHECK(f.adapter.Acknowledge(PlayerId(1),*f.adapter.ExpectedAck(PlayerId(1)))==R::None);
+    S_CampaignStartSimulation start;CHECK(f.adapter.Start(start)==R::None);CHECK(control.SynchronizeCommitted()==R::None);
+    CHECK(guest.InstallCommitted(f.ownership.GetSnapshot())==R::None); // phase-only publication may arrive first
+    InstallCampaignMissionView(&guest);InstallCampaignMissionReconstruction(&reconstruction);
+    CHECK(!CanCampaignSimulate());CHECK(reconstruction.AcceptStart(start)==R::None);CHECK(CanCampaignSimulate());
+    const auto token=f.ownership.GetControlToken(f.guest);CHECK(token);CHECK(token->m_Actor.m_Actor==ActorId(21));
+    CampaignProtocol::S_Input input{*token,1,CampaignProtocol::E_InputKind::ControlBits,{1}};
+    CHECK(control.Enqueue(f.guest,input)==R::None);CHECK(control.ApplyNext()==R::None);CHECK(hostSink.executions==1);
+    CHECK(control.OnDisconnected(f.guest)==R::None);CHECK(f.ownership.ResolveActor(token->m_Actor)==token->m_Soldier);
+    CHECK(!f.ownership.FindOwner(token->m_Soldier));CHECK(control.Enqueue(f.guest,input)==R::NotAdmitted);
+    reconstruction.Invalidate();CHECK(guest.RetireBeforeReconstruction()==R::None);CHECK(!CanCampaignSimulate());
+    InstallCampaignMissionReconstruction(nullptr);InstallCampaignMissionView(nullptr);
+    CHECK(f.adapter.End()==R::None);CHECK(control.SynchronizeCommitted()==R::None);
+    CHECK(f.ownership.StartPreparation()==R::None);CHECK(f.ownership.Freeze()==R::None);
+    const auto next=f.ownership.GetSnapshot();f.frozen.m_Context=next->m_Context;
+    f.frozen.m_OwnershipRevision=next->m_Revision;f.frozen.m_PreparationGeneration=f.ownership.GetSession().GetPreparationGeneration();
+    f.frozen.m_RequiredParticipants={PlayerId(1)}; // explicit fixture policy in a NEW preparation generation
+    for(auto &s:f.frozen.m_Soldiers)for(const auto &r:next->m_Soldiers)if(s.m_Soldier==r.m_Soldier)s.m_Ownership=r;
+    const int oldDrains=hostSink.drains;
+    CHECK(f.adapter.Begin(f.frozen)==R::None);CHECK(retirements==2);CHECK(hostSink.drains>oldDrains);
+    CHECK(f.adapter.GetContext().m_MissionGeneration==MissionGeneration(2));
+}
+
 }
 int main() {
-    try { TestDormancy(); TestFrozenRejection(); TestBarrier(); TestAckFences(); TestInvalidation(); TestNewGeneration(); TestStartupScripts(); TestReconstruction(); TestGuestNativeGate(); }
+    try { TestDormancy(); TestFrozenRejection(); TestBarrier(); TestAckFences(); TestInvalidation(); TestNewGeneration(); TestStartupScripts(); TestReconstruction(); TestGuestNativeGate(); TestMergedControllerComposition(); }
     catch(const std::exception &e) { std::cerr<<"FAIL after "<<g_Checks<<": "<<e.what()<<'\n'; return 1; }
-    std::cout<<"PASS: 9 lifecycle suites / "<<g_Checks<<" checks\n";
+    std::cout<<"PASS: 10 lifecycle suites / "<<g_Checks<<" checks\n";
 }

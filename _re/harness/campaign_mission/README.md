@@ -32,10 +32,13 @@ If sanitizer libraries are unpacked privately, provide `--sanitizer-library-dir 
 with unversioned libasan/libubsan links and launch with `LD_LIBRARY_PATH=DIR`.
 This changes only the compiler/runtime process environment, not the machine.
 
-The lifecycle executable uses real session/ownership/lifecycle implementation:
+The lifecycle executable uses real session/ownership/lifecycle implementation and
+the merged host/guest controller and protocol components:
 frozen-state validation, noncontiguous actors, loading versus simulation, old/wrong
 ack tuples, duplicate/missing acks, departure, abort, generations/immutable retained
-manifests, failed native reconstruction and binding verification. The second
+manifests, failed native reconstruction and binding verification. Its combined fixture also
+exercises real controller handoffs, guest publication/start ordering, tagged input,
+disconnect and pre-generation controller retirement across the merged modules. The second
 executable extracts the actual current `OnPlayerLeft`/native departure helper, `ChangeMap`, difficulty,
 script-team, original-point spawn and native spawn-conversion bodies. Detached services verify legacy
 solo/native co-op destruction and settings paths are preserved when dormant, while

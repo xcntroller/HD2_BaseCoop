@@ -73,24 +73,25 @@ and repeats affected checks; do not merge an unfinished dependency branch.
   Pre-generation retirement callback drains prior physical controllers before
   advancing ownership generation; failed/missing prior-world retirement does not
   advance the mission generation. Final peer rereview is still pending.
-- Remaining: final combined adapter check after COOP-008 merges (including its public
-  progress setter), exact-head independent review, final source checks and review PR.
+- Remaining: final exact-head independent review and integration of PR #19.
+  COOP-008 implementation and actual-done metadata are merged (`d34b6900`, `934143aa`);
+  the agreed public progress setter is now called after native mission initialization.
   No live attachment/menu or two-player campaign gameplay claim; COOP-010 owns those.
-- Next action: repeat target/sanitizer checks on the final source; add the agreed
-  COOP-008 progress setter call after its merge and review the combined native paths.
-- Validation run: latest GCC 9 lifecycle suites / 343 checks and 4 extracted native
-  source regression suites / 100 checks PASS; MSVC 19.44.35230 x86 `/W4 /WX` same PASS in
-  `build/campaign_mission/msvc-beskbd61` on the restored private toolchain.
-  Native ASan/UBSan PASS both suites (`gcc-ynts1zzb`) using process-local private
+- Next action: finish affected native build repeat for the two pickup-respawn guards,
+  then request final exact-head review/merge with updated reproducible evidence.
+- Validation run: final combined GCC 10 lifecycle suites / 389 checks and 4 extracted
+  native source regression suites / 104 checks PASS; MSVC 19.44.35230 x86 `/W4 /WX` same PASS in
+  `build/campaign_mission/msvc-8vslde83` on the restored private toolchain.
+  Native ASan/UBSan PASS both suites (`gcc-et767brf`) using process-local private
   libraries in `build/tooling/gccsan/usr/lib64`, `--sanitizer-library-dir` and
   LD_LIBRARY_PATH; no machine-global changes. Full source-extracted checks include
   original-point spawn/notification ordering and the real native departure helper.
 - Build evidence: full MSVC x86/x87 game build compiled 278 units, 0 compiler messages,
   link 0/LAA yes (`build/full-game-build.log`). Later source refresh (`build/game-restored.log`)
   compiled 1 changed unit and linked successfully after private toolchain restoration.
-  Complete refresh `build/game-script-final.log` again compiled 278 units with zero
-  messages/link 0. The final small reconstruction check and future COOP-008 merge
-  require an affected/full combined repeat; no final combined claim yet.
+  Final combined `build/final-combined-game.log` compiled 282 units with zero compiler
+  messages, link 0/LAA yes. It includes merged COOP-008/007 and the progress setter.
+  The final two pickup-respawn guard changes require an affected incremental repeat.
 - Runtime evidence: a private copied 1.12 installation launched intro/main menu on
   Xvfb :101, original campaign flow was attempted but no mission-play acceptance is
   claimed. Focused source regressions establish dormant solo/native settings and
@@ -106,6 +107,9 @@ and repeats affected checks; do not merge an unfinished dependency branch.
   resolve authenticated incarnation before connection cleanup. All world/snapshot
   and input dispatch obligations are in the [harness guide](../../_re/harness/campaign_mission/README.md).
 - Scope: sole lifecycle writer; 008 retains all human/controller/actor consumers.
+  Narrow scope expansion acknowledged by COOP-008 after its merge: exactly two
+  actors_module.cpp pickup-respawn guards now exclude explicit campaign sessions,
+  and its composition guide clarifies retaining views until physical retirement.
   No shared DTO/legacy layout/wire changes or generated tier1 edits.
 - Prerequisites: 001 `15b572ff`, 004 `59a480c8`, 005 `06d999d7`, 006 `59cb8944` are merged.
-  Final 009 combined adapter integration follows 008 merge; no draft branch is stacked.
+  Final 009 source includes only merged dependencies; no draft branch is stacked.

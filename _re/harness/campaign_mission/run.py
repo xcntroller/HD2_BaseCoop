@@ -67,7 +67,8 @@ def main():
 
     sources = [str(SOURCES / "model_tests.cpp"), str(ROOT / "src/game/campaign_session.cpp"),
                str(ROOT / "src/game/campaign_ownership.cpp"),
-               str(ROOT / "src/game/campaign_mission_adapter.cpp")]
+               str(ROOT / "src/game/campaign_mission_adapter.cpp"),
+               str(ROOT / "src/game/campaign_control_adapter.cpp"), str(ROOT / "src/net/campaign_protocol.cpp")]
     if args.compiler == "msvc":
         flags = ["/nologo", "/std:c++17", "/EHsc", "/W4", "/WX", "/permissive-",
                  "/Zc:__cplusplus", "/arch:IA32", "/MT", "/O2"]
