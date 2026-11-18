@@ -2,14 +2,15 @@
 
 ## Coordination
 
-- Status: review
+- Status: done
 - Owner/session: Codex COOP-014, user assignment, thread `01a1ed7a-ddd9-7000-bbec-e292bd129d25`
 - Canonical branch: `feature/coop-014-arctic1-completion`
 - Base commit: `9ec7fe48bb21c38f9d95976b99198c6fb1576e74`
 - Dependencies: [COOP-010](COOP-010.md) two-player Arctic1 development path.
   Integration also exercises the menu deployment from [COOP-013](COOP-013.md).
 - Last source checkpoint: `22763e24` native gameplay integrated with COOP-013
-- Checkpoint location: `.worktrees/COOP-014` and the canonical branch on origin
+- Integrated commit: `619d6aec77ed902e30e0b79dddad2cf67bffaf5d`
+- Checkpoint location: `main`, the canonical branch on origin and `.worktrees/COOP-014`
 - Review/integration: COOP-012 coordinator accepted the claim in ledger `75131f7a`.
   Separate integration review passed at `c96d169d`.
 - Pull request: [#25](https://github.com/xcntroller/HD2_BaseCoop/pull/25)
@@ -346,13 +347,14 @@ separate from that build.
 
 ## Handoff
 
-- Completed: integrated the COOP-013 source on the task branch and verified
-  the production x86 menu deployment, live handoff, and controlled host/guest
+- Completed: merged [PR #25](https://github.com/xcntroller/HD2_BaseCoop/pull/25)
+  after verifying the production x86 deployment, live handoff, and controlled
   interaction, objective and terminal boundaries.
-- Remaining: integrate the reviewed technical change. The full original paired
-  route is pending owner playtest using the production x86 build.
-- Next action: review [PR #25](https://github.com/xcntroller/HD2_BaseCoop/pull/25)
-  and run the owner route above when ready for campaign playtesting.
+- Remaining: the full original paired route is pending owner playtest using
+  the production x86 build.
+- Next action: run the owner route above when ready for campaign playtesting.
+  [COOP-015](COOP-015.md) can use the host terminal result for debrief and
+  progression.
 - Blockers: none.
 - Decisions: Use the existing development launch and game data. Base the interaction scope on what the original Arctic1 route exercises.
 - Local state: private build outputs and runtime copies under ignored worktree `build/`.

@@ -2,7 +2,7 @@
 
 ## Coordination
 
-- Status: planned
+- Status: ready
 - Owner/session: unassigned
 - Canonical branch: `feature/coop-015-campaign-progression`
 - Base commit: not started
@@ -77,7 +77,9 @@ runtime evidence and legacy regression requirements.
 - Completed: task definition.
 - Remaining: implementation or verification and the acceptance evidence above.
 - Next action: Trace the original campaign nodes from Arctic1 mission exit to the next playable step and identify the host writeback boundary.
-- Blockers: COOP-013 merged at `73d518a5`. COOP-014 must merge before implementation.
+- Blockers: none. COOP-013 merged at `73d518a5` and COOP-014 merged at
+  `619d6aec`. The host result is available through `GetCampaignMissionResult()`
+  while the session is in Ending.
 - Decisions: Preserve the original step sequence and record any necessary eligibility or transition departure decision before exposing that policy.
 - Local state: no task worktree or artifacts.
 - Review notes: none.
