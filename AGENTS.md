@@ -71,6 +71,11 @@ User instructions and later confirmed design decisions take precedence over thes
 - Run checks appropriate to the change. A syntax check does not establish a runnable
   build; a runnable build does not establish host/guest behavior. Record limitations
   honestly, and do not mark a playable feature complete without its runtime evidence.
+- For campaign tasks, use deterministic integration tests, captured checkpoints, and
+  short host/guest checks that establish the required state directly. Keep debug
+  fixtures out of production gameplay and preserve authored missions and objectives.
+  Record genuine gameplay, debug-assisted runs, and simulation separately. The user
+  owns lengthy playthroughs. Leave exact reproduction steps for any gate that needs one.
 - Legacy builds share fixed temporary output paths. Isolate process-local build outputs
   or serialize those builds as described in the workflow; worktrees alone are insufficient.
 

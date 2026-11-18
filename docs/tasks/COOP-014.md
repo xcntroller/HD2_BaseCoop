@@ -7,7 +7,7 @@
 - Canonical branch: `feature/coop-014-arctic1-completion`
 - Base commit: `9ec7fe48bb21c38f9d95976b99198c6fb1576e74`
 - Dependencies: [COOP-010](COOP-010.md) two-player Arctic1 development path
-- Last checkpoint: `46f06f19` native interaction reach and guest door motion
+- Last source checkpoint: `22763e24` native gameplay integrated with COOP-013
 - Checkpoint location: `.worktrees/COOP-014` and the canonical branch on origin
 - Review/integration: COOP-012 coordinator accepted the claim in ledger `75131f7a`.
 - Pull request: [draft #25](https://github.com/xcntroller/HD2_BaseCoop/pull/25)
@@ -47,6 +47,11 @@ for the later campaign-wide verification task.
 - Exercise a reproducible failure outcome and verify that it cannot be committed
   as success. Record the terminal squad state, including casualties and loadout changes,
   and repeat the COOP-010 handoff and original Tutorial/Sicily2 smoke checks if affected.
+
+The user owns the full co-op playthrough. Engineering uses focused two-instance
+checks and isolated debug fixtures. The full original paired success remains a
+playtest gate. The original mission scripts and objective definitions are used
+unchanged in the playtest build.
 
 ## Validation evidence
 
@@ -234,21 +239,87 @@ for progression.
   once. Both instances finished closing at angle 0 after the guest stepped
   back, and both started reopening in the subsequent check.
 
+### Integrated and debug-assisted checks
+
+- Integrated current `main` at `be6a81cb`, including COOP-013. The mission
+  update, presentation and terminal result use the admitted peer set. The
+  clean production x86 build compiled 292 units with zero compiler diagnostics.
+  Release executable SHA-256
+  `d691fe98f6b01acf9ca38b373ded12c96c3112fffc79b6f2124689053347b9b8`.
+  GCC and MSVC x86 protocol checks each passed 12 suites and 567,550 checks.
+  The GCC controller, mission lifecycle and legacy source suites also passed.
+- **Production deployment.** Two copies of the release entered Arctic1 from
+  the standard Co-op Campaign menu. Both players claimed and readied distinct
+  soldiers. The host captured a 37,646-byte initial world with CRC32
+  `510781437`, the guest reconstructed that same world, and both entered
+  Running at generation 1 and snapshot 1. The guest received four squad
+  actors and 30 ambient humans and started the shared aircraft scene.
+  See `build/evidence/menu-production-*-campaign-dev.log`.
+- **Debug-assisted wire and success.** A checked host moved the native
+  cutters into its pouches and used panel 99 next to a seeded player position.
+  The host accepted one request and completed one native cut. An ordinary
+  production guest presented the cut once. After the fixture seeded
+  objective success and induced one native squad casualty, both peers
+  reached the same terminal Success with objectives 1 through 4 complete.
+  The host captured four soldiers, including the casualty and the cutters
+  still in the host's pouches, and retained the fixture's script save value
+  in the mission result. The guest applied the terminal result at
+  mission time 13,300 ms. The log verifier passed on
+  `build/evidence/debug-wire-success/`.
+- **Debug-assisted native failure.** The checked host induced the guide's
+  death through the script's native damage entry point. The unchanged
+  mission script set objective 1 to critical failure. A later completion
+  attempt left it at status 3. Both peers reached Failure with objective
+  states 3 / 2 / 2, and the terminal record contained four soldiers.
+  The log verifier passed on `build/evidence/debug-guide-failure/`.
+- The fixture lives in the isolated harness under `_re/harness/campaign_arctic1/`.
+  The production build has no fixture hook. The seeded terminal result is
+  technical evidence for synchronization. The original solo completion
+  is the genuine playthrough evidence. The original paired completion
+  remains for the user's full playtest.
+
 ## PR test instructions and delivery
 
-- Delivery: Integrated gameplay; specify runnable artifact or Source-only at review.
-- Prerequisites and reproduction steps: record build, game setup, player count, actions
-  and expected results before review.
-- Validation actually run: see the base and implementation checkpoints above.
+**Source-only** integrated gameplay. Build the normal x86 executable with the
+[isolated build guide](../build_baseline.md). Use Sabre Squadron 1.12, matching
+engine libraries, and one private game copy per peer on the same IPv4 LAN.
+The [controlled-run harness](../../_re/harness/campaign_arctic1/README.md) is
+separate from that build.
+
+### User playtest
+
+1. In **Single Player Game → Co-op Campaign**, host and join by IPv4. On the
+   host, select **Prepare Mission** and confirm **Op. Snowball - First Strike**.
+   Claim distinct soldiers, equip them, and ready both peers. Put the wire
+   cutters in a soldier's pouches so the original action menu can use them.
+   Deploy with both players connected.
+2. Watch the aircraft intro and compare the original camera, subtitles and
+   audio. Escape on the guest leaves the scene playing. Escape on the host
+   advances both peers. On the default controls, the host can order the
+   unclaimed soldiers to follow quietly with numpad 0, 4, 1.
+3. Clear or avoid the hut patrol. From just outside the hut door, aim at its
+   panel, press Space, and choose the enabled Open or Close action on the
+   guest. Give the door room to swing. Both peers should reach the same state.
+4. Contact the guide at the rendezvous. Stay near him during the dialogue
+   and follow the route he shows. Keep both players on his path in the swamp.
+   Confirm both sides mark the guide objective as Success.
+5. With the cutters in the pouches, aim at an intact fence panel from within
+   reach, press Space and choose **Use wire-cutters**. Wait for the native
+   action. The gap should appear on both sides.
+6. Locate the underground entrance. Clear the original garrison, including
+   the guards along the docks. The east road also provides a route into the
+   facility. Return every living squad member to the underground entrance.
+   Both HUDs should show **Mission Successful**. Verify the four mandatory
+   objectives are complete and the two `campaign-dev.log` files report the
+   same final outcome and objectives. The host log records terminal casualties
+   and gear. COOP-015 owns the debrief and progression.
 
 ## Handoff
 
 - Completed: refreshed origin, verified COOP-010 merge `738b124d` is an ancestor of
   the base, checked for duplicate work, and established the canonical worktree.
-- Remaining: paired success and the live fence cut.
-- Next action: follow the guide, exercise the native fence cut on both peers,
-  approach the complex with cover, and clear the original
-  garrison, and gather the surviving squad at the underground entrance.
+- Remaining: original paired success in the user's full playthrough.
+- Next action: use the normal build and the user playtest steps above.
 - Blockers: none. Serialize live LAN tests with COOP-013 when the fixed provider port is occupied.
 - Decisions: Use the existing development launch and game data. Base the interaction scope on what the original Arctic1 route exercises.
 - Local state: private build outputs and runtime copies under ignored worktree `build/`.

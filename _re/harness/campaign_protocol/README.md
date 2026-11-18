@@ -67,15 +67,16 @@ current bit offset (usually 37); it is **not byte-aligned** in the native stream
 | 0 | u32 LE | 0x50433248, literal bytes `48 32 43 50` / `H2CP` |
 | 4 | u16 LE | major, 1 |
 | 6 | u16 LE | minor, 0 |
-| 8 | u16 LE | explicit message tag, 1..20 |
+| 8 | u16 LE | explicit message tag, 1..21 |
 | 10 | u16 LE | flags, exactly zero; unknown flags fail closed |
 | 12 | u32 LE | exact body byte count, excluding the 16-byte header |
 | 16 | bytes | message body; no trailing bytes or implicit padding |
 
-Tags 1..20 are Hello, Accept, NegotiationAck, Reject, OwnershipRequest,
+Tags 1..21 are Hello, Accept, NegotiationAck, Reject, OwnershipRequest,
 EditRequest, ReadyRequest, DeployRequest, RequestResult, OwnershipSnapshot,
 PreparationSnapshot, PreparationDelta, BeginMission, SnapshotAck,
-StartSimulation, Input, WorldChunk, MissionUpdate, WeaponEvent, InventoryEvent. Tags never depend on C++ struct layout.
+StartSimulation, Input, WorldChunk, MissionUpdate, WeaponEvent, InventoryEvent,
+PreparationResync. Tags never depend on C++ struct layout.
 `T_Message` order is intentionally bound to these tags; a reorder is a wire change.
 Version 1.0 is the only implemented body schema. Unknown major/minor/tag/flags
 reject; no guessed decoding or fallback. Negotiation's bootstrap header remains
