@@ -10,7 +10,7 @@
 - Last checkpoint: claim accepted and canonical worktree created
 - Checkpoint location: `.worktrees/COOP-014` and the canonical branch on origin
 - Review/integration: COOP-012 coordinator accepted the claim in ledger `75131f7a`.
-- Pull request: none
+- Pull request: [draft #25](https://github.com/xcntroller/HD2_BaseCoop/pull/25)
 
 ## Branch authority and completion PR
 
@@ -50,10 +50,44 @@ for the later campaign-wide verification task.
 
 ## Validation evidence
 
-Pending. Record the tested commit, toolchain and game version, exact checks, outcomes
-and evidence locations. Use the [build guide](../build_baseline.md) for isolated x86
-builds and the [campaign design](../base_game_coop.md#validation-requirements) for
-runtime evidence and legacy regression requirements.
+Base `9ec7fe48` built through Windows Python 3.13.9 and
+`_re/tools/build_isolated.py game --all` with MSVC 14.44.35207 x86 and SDK 10.0.26100.0.
+All 287 translation units compiled with zero compiler diagnostics, link returned 0,
+and LAA was enabled. Base executable SHA-256
+`e7b98b08a3ded24b9ab66b1889986d58de5d1325430e51cf2235f73433888acf`.
+
+Two private Wine instances on displays :102 and :103 ran that build with Sabre Squadron
+1.12 data and started generation 1, snapshot 1 after the guest reconstructed the
+37,646-byte baseline. Both logged the opening objective activation. Compared the
+aircraft intro in both windows. The host rendered the cabin and seated squad while
+the guest showed a dark view with the in-mission HUD. The build and process logs are
+in ignored `build/evidence/`; per-peer `campaign-dev.log` files are in
+`build/runtime/{host,guest}/`. The base solo process reached the original main menu.
+
+## Original mission audit
+
+Read the archive script assignments and the original Arctic1 scripts from the
+local 1.12 installation. Use the official patch copies for the cutscene and
+guide dialogue when auditing. The guide (Rebel) is a native AI actor and starts
+his route via the original player proximity conditions. His staged routes and
+cutscenes use the authoritative script's signals, AI movement and position
+conditions. Missing or killing the guide can fail objective 1. The underground
+entrance activates through a player range check. A separate script monitors
+the original garrison and signals objective 3; its list deliberately excludes
+one maintenance worker. When objectives 2 and 3 complete, the original
+gathering condition checks all living squad members near the entrance. It
+records the squad count and nearby door state for the next mission. All living
+squad members surviving is a bonus, as is stopping the vehicle. These are
+static findings. Actual solo and paired completion, failure, the native
+interactions encountered in play, and final squad evidence are still pending.
+
+The VM and AI currently tick on the host. The guest receives a camera, squad poses
+and objective statuses but no final outcome, ambient human motion, or most of the
+scene and HUD events used by Arctic1's scripts. The existing native result hook is
+unwired and campaign teardown can write soldier state independently of mission
+success. COOP-014 will make the original outcome and the captured terminal squad
+available at the native lifecycle boundary, with COOP-015 consuming that result
+for progression.
 
 ## PR test instructions and delivery
 
