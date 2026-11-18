@@ -151,3 +151,8 @@ missing fields. COOP-006 was notified explicitly before this stopped-writer hand
 - COOP-007 is done at main `577c04d8` (feature `8067b471`); resources and evidence remain preserved. COOP-008 is active in draft PR #17; its latest API checkpoint is `e18835b3`, with final review/validation pending. COOP-009 owns only its acknowledged lifecycle scope, initial published claim `429ae489`; implementation/harness evidence is being prepared.
 - No integration approval is implied. Final COOP-009 combined adapter integration follows COOP-008 merge and affected regressions. COOP-010 owns live attachment and actual two-instance campaign acceptance.
 - COOP-009 runtime resources: private Xvfb :101 (later :102 guest), own Wine prefixes and build output; preserve other workers displays/resources. Pinned COOP-007 compiler/SDK/Python and engine imports are borrowed read-only, imports copied into ignored 009 directories.
+
+## Resource correction / COOP-009 restoration
+
+- After COOP-007 completed, its entire worktree/toolchain disappeared externally. COOP-007/008/009 each confirmed absence; none reports deleting it. Historical passing checks remain accurate, but old 007 paths no longer exist. Preservation statements above describe the earlier resource state.
+- COOP-009 restored a private pinned toolchain using the merged build guide: `.worktrees/COOP-009/build/tooling/run-python.bat`, MSVC14.44.35207/SDK10.0.26100.0/WindowsPython3.13.9, own downloader/cache. Read-only borrowing is authorized for COOP-008 with its own Wine prefix and isolated outputs. Native engine imports/DLLs copied before disappearance remain in ignored 009 build/runtime directories. Preserve these resources until all consumers finish; never infer available paths from historical evidence alone.
