@@ -36,7 +36,8 @@ editing access to another connected player's loadout.
    the committed roster and kits at deployment, then wait for every participating
    client to load before starting play.
 5. Play the original mission with human-controlled squad members. Keep the campaign
-   objectives, scripts, HUD, interaction, and progression. Omit multiplayer match
+   objectives, scripts, interactions, and progression. Use the campaign HUD as the
+   starting point for co-op presentation. Omit multiplayer match
    timers, hit and kill feeds, rounds, ranks, and map rotation. Provide a co-op
    scoreboard for viewing the squad's mission performance. The scoreboard's fields
    and presentation remain open.
@@ -48,6 +49,26 @@ editing access to another connected player's loadout.
    before the host can advance. Readiness applies to the current report. Departed
    players leave the barrier, and there is no host override. Advance once into the
    original next campaign step.
+
+## Co-op interface design
+
+Use the original campaign's art and period character as a visual reference. Co-op menus
+and new HUD elements can use updated layouts, typography, controls, and visual cues where
+they make the game easier to read or navigate. Reuse original components where they fit
+the task. A co-op screen can rearrange or replace controls that make a shared workflow
+hard to follow.
+
+- **Menus and preparation.** Give the player a clear primary action and keep the current
+  playthrough, soldier ownership, and readiness easy to find where they are relevant.
+  Group related game rules and explain when a setting takes effect. Keep stock conflicts
+  and disabled actions next to the control they affect, with a short reason or next step.
+- **In-mission HUD.** Give priority to aiming, objectives, subtitles, and interaction
+  prompts. Use compact co-op cues for current needs such as a join pause or waiting to
+  respawn. Put detailed squad performance in the scoreboard on demand. Check new
+  elements alongside campaign overlays at supported resolutions.
+- **Readable states.** Use clear labels, legible type, contrast, and visible focus in
+  menus. Pair colour with text or a distinct icon for ownership, readiness, and blocking
+  states. Check both host and guest views where their actions or waiting states differ.
 
 ## Playthrough game rules
 
@@ -147,9 +168,9 @@ session flow would retain multiplayer spawning, rounds, disconnect behavior, and
 The new preparation screen should expose the selected squad, each soldier's human owner
 or AI status, and the local player's equipment editor. The host can switch that editor
 between their own soldier and unclaimed AI soldiers. Other players' loadouts may be shown
-for coordination, but editing remains subject to ownership. Show the briefing and campaign
-equipment information in the singleplayer style. A player list or readiness indicator
-should serve preparation; it should not introduce multiplayer ranks or scoring.
+for coordination, but editing remains subject to ownership. Show the original briefing
+and campaign equipment information using the co-op interface guidance above. Keep the
+player list focused on ownership and readiness.
 
 Separate the shared preparation state from its controls and rendering. This lets the UI,
 equipment rules, and transport adapters develop independently. The existing campaign

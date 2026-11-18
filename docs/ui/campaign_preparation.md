@@ -11,8 +11,9 @@ and what still needs inspection in the installed game. Design base: `7e033add`.
 The [campaign design](../base_game_coop.md) confirms a host-led original campaign, up to
 four humans, AI in unclaimed soldiers, each human equipping their own soldier, and the host
 equipping their own and AI soldiers. Preserve campaign equipment, progression, and mission
-restrictions. Use campaign presentation. Host authority validates a player's choice; it
-does not give the host editing access to that player's soldier.
+restrictions. Host authority validates each player's own equipment choices. Follow the
+[co-op interface guidance](../base_game_coop.md#co-op-interface-design) when adapting the
+campaign's visual presentation to the shared preparation flow.
 
 The layout and policies below are proposals for review. Host squad selection followed by
 guest claims, readiness from every deployed human, and first accepted scarce-item requests
@@ -21,11 +22,10 @@ and semantics; this document is a consumer specification, not an alternative wir
 
 ## Layout
 
-Use the campaign's restrained document/table presentation: muted olive surrounding panels,
-warm paper, dark text, portrait selection border, campaign item images and soldier preview.
-No scores, ranks, class unlocks, rounds, respawn controls, or native multiplayer loadout flow.
-The preview's typography, colours, initials, and item rows communicate the arrangement;
-exact game materials/fonts require in-engine verification.
+The mockup takes its visual cues from the campaign's muted olive panels, warm paper,
+and dark text. Agents can revise the layout, type, and controls to make the selected
+soldier, shared stock, readiness, and next action easier to find. Check the resulting
+layout in-engine with a host and guest, including long player names and unavailable actions.
 
 Reference composition: a 1024 × 768, 4:3 safe area. Reserve 40 px outer margins, a 64 px
 heading, a 156 px four-slot squad strip, a 380 px content region, a 52 px readiness/action
