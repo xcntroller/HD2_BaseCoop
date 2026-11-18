@@ -2,14 +2,14 @@
 
 ## Coordination
 
-- Status: active
+- Status: review
 - Owner/session: Codex COOP-009, user assignment 2026-11-18; coordinator COOP-007 acknowledged claim; COOP-009 accepted its stopped-writer handoff at ledger `9e051608`
 - Canonical branch: `feature/coop-009-campaign-adapters`
 - Base commit: `0fcea78f85d0fe9348c3b8e13d1a0f23f50a482a`
 - Dependencies: COOP-001, COOP-004, COOP-005, COOP-006
-- Last checkpoint: startup-script/departure/reconstruction review candidate (this commit)
+- Last checkpoint: source `6375ccad`, integrated-main sync `3a257b90`; final evidence in this documentation commit
 - Checkpoint location: `.worktrees/COOP-009`, canonical branch on origin
-- Review/integration: active component; final combined integration waits for COOP-008 merge
+- Review/integration: combined adapters validated; final COOP-008 independent review/merge gate pending
 - Pull request: https://github.com/xcntroller/HD2_BaseCoop/pull/19 (draft)
 
 ## Branch authority and completion PR
@@ -72,36 +72,45 @@ and repeats affected checks; do not merge an unfinished dependency branch.
   Adapter copies are disabled and SessionId lifetime is explicit in its header.
   Pre-generation retirement callback drains prior physical controllers before
   advancing ownership generation; failed/missing prior-world retirement does not
-  advance the mission generation. Final peer rereview is still pending.
+  advance the mission generation. Host simulation also requires its own successful
+  lifecycle Start receipt for the exact sealed session/generation. Final peer
+  rereview is pending; no source fixes remain.
 - Remaining: final exact-head independent review and integration of PR #19.
   COOP-008 implementation and actual-done metadata are merged (`d34b6900`, `934143aa`);
   the agreed public progress setter is now called after native mission initialization.
   No live attachment/menu or two-player campaign gameplay claim; COOP-010 owns those.
-- Next action: finish affected native build repeat for the two pickup-respawn guards,
-  then request final exact-head review/merge with updated reproducible evidence.
-- Validation run: final combined GCC 10 lifecycle suites / 389 checks and 4 extracted
-  native source regression suites / 104 checks PASS; MSVC 19.44.35230 x86 `/W4 /WX` same PASS in
-  `build/campaign_mission/msvc-8vslde83` on the restored private toolchain.
-  Native ASan/UBSan PASS both suites (`gcc-et767brf`) using process-local private
-  libraries in `build/tooling/gccsan/usr/lib64`, `--sanitizer-library-dir` and
-  LD_LIBRARY_PATH; no machine-global changes. Full source-extracted checks include
-  original-point spawn/notification ordering and the real native departure helper.
-- Build evidence: full MSVC x86/x87 game build compiled 278 units, 0 compiler messages,
-  link 0/LAA yes (`build/full-game-build.log`). Later source refresh (`build/game-restored.log`)
-  compiled 1 changed unit and linked successfully after private toolchain restoration.
-  Final combined `build/final-combined-game.log` compiled 282 units with zero compiler
-  messages, link 0/LAA yes. It includes merged COOP-008/007 and the progress setter.
-  The final two pickup-respawn guard changes require an affected incremental repeat.
+- Next action: record final independent review and perform exact-head PR #19
+  integration gates, then actual-done/dependent-task metadata follow-up.
+- Validation run on final combined source `3a257b90` (own source `6375ccad`):
+  strict GCC / ASan+UBSan and intended MSVC 19.44.35230 x86 `/W4 /WX` each PASS
+  11 lifecycle/model-composition suites / 409 checks and 4 actual-source native
+  regression suites / 104 checks. Final directories: `gcc-o6ovgh19` (sanitized),
+  `msvc-mz0i94pz`; earlier regular GCC `gcc-y_90vbg1` passes the same suites.
+  Exact commands, environment, compiler and execution logs are in those directories.
+  Private sanitizer libraries use process-local LD_LIBRARY_PATH and
+  `--sanitizer-library-dir`; no machine-global changes.
+- Final build: `build/accepted-combined-game.log`: 282 translation units, zero
+  compiler messages, link 0, LAA yes, MSVC x86/x87 flags. This includes finished
+  COOP-008/007, both pickup guards, the committed progress setter and host/guest
+  Start receipts. The focused combined fixture runs real session, ownership,
+  host/guest control and protocol modules through world acknowledgment, reordered
+  Running/Start, input, disconnect and pre-generation retirement.
+- Diff/document checks: `git diff --check`, complete final scope/history review,
+  Python runner syntax and local Markdown file links are required before merge.
 - Runtime evidence: a private copied 1.12 installation launched intro/main menu on
   Xvfb :101, original campaign flow was attempted but no mission-play acceptance is
   claimed. Focused source regressions establish dormant solo/native settings and
   departure behavior; full live campaign acceptance remains COOP-010.
 - Resources: original COOP-007 toolchain/worktree disappeared externally after its
-  completion;007/008/009 confirmed absence; none reports deleting it. Historical
+  completion; 007/008/009 confirmed absence; none reports deleting it. Historical
   passing evidence remains accurate. Restored private 009 compiler/SDK/WinPython
   is `build/tooling/run-python.bat` (same 14.44.35207/10.0.26100.0/3.13.9), with own
   Wine prefix and isolated outputs. Read-only borrowing authorized for 008.
-  Native imports/DLLs copied before deletion are preserved in ignored 009 directories.
+  A second preserved, reconfigured launcher is at root-checkout ignored
+  `build/coop-shared-tooling/run-python.bat`; matching engine imports/DLLs are in
+  its `engine/` directory. Final logs, executable and component outputs are copied
+  to root-checkout ignored `build/coop-009-evidence/`. These paths survive loss of
+  the task worktree; they remain local prerequisites/artifacts, never Git content.
 - API: native callback hooks bind 008 `SynchronizeCommitted`,
   `FindCampaignTransportPlayer(int slot)`, `HandleCampaignDisconnect(PlayerId)`;
   resolve authenticated incarnation before connection cleanup. All world/snapshot
