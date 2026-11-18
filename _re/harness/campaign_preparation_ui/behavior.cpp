@@ -88,5 +88,52 @@ int main() {
         ui.Key(E_CampaignPreparationKey::Escape); ui.Key(E_CampaignPreparationKey::Escape); Check(ui.IsOpen(), "leave cancellation");
         Activate(ui, A::Leave); Activate(ui, A::ConfirmLeave); Check(ui.LeaveRequested() && !ui.IsOpen(), "confirmed leave");
     }
+    fake.Reset();
+    {
+        C_CampaignPreparationScreen ui(fake, fake);
+        Activate(ui,A::Equip);
+        for (int field = 0; field < 3; ++field) {
+            auto wrong = fake.Result();
+            if (field == 0) wrong.m_Result.m_Context.m_Session = SessionId(999);
+            if (field == 1) wrong.m_Result.m_Context.m_PlayerEcho = PlayerId(999);
+            if (field == 2) wrong.m_Result.m_PreparationGeneration = PreparationGeneration(999);
+            fake.m_Events.push_back(wrong); ui.Tick(); Check(ui.IsPending(), "full result scope correlation");
+        }
+        auto retained = ui.GetSnapshot();
+        fake.Resolve(E_CampaignReason::CapacityExceeded); ui.Tick();
+        Check(ui.GetNotice() == E_CampaignReason::CapacityExceeded && ui.GetSnapshot()->m_Stock[0].m_State.m_Quantity == 1, "capacity rejection preserves display");
+        const auto focus = ui.GetFocus(); fake.Publish(); ui.Tick(); Check(ui.GetFocus() == focus, "remote stock refresh preserves focus");
+        fake.m_State.m_Soldiers[0].m_CanView = {false,E_CampaignReason::Ineligible};
+        ui.Tick(); Check(!Enabled(ui,A::Skills) && !Enabled(ui,A::Equip), "visibility denial cannot expose inventory controls");
+        fake.m_State.m_Soldiers[0].m_CanView = {true,E_CampaignReason::None};
+        // Readiness-only view changes must not be sent as preparation revisions.
+        fake.Publish(); Activate(ui,A::Ready);
+        Check(fake.m_Ready->m_Context.m_ExpectedPreparationRevision == fake.m_State.m_PreparationRevision, "ready binds preparation revision");
+        Check(fake.m_Ready->m_Context.m_ExpectedPreparationRevision.Value() != fake.m_State.m_ViewRevision.Value(), "view and preparation revision separated");
+        fake.Resolve(); ui.Tick();
+        ui.Close(); Check(retained->m_Stock[0].m_State.m_Quantity == 1, "retained snapshot survives screen close");
+    }
+    fake.Reset();
+    {
+        for (std::uint64_t id = 2; id <= 10; ++id) { auto stock = fake.m_State.m_Stock[0]; stock.m_Entry = StockEntryId(id); fake.m_State.m_Stock.push_back(stock); }
+        C_CampaignPreparationScreen ui(fake,fake);
+        Activate(ui,A::Stock,1); ui.Key(E_CampaignPreparationKey::Down);
+        Activate(ui,A::Equip); Check(std::get<S_CampaignTakeFromStock>(fake.m_Edit->m_Operation).m_StockEntry == StockEntryId(2), "arrow selects stock identity");
+        fake.Resolve(E_CampaignReason::MissionRestriction); ui.Tick();
+        Activate(ui,A::StockPage); Activate(ui,A::Stock,5);
+        Activate(ui,A::Equip); Check(std::get<S_CampaignTakeFromStock>(fake.m_Edit->m_Operation).m_StockEntry == StockEntryId(5), "mouse stock paging");
+        fake.Resolve(E_CampaignReason::MissionRestriction); ui.Tick();
+        Activate(ui,A::Findings); Check(!Enabled(ui,A::Equip), "restriction detail page has no equipment mutations");
+        Activate(ui,A::Findings); Activate(ui,A::Equip);
+        const auto old = fake.Result();
+        fake.Reset(); ui.Tick(); Check(!ui.IsPending(), "new generation discards pending presentation");
+        fake.m_Events.push_back(old); ui.Tick(); Check(ui.GetSnapshot()->m_Generation == fake.m_State.m_Generation, "obsolete result cannot install old generation");
+        fake.m_Status = E_CampaignSyncStatus::Resyncing; ui.Tick();
+        Check(!Enabled(ui,A::Equip) && !Enabled(ui,A::Ready), "snapshot-gap resync gates mutation");
+        const auto generation = fake.m_State.m_Generation;
+        fake.m_Status = E_CampaignSyncStatus::Loading; ui.Tick();
+        fake.m_State.m_Generation = PreparationGeneration(generation.Value()-1); fake.m_Status = E_CampaignSyncStatus::Current;
+        ui.Tick(); Check(fake.m_Resyncs > 0 && !ui.GetSnapshot(), "loading cannot erase generation freshness fence");
+    }
     std::cout << "PASS: campaign preparation component permissions, transactions, races, lifecycle and input\n";
 }

@@ -16,6 +16,8 @@ public:
     virtual void Text(const S_CampaignPreparationRect &rect, const std::string &text,
                       bool muted = false) = 0;
     // Missing catalog assets must be explicit placeholders, never unchecked frames.
+    virtual void Preview(const S_CampaignPreparationRect &rect, AssetKey asset,
+        const S_CampaignSoldierLoadout &loadout) = 0;
     virtual void Focus(const S_CampaignPreparationRect &rect) = 0;
     virtual void Asset(const S_CampaignPreparationRect &rect, AssetKey asset) = 0;
 };
@@ -35,7 +37,7 @@ public:
 };
 enum class E_CampaignPreparationKey { Tab, BackTab, Enter, Space, Left, Right, Up, Down, Escape };
 enum class E_CampaignPreparationAction {
-    Slot, Page, Inventory, Stock, InventoryPage, StockPage, BriefingPage, Destination, QuantityDown, QuantityUp,
+    Slot, Page, Findings, Inventory, Stock, InventoryPage, StockPage, BriefingPage, Destination, QuantityDown, QuantityUp,
     Equip, Return, Skills, Claim, Release, Ready, Deploy, Leave, ConfirmLeave, CancelLeave
 };
 struct S_CampaignPreparationControl {
@@ -76,6 +78,7 @@ private:
     };
     bool IsCurrent() const;
     bool CanEdit() const;
+    E_CampaignReason EditReason() const;
     const S_CampaignSoldierPresentation *Soldier() const;
     const S_CampaignSoldierLoadout *Loadout() const;
     const S_CampaignStockEntry *Stock() const;
@@ -91,6 +94,9 @@ private:
     I_CampaignPreparation &m_Model;
     I_CampaignPreparationPresentation &m_Presentation;
     T_CampaignPreparationSnapshot m_Snapshot;
+    SessionId m_LastSession;
+    PreparationGeneration m_LastGeneration;
+    ViewRevision m_LastView;
     E_CampaignSyncStatus m_Status = E_CampaignSyncStatus::Loading;
     std::optional<SoldierId> m_Selected;
     std::optional<StockEntryId> m_Stock;
@@ -103,6 +109,6 @@ private:
     std::uint32_t m_Quantity = 1;
     E_CampaignReason m_Notice = E_CampaignReason::None;
     bool m_Open = true, m_LeaveRequested = false, m_ConfirmLeave = false;
-    bool m_Briefing = false, m_Skills = false;
+    bool m_Briefing = false, m_Skills = false, m_Findings = false;
 };
 #endif

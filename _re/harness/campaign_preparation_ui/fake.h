@@ -16,7 +16,7 @@ public:
     std::optional<S_CampaignReadyRequest> m_Ready;
     std::optional<S_CampaignOwnershipRequest> m_Ownership;
     std::optional<S_CampaignDeployRequest> m_Deploy;
-    std::uint64_t m_Next = 1, m_NextToken = 1;
+    std::uint64_t m_Next = 1, m_NextToken = 1, m_NextGeneration = 1;
     LocalSubmissionId m_LastToken;
     int m_Submissions = 0, m_Resyncs = 0, m_Polls = 0;
     std::map<std::string, std::string> m_Labels{
@@ -31,22 +31,23 @@ public:
         {"COOP_OWNER_EDIT_OWN", "Editing your soldier"}, {"COOP_OWNER_EDIT_AI", "Editing AI soldier"},
         {"COOP_SLOT_UNAVAILABLE", "Unavailable"}, {"COOP_SLOT_CLAIM", "Claim"}, {"COOP_SLOT_RELEASE", "Release"},
         {"COOP_BRIEFING_TITLE", "MISSION BRIEFING"}, {"COOP_BRIEFING_PAGE", "Open briefing"}, {"COOP_EQUIP_PAGE", "Equipment"},
-        {"COOP_PAGE_NEXT", "Next page"}, {"COOP_SKILLS", "Skills / equipment"}, {"COOP_PAGE_KEYS", "Arrow keys: page"},
+        {"COOP_OWNER_NO_SOLDIER", "No assigned soldier / spectating. Host may equip eligible AI."}, {"COOP_PAGE_PREVIOUS", "Previous page"}, {"COOP_PAGE_NEXT", "Next page"}, {"COOP_SKILLS", "Skills / equipment"}, {"COOP_PAGE_KEYS", "Arrow keys: page"},
         {"COOP_EQUIP_NO_DESTINATION", "No valid destination"}, {"COOP_EQUIP_TAKE", "Equip"}, {"COOP_EQUIP_RETURN", "Return"},
         {"COOP_EQUIP_WEIGHT", "Weight"}, {"COOP_EQUIP_BELT_PACK", "Belt / backpack"}, {"COOP_EQUIP_STOCK", "SHARED MILITARY STOCK"},
-        {"COOP_ESSENTIAL_TITLE", "MISSION ESSENTIALS:"}, {"COOP_READY_SET", "Ready"}, {"COOP_READY_UNSET", "Not ready"},
+        {"COOP_ESSENTIAL_DETAILS", "Essentials / restrictions"}, {"COOP_ESSENTIAL_TITLE", "MISSION ESSENTIALS:"}, {"COOP_READY_SET", "Ready"}, {"COOP_READY_UNSET", "Not ready"},
         {"COOP_READY_YES", "Ready"}, {"COOP_READY_NO", "Preparing"}, {"COOP_READY_DEPLOY", "Deploy"}, {"COOP_READY_LEAVE", "Leave"},
         {"COOP_READY_CONFIRM_LEAVE", "Confirm leave"}, {"COOP_READY_CANCEL", "Cancel"},
         {"COOP_READY_HOST_LEAVE", "End this fixture session for everyone?"}, {"COOP_READY_GUEST_LEAVE", "Leave preparation?"}
     };
     C_FakePreparation() { Reset(); }
     void Reset() {
+        m_Edit.reset(); m_Ready.reset(); m_Ownership.reset(); m_Deploy.reset();
         m_State = {}; m_Status = E_CampaignSyncStatus::Current; m_Events.clear();
         auto &s = m_State;
         s.m_Context.m_Kind = E_CampaignSessionKind::CampaignCoop; s.m_Context.m_Session = SessionId(1);
         s.m_Context.m_LocalPlayer = PlayerId(1); s.m_Context.m_HostPlayer = PlayerId(1);
-        s.m_Context.m_Phase = E_CampaignPhase::Preparation;
-        s.m_Generation = PreparationGeneration(1); s.m_PreparationRevision = PreparationRevision(1);
+        s.m_Context.m_Phase = E_CampaignPhase::Preparation; s.m_Context.m_UsesCampaignRules = true;
+        s.m_Generation = PreparationGeneration(m_NextGeneration++); s.m_PreparationRevision = PreparationRevision(1);
         s.m_ViewRevision = ViewRevision(1); s.m_OwnershipRevision = OwnershipRevision(1);
         s.m_Connection = E_CampaignConnectionStatus::Admitted; s.m_Sync = E_CampaignSyncStatus::Current;
         s.m_Briefing = {TextKey("1"), TextKey("2"), TextKey("3"), AssetKey("1")};
@@ -69,6 +70,8 @@ public:
         S_CampaignStockEntry stock; stock.m_Entry = StockEntryId(1); stock.m_State = {ItemCatalogKey("2"), 1, {}, {}, {}, {}};
         for (std::uint64_t i = 1; i <= 4; ++i) stock.m_Destinations.push_back({SoldierId(i), {PlacementKey("1"), PlacementKey("2")}, {true, E_CampaignReason::None}});
         s.m_Stock.push_back(stock); s.m_Essentials.push_back({ItemCatalogKey("2"), 1, 0, 1, {SoldierId(1), SoldierId(3)}, {}});
+        s.m_Policies.m_Decisions.push_back({E_CampaignPolicy::DeploymentQuorum, E_CampaignPolicyState::Permitted, TextKey("fixture.all-deployed-humans")});
+        s.m_Policies.m_Decisions.push_back({E_CampaignPolicy::SoldierSelection, E_CampaignPolicyState::Permitted, TextKey("fixture.release-then-claim")});
         Rights();
     }
     void Rights() {
@@ -117,6 +120,7 @@ public:
         r.m_Context = m_Edit ? m_Edit->m_Context.m_Request : m_Ready ? m_Ready->m_Context.m_Request : m_Ownership ? m_Ownership->m_Context : m_Deploy->m_Context.m_Request;
         r.m_Family = m_Edit ? E_CampaignRequestFamily::Edit : m_Ready ? E_CampaignRequestFamily::Ready : m_Ownership ? E_CampaignRequestFamily::Ownership : E_CampaignRequestFamily::Deploy;
         r.m_PreparationGeneration = m_State.m_Generation; r.m_Reason = reason;
+        r.m_OwnershipRevision = m_State.m_OwnershipRevision; r.m_PreparationRevision = m_State.m_PreparationRevision; r.m_ViewRevision = m_State.m_ViewRevision;
         r.m_Outcome = reason == E_CampaignReason::None ? E_CampaignRequestOutcome::Accepted : E_CampaignRequestOutcome::Rejected;
         r.m_State = GetSnapshot().m_Snapshot;
         return {m_LastToken, r};
@@ -172,6 +176,13 @@ public:
     std::string Reason(E_CampaignReason reason) const override {
         switch (reason) {
         case E_CampaignReason::None: return "";
+        case E_CampaignReason::InvalidItem: return "Select a carried item to return";
+        case E_CampaignReason::InvalidCount: return "Choose a quantity carried by this soldier";
+        case E_CampaignReason::PendingTransaction: return "Wait for the pending request";
+        case E_CampaignReason::SnapshotUnavailable: return "Receiving a complete preparation snapshot";
+        case E_CampaignReason::Disconnected: return "Disconnected - requests unavailable";
+        case E_CampaignReason::Frozen: return "Preparation is frozen";
+        case E_CampaignReason::Ineligible: return "No eligible assigned soldier";
         case E_CampaignReason::NotOwner: return "Read only - another human equips this soldier";
         case E_CampaignReason::StaleRevision: return "Equipment changed; review and try again";
         case E_CampaignReason::StockUnavailable: return "Item no longer available";

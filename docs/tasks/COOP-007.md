@@ -10,7 +10,7 @@
 - Last checkpoint: claim `7ea491e0`; current presenter/native harness checkpoint is `HEAD`
 - Checkpoint location: `.worktrees/COOP-007`; `origin/feature/coop-007-preparation-screen`
 - Review/integration: none
-- Pull request: none
+- Pull request: https://github.com/xcntroller/HD2_BaseCoop/pull/12 (draft; native acceptance incomplete)
 
 ## Branch authority and completion PR
 
