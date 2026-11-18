@@ -10,6 +10,7 @@
 class C_FakePreparation final : public I_CampaignPreparation, public I_CampaignPreparationPresentation {
 public:
     S_CampaignPreparationSnapshot m_State;
+    std::string m_BriefingOverride;
     E_CampaignSyncStatus m_Status = E_CampaignSyncStatus::Current;
     std::deque<T_CampaignPreparationEvent> m_Events;
     std::optional<S_CampaignEditRequest> m_Edit;
@@ -34,14 +35,14 @@ public:
         {"COOP_OWNER_NO_SOLDIER", "No assigned soldier / spectating. Host may equip eligible AI."}, {"COOP_PAGE_PREVIOUS", "Previous page"}, {"COOP_PAGE_NEXT", "Next page"}, {"COOP_SKILLS", "Skills / equipment"}, {"COOP_PAGE_KEYS", "Arrow keys: page"},
         {"COOP_EQUIP_NO_DESTINATION", "No valid destination"}, {"COOP_EQUIP_TAKE", "Equip"}, {"COOP_EQUIP_RETURN", "Return"},
         {"COOP_EQUIP_WEIGHT", "Weight"}, {"COOP_EQUIP_BELT_PACK", "Belt / backpack"}, {"COOP_EQUIP_STOCK", "SHARED MILITARY STOCK"},
-        {"COOP_ESSENTIAL_DETAILS", "Essentials / restrictions"}, {"COOP_ESSENTIAL_TITLE", "MISSION ESSENTIALS:"}, {"COOP_READY_SET", "Ready"}, {"COOP_READY_UNSET", "Not ready"},
+        {"COOP_ESSENTIAL_ELIGIBLE", "Eligible carriers:"}, {"COOP_EQUIP_AMMO", "Ammo"}, {"COOP_EQUIP_ROUNDS", "Rounds"}, {"COOP_EQUIP_CHARGES", "Charges"}, {"COOP_EQUIP_CONDITION", "Condition"}, {"COOP_ESSENTIAL_DETAILS", "Essentials / restrictions"}, {"COOP_ESSENTIAL_TITLE", "MISSION ESSENTIALS:"}, {"COOP_READY_SET", "Ready"}, {"COOP_READY_UNSET", "Not ready"},
         {"COOP_READY_YES", "Ready"}, {"COOP_READY_NO", "Preparing"}, {"COOP_READY_DEPLOY", "Deploy"}, {"COOP_READY_LEAVE", "Leave"},
         {"COOP_READY_CONFIRM_LEAVE", "Confirm leave"}, {"COOP_READY_CANCEL", "Cancel"},
         {"COOP_READY_HOST_LEAVE", "End this fixture session for everyone?"}, {"COOP_READY_GUEST_LEAVE", "Leave preparation?"}
     };
     C_FakePreparation() { Reset(); }
     void Reset() {
-        m_Edit.reset(); m_Ready.reset(); m_Ownership.reset(); m_Deploy.reset();
+        m_Edit.reset(); m_Ready.reset(); m_Ownership.reset(); m_Deploy.reset(); m_BriefingOverride.clear();
         m_State = {}; m_Status = E_CampaignSyncStatus::Current; m_Events.clear();
         auto &s = m_State;
         s.m_Context.m_Kind = E_CampaignSessionKind::CampaignCoop; s.m_Context.m_Session = SessionId(1);
@@ -63,7 +64,7 @@ public:
             S_CampaignSoldierLoadout loadout; loadout.m_Soldier = SoldierId(i);
             loadout.m_Weight = 7; loadout.m_WeightCapacity = 30; loadout.m_BeltCapacity = 8;
             loadout.m_BackpackCapacity = 18; loadout.m_BackpackWeightCapacity = 15;
-            loadout.m_Skills = {{SkillKey("1"), 63.5f}, {SkillKey("2"), 80.25f}};
+            for (int key = 1; key <= 7; ++key) loadout.m_Skills.push_back({SkillKey(std::to_string(key)), 60.25f + static_cast<float>(key)});
             loadout.m_Items.push_back({PreparationItemId(i), {ItemCatalogKey("1"), 1, {}, {}, {}, {}}, {PlacementKey("1"), 0}});
             s.m_Loadouts.push_back(loadout);
         }
@@ -167,11 +168,14 @@ public:
     std::string Text(TextKey key) const override {
         if (key == TextKey("1")) return "OPERATION LANTERN (SYNTHETIC FIXTURE)";
         if (key == TextKey("2")) return "Night reconnaissance / difficulty: campaign";
+        if (key.Value().find("fixture.line.") == 0) return key.Value();
+        if (!m_BriefingOverride.empty()) return m_BriefingOverride;
         return "Cross the valley, observe the depot and recover the field documents. Keep the original squad together. One medical kit is essential. Synthetic mission and equipment; no connected game or approved deployment policy.";
     }
     std::string Item(ItemCatalogKey key) const override { return key == ItemCatalogKey("1") ? "Service rifle" : "Medical kit"; }
+    std::string ItemDescription(ItemCatalogKey key) const override { return key == ItemCatalogKey("1") ? "Synthetic service rifle. Inspect ammunition and condition before choosing a variant." : "Synthetic medical kit. Shared stock; one required by this fixture mission."; }
     std::string Placement(PlacementKey key) const override { return key == PlacementKey("1") ? "Belt" : "Backpack"; }
-    std::string Skill(SkillKey key) const override { return key == SkillKey("1") ? "Shooting" : "Endurance"; }
+    std::string Skill(SkillKey key) const override { return key == SkillKey("1") ? "Shooting" : key == SkillKey("2") ? "Endurance" : "Campaign skill " + key.Value(); }
     std::string Label(const std::string &key) const override { auto it = m_Labels.find(key); return it == m_Labels.end() ? key : it->second; }
     std::string Reason(E_CampaignReason reason) const override {
         switch (reason) {

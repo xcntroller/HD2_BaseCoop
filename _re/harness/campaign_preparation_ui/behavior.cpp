@@ -13,6 +13,27 @@ bool Enabled(C_CampaignPreparationScreen &ui, E_CampaignPreparationAction action
     ui.Tick(); for (const auto &c : ui.GetControls()) if (c.m_Action == action) return c.m_Enabled;
     return false;
 }
+class C_TestPainter final : public I_CampaignPreparationPainter {
+public:
+    std::string m_Document, m_Input;
+    std::vector<std::string> m_Text;
+    std::vector<std::string> Paginate(const S_CampaignPreparationRect &, const std::string &text) override {
+        m_Input = text;
+        std::vector<std::string> pages; std::size_t start = 0; int lines = 0;
+        for (std::size_t i = 0; i < text.size(); ++i) if (text[i] == '\n' && ++lines == 4) {
+            pages.push_back(text.substr(start,i+1-start)); start=i+1; lines=0;
+        }
+        if (start < text.size()) pages.push_back(text.substr(start));
+        return pages;
+    }
+    void Panel(const S_CampaignPreparationRect &, bool) override {}
+    void Text(const S_CampaignPreparationRect &rect, const std::string &text, bool) override {
+        m_Text.push_back(text); if (rect.m_Y == 306) m_Document = text;
+    }
+    void Preview(const S_CampaignPreparationRect &, AssetKey, const S_CampaignSoldierLoadout &) override {}
+    void Asset(const S_CampaignPreparationRect &, AssetKey) override {}
+    void Focus(const S_CampaignPreparationRect &) override {}
+};
 int main() {
     using A = E_CampaignPreparationAction;
     C_FakePreparation fake;
@@ -134,6 +155,35 @@ int main() {
         fake.m_Status = E_CampaignSyncStatus::Loading; ui.Tick();
         fake.m_State.m_Generation = PreparationGeneration(generation.Value()-1); fake.m_Status = E_CampaignSyncStatus::Current;
         ui.Tick(); Check(fake.m_Resyncs > 0 && !ui.GetSnapshot(), "loading cannot erase generation freshness fence");
+    }
+    fake.Reset();
+    {
+        for (int i=1;i<=30;++i) fake.m_BriefingOverride += "Brief line " + std::to_string(i) + " \xc4\x8d\n";
+        Check(fake.m_BriefingOverride.size()<1200,"short multiline regression fixture");
+        C_CampaignPreparationScreen ui(fake,fake); C_TestPainter painter;
+        Activate(ui,A::Page); ui.Render(painter);
+        Check(ui.GetDocumentPageCount()>1,"painter-measured multiline pagination");
+        std::string reached;
+        for (std::size_t i=0;i<ui.GetDocumentPageCount();++i) {
+            ui.Render(painter); reached += painter.m_Document;
+            if (i+1<ui.GetDocumentPageCount()) Activate(ui,A::BriefingPage,1);
+        }
+        Check(reached==fake.m_BriefingOverride,"all briefing lines and UTF-8 bytes reachable");
+        Activate(ui,A::Page);
+        for (int i=0;i<30;++i) {S_CampaignFinding f;f.m_Message=TextKey("fixture.line."+std::to_string(i));fake.m_State.m_Findings.push_back(f);}
+        Activate(ui,A::Findings);ui.Render(painter);const auto complete=painter.m_Input;reached.clear();
+        for (std::size_t i=0;i<ui.GetDocumentPageCount();++i) {ui.Render(painter);reached+=painter.m_Document;if(i+1<ui.GetDocumentPageCount())Activate(ui,A::BriefingPage,1);}
+        Check(reached==complete && reached.find("fixture.line.29")!=std::string::npos,"all restriction details reachable");
+        Activate(ui,A::Findings);Activate(ui,A::Skills);painter.m_Text.clear();
+        for (int i=0;i<2;++i) {ui.Render(painter);if(i==0)Activate(ui,A::SkillsPage,1);}
+        for(int i=3;i<=7;++i) Check(std::any_of(painter.m_Text.begin(),painter.m_Text.end(),[i](const auto &t){return t.find("Campaign skill "+std::to_string(i)+" ")==0;}),"all seven campaign skills reachable");
+        for(int i=8;i<=11;++i) fake.m_State.m_Loadouts[0].m_Skills.push_back({SkillKey(std::to_string(i)),70.5f});
+        Activate(ui,A::SkillsPage,1);ui.Render(painter);
+        Check(std::any_of(painter.m_Text.begin(),painter.m_Text.end(),[](const auto &t){return t.find("Campaign skill 11 ")==0;}),"additional catalog skills reachable");
+        fake.m_State.m_Stock[0].m_State.m_AmmoType=ItemCatalogKey("1");fake.m_State.m_Stock[0].m_State.m_Rounds=3;
+        fake.m_State.m_Stock[0].m_State.m_Charges=.5f;fake.m_State.m_Stock[0].m_State.m_Condition=.75f;
+        Activate(ui,A::Findings);ui.Render(painter);
+        Check(painter.m_Input.find("Rounds 3")!=std::string::npos && painter.m_Input.find("Charges 0.5")!=std::string::npos && painter.m_Input.find("Condition 0.75")!=std::string::npos,"variant metadata inspectable");
     }
     std::cout << "PASS: campaign preparation component permissions, transactions, races, lifecycle and input\n";
 }

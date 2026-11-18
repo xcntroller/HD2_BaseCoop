@@ -83,6 +83,14 @@ const S_CampaignAllowedDestination *C_CampaignPreparationScreen::Destination() c
     if (stock && m_Selected) for (const auto &d : stock->m_Destinations) if (d.m_Soldier == *m_Selected) return &d;
     return nullptr;
 }
+std::string C_CampaignPreparationScreen::ItemState(const S_CampaignItemState &state) const {
+    std::string summary = m_Presentation.Item(state.m_Item) + " x" + std::to_string(state.m_Quantity);
+    if (state.m_AmmoType) summary += " / " + Label("COOP_EQUIP_AMMO") + " " + m_Presentation.Item(*state.m_AmmoType);
+    if (state.m_Rounds) summary += " / " + Label("COOP_EQUIP_ROUNDS") + " " + std::to_string(*state.m_Rounds);
+    if (state.m_Charges) summary += " / " + Label("COOP_EQUIP_CHARGES") + " " + Number(*state.m_Charges);
+    if (state.m_Condition) summary += " / " + Label("COOP_EQUIP_CONDITION") + " " + Number(*state.m_Condition);
+    return summary;
+}
 std::string C_CampaignPreparationScreen::Owner(const S_CampaignSoldierPresentation &s) const {
     if (s.m_Ownership.m_Scripted) return Label("COOP_OWNER_SCRIPTED");
     if (!s.m_Ownership.m_Owner) return Label("COOP_OWNER_AI");
@@ -193,21 +201,28 @@ void C_CampaignPreparationScreen::BuildControls() {
         for (std::size_t i = m_InventoryPage * PAGE_SIZE; i < loadout->m_Items.size() && i < (m_InventoryPage + 1) * PAGE_SIZE; ++i) {
             const auto &v = loadout->m_Items[i];
             add(E_CampaignPreparationAction::Inventory, v.m_Entry.Value(), {266, 350 + static_cast<float>(i % PAGE_SIZE) * 32, 320, 30},
-                m_Presentation.Item(v.m_State.m_Item) + " x" + std::to_string(v.m_State.m_Quantity) + " / " + m_Presentation.Placement(v.m_Placement.m_Slot));
+                ItemState(v.m_State) + " / " + m_Presentation.Placement(v.m_Placement.m_Slot));
         }
     }
     if (loadout && !m_Briefing && !m_Findings && !m_Skills && loadout->m_Items.size() > PAGE_SIZE)
         add(E_CampaignPreparationAction::InventoryPage, 0, {266, 480, 320, 24}, Label("COOP_PAGE_NEXT"));
     if (m_Briefing || m_Findings) {
         add(E_CampaignPreparationAction::BriefingPage, 0, {266, 554, 154, 32}, Label("COOP_PAGE_PREVIOUS"), m_BriefingPage > 0);
-        add(E_CampaignPreparationAction::BriefingPage, 1, {610, 554, 358, 32}, Label("COOP_PAGE_NEXT"));
+        add(E_CampaignPreparationAction::BriefingPage, 1, {610, 554, 358, 32}, Label("COOP_PAGE_NEXT"), m_BriefingPage + 1 < m_TextPages);
+    }
+    if (loadout && m_Skills && !m_Briefing && !m_Findings) {
+        m_SkillPage = std::min(m_SkillPage, loadout->m_Skills.empty() ? std::size_t(0) : (loadout->m_Skills.size()-1)/PAGE_SIZE);
+        if (loadout->m_Skills.size() > PAGE_SIZE) {
+            add(E_CampaignPreparationAction::SkillsPage, 0, {266,480,154,24}, Label("COOP_PAGE_PREVIOUS"), m_SkillPage > 0);
+            add(E_CampaignPreparationAction::SkillsPage, 1, {430,480,156,24}, Label("COOP_PAGE_NEXT"), (m_SkillPage+1)*PAGE_SIZE < loadout->m_Skills.size());
+        }
     }
     if (m_Snapshot && !m_Briefing && !m_Findings) {
         m_StockPage = std::min(m_StockPage, m_Snapshot->m_Stock.empty() ? std::size_t(0) : (m_Snapshot->m_Stock.size() - 1) / PAGE_SIZE);
         for (std::size_t i = m_StockPage * PAGE_SIZE; i < m_Snapshot->m_Stock.size() && i < (m_StockPage + 1) * PAGE_SIZE; ++i) {
             const auto &v = m_Snapshot->m_Stock[i];
             add(E_CampaignPreparationAction::Stock, v.m_Entry.Value(), {610, 326 + static_cast<float>(i % PAGE_SIZE) * 32, 358, 30},
-                m_Presentation.Item(v.m_State.m_Item) + " x" + std::to_string(v.m_State.m_Quantity));
+                ItemState(v.m_State));
         }
         if (m_Snapshot->m_Stock.size() > PAGE_SIZE)
             add(E_CampaignPreparationAction::StockPage, 0, {792, 478, 176, 30}, Label("COOP_PAGE_NEXT"));
@@ -262,14 +277,15 @@ void C_CampaignPreparationScreen::Activate(std::size_t index) {
     switch (control.m_Action) {
     case A::Slot:
         m_Selected = m_Snapshot->m_Slots[static_cast<std::size_t>(control.m_Key)].m_Soldier;
-        m_Inventory.reset(); m_Destination.reset(); m_Quantity = 1; m_InventoryPage = 0; Refresh(); break;
+        m_Inventory.reset(); m_Destination.reset(); m_Quantity = 1; m_InventoryPage = 0; m_SkillPage = 0; Refresh(); break;
     case A::Stock: m_Stock = StockEntryId(control.m_Key); m_Destination.reset(); m_Quantity = 1; Refresh(); break;
     case A::Inventory: m_Inventory = PreparationItemId(control.m_Key); break;
     case A::Page: m_Briefing = !m_Briefing; m_Findings = false; m_BriefingPage = 0; break;
     case A::Findings: m_Findings = !m_Findings; m_Briefing = false; m_BriefingPage = 0; break;
     case A::InventoryPage: ++m_InventoryPage; if (Loadout() && m_InventoryPage * PAGE_SIZE >= Loadout()->m_Items.size()) m_InventoryPage = 0; break;
     case A::StockPage: ++m_StockPage; if (m_StockPage * PAGE_SIZE >= m_Snapshot->m_Stock.size()) m_StockPage = 0; break;
-    case A::BriefingPage: if (control.m_Key) { if (m_BriefingPage < 10000) ++m_BriefingPage; } else if (m_BriefingPage) --m_BriefingPage; break;
+    case A::BriefingPage: if (control.m_Key) { if (m_BriefingPage+1 < m_TextPages) ++m_BriefingPage; } else if (m_BriefingPage) --m_BriefingPage; break;
+    case A::SkillsPage: if (control.m_Key) ++m_SkillPage; else if (m_SkillPage) --m_SkillPage; break;
     case A::Skills: m_Skills = !m_Skills; break;
     case A::QuantityDown: --m_Quantity; break;
     case A::QuantityUp: ++m_Quantity; break;
@@ -349,7 +365,12 @@ bool C_CampaignPreparationScreen::Key(E_CampaignPreparationKey key) {
                 m_Controls[i].m_Action == (inventory ? E_CampaignPreparationAction::Inventory : E_CampaignPreparationAction::Stock)) m_Focus = i;
             return true;
         }
-        if (m_Briefing || m_Findings) { if (forward) ++m_BriefingPage; else if (m_BriefingPage) --m_BriefingPage; return true; }
+        if (m_Skills && !m_Briefing && !m_Findings && Loadout() && !Loadout()->m_Skills.empty()) {
+            const auto pages = (Loadout()->m_Skills.size()+PAGE_SIZE-1)/PAGE_SIZE;
+            m_SkillPage = forward ? (m_SkillPage+1)%pages : (m_SkillPage+pages-1)%pages;
+            BuildControls(); return true;
+        }
+        if (m_Briefing || m_Findings) { if (forward) { if (m_BriefingPage+1 < m_TextPages) ++m_BriefingPage; } else if (m_BriefingPage) --m_BriefingPage; return true; }
     }
     const bool back = key == K::BackTab || key == K::Left || key == K::Up;
     m_Focus = back ? (m_Focus + m_Controls.size() - 1) % m_Controls.size() : (m_Focus + 1) % m_Controls.size();
@@ -376,6 +397,7 @@ void C_CampaignPreparationScreen::Render(I_CampaignPreparationPainter &p) {
                 if (s) detail += Name(s->m_DisplayName, 240) + " / " + Owner(*s) + "\n";
                 for (const auto &e : m_Snapshot->m_Essentials) {
                     detail += m_Presentation.Item(e.m_Item) + " " + std::to_string(e.m_Carried) + "/" + std::to_string(e.m_Required) + "\n";
+                    detail += Label("COOP_ESSENTIAL_ELIGIBLE") + " ";
                     for (const auto carrier : e.m_EligibleCarriers) for (const auto &candidate : m_Snapshot->m_Soldiers)
                         if (candidate.m_Soldier == carrier) detail += Name(candidate.m_DisplayName, 240) + " (" + Owner(candidate) + ")  ";
                     detail += "\n";
@@ -386,24 +408,36 @@ void C_CampaignPreparationScreen::Render(I_CampaignPreparationPainter &p) {
                 findings(m_Snapshot->m_Findings); findings(m_Snapshot->m_DeployBlockers);
                 if (s) findings(s->m_Restrictions);
                 if (l) findings(l->m_Findings);
-                if (const auto *stock = Stock()) for (const auto &constraint : stock->m_Constraints) {
-                    detail += m_Presentation.Text(constraint.m_Description) + "\n"; findings(constraint.m_Findings);
+                if (const auto *stock = Stock()) {
+                    detail += ItemState(stock->m_State) + "\n" + m_Presentation.ItemDescription(stock->m_State.m_Item) + "\n";
+                    for (const auto &constraint : stock->m_Constraints) {detail += m_Presentation.Text(constraint.m_Description) + "\n"; findings(constraint.m_Findings);}
                 }
+                if (l && m_Inventory) for (const auto &entry : l->m_Items) if (entry.m_Entry == *m_Inventory)
+                    detail += ItemState(entry.m_State) + "\n" + m_Presentation.ItemDescription(entry.m_State.m_Item) + "\n";
             }
-            const auto pages = std::max(std::size_t(1), (detail.size() + 1199) / 1200);
-            m_BriefingPage = std::min(m_BriefingPage, pages - 1);
+            const S_CampaignPreparationRect document{52, 306, 900, 230};
+            auto pages = p.Paginate(document, detail);
+            if (pages.empty()) pages.emplace_back();
+            m_TextPages = pages.size();
+            m_BriefingPage = std::min(m_BriefingPage, m_TextPages - 1);
             p.Panel({40, 290, 938, 304}, false);
-            text(52, 334, 900, 210, detail.substr(m_BriefingPage * 1200, 1200));
-            text(430, 554, 174, 32, std::to_string(m_BriefingPage + 1) + "/" + std::to_string(pages));
+            p.Text(document, pages[m_BriefingPage]);
+            text(430, 554, 174, 32, std::to_string(m_BriefingPage + 1) + "/" + std::to_string(m_TextPages));
+            BuildControls();
         } else {
-            text(50, 330, 186, 94, body.substr(0, 130));
+            text(50, 330, 186, 94, Name(body, 130));
             if (s) {
                 text(266, 296, 320, 24, Name(s->m_DisplayName, 40));
                 text(266, 322, 320, 26, Label(CanEdit() ? (s->m_Ownership.m_Owner ? "COOP_OWNER_EDIT_OWN" : "COOP_OWNER_EDIT_AI") : "COOP_OWNER_READ_ONLY") + " / " + Owner(*s), !CanEdit());
                 if (s->m_CanView.m_Allowed && l) p.Preview({50, 428, 186, 116}, s->m_Preview, *l);
                 if (l) {
-                    if (m_Skills) { float y = 354; for (const auto &skill : l->m_Skills) { if (y > 490) break;
-                        text(266, y, 320, 26, m_Presentation.Skill(skill.m_Key) + " " + Number(skill.m_Value)); y += 28; } }
+                    if (m_Skills) {
+                        float y = 354;
+                        for (std::size_t i = m_SkillPage*PAGE_SIZE; i < l->m_Skills.size() && i < (m_SkillPage+1)*PAGE_SIZE; ++i) {
+                            const auto &skill = l->m_Skills[i];
+                            text(266,y,320,26,m_Presentation.Skill(skill.m_Key) + " " + Number(skill.m_Value)); y += 28;
+                        }
+                    }
                     text(266, 516, 320, 30, Label("COOP_EQUIP_WEIGHT") + " " + Number(l->m_Weight) + "/" + Number(l->m_WeightCapacity));
                     text(266, 552, 320, 30, Label("COOP_EQUIP_BELT_PACK") + " " + Number(l->m_BeltVolume) + "/" + Number(l->m_BeltCapacity) + " | " + Number(l->m_BackpackVolume) + "/" + Number(l->m_BackpackCapacity));
                 } else text(266, 370, 320, 100, m_Presentation.Reason(s->m_CanView.m_Reason));

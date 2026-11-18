@@ -56,29 +56,67 @@ public:
         Quad(r, selected ? 0xffb7a76c : r.m_Width == 1024 ? 0xff41483a : 0xffd5cdb5);
         if (r.m_Width != 1024) { auto line=r; line.m_Height=1; Quad(line,0xff6c7057); }
     }
+    // Both drawing and pagination use these exact UTF-8 token, glyph and wrap rules.
+    // Fixture texture font maps supported Latin codepoints; unsupported glyphs use '?'.
+    static std::size_t TokenSize(const std::string &text, std::size_t i) {
+        const auto first = static_cast<unsigned char>(text[i]);
+        std::size_t count = first < 0x80 ? 1 : first < 0xe0 ? 2 : first < 0xf0 ? 3 : 4;
+        if (i+count > text.size()) return 1;
+        for (std::size_t j=1;j<count;++j) if ((static_cast<unsigned char>(text[i+j]) & 0xc0) != 0x80) return 1;
+        return count;
+    }
+    static int Glyph(const std::string &text, std::size_t i) {
+        const auto count = TokenSize(text,i);
+        if (count == 1) return static_cast<unsigned char>(text[i]);
+        unsigned code = static_cast<unsigned char>(text[i]) & ((1u << (7-count))-1);
+        for (std::size_t j=1;j<count;++j) code=(code<<6)|(static_cast<unsigned char>(text[i+j])&0x3f);
+        return code <= 255 ? static_cast<int>(code) : '?';
+    }
+    float Width(const std::string &text, std::size_t i) { return std::max(.4f,m_Font.GetGlyph(Glyph(text,i))->aspect)*16; }
+    std::vector<std::string> Lines(const S_CampaignPreparationRect &r, const std::string &text) {
+        std::vector<std::string> lines; std::string line; float x = 0;
+        const float width = std::max(1.0f,r.m_Width-10);
+        for (std::size_t i=0;i<text.size();) {
+            if(text[i]=='\r') {++i;continue;}
+            if(text[i]=='\n') {lines.push_back(line);line.clear();x=0;++i;continue;}
+            if(text[i]!=' ' && (i==0 || text[i-1]==' ' || text[i-1]=='\n')) {
+                float word=0;
+                for(std::size_t j=i;j<text.size() && text[j]!=' ' && text[j]!='\n';j+=TokenSize(text,j)) word+=Width(text,j);
+                if(x>0 && x+word>width) {lines.push_back(line);line.clear();x=0;}
+            }
+            const auto token = TokenSize(text,i); const float advance = Width(text,i);
+            if(x>0 && x+advance>width) {lines.push_back(line);line.clear();x=0;}
+            if(x>0 || text[i]!=' ') {line.append(text,i,token);x+=advance;}
+            i+=token;
+        }
+        lines.push_back(line); return lines;
+    }
+    static std::size_t LineCount(const S_CampaignPreparationRect &r) {
+        return static_cast<std::size_t>(std::max(1.0f, std::floor((r.m_Height-19)/18)+1));
+    }
+    std::vector<std::string> Paginate(const S_CampaignPreparationRect &r, const std::string &text) override {
+        const auto lines = Lines(r,text); const auto count = LineCount(r);
+        std::vector<std::string> pages;
+        for(std::size_t first=0;first<lines.size();first+=count) {
+            std::string page;
+            for(std::size_t i=first;i<lines.size() && i<first+count;++i) {if(i!=first) page+='\n';page+=lines[i];}
+            pages.push_back(std::move(page));
+        }
+        return pages;
+    }
     void Text(const S_CampaignPreparationRect &r, const std::string &text, bool muted) override {
-        // Bounded word wrap and clipping using the reused campaign texture font.
-        // This fixture's copy is ASCII; localized UTF-8 uses the game's text-box adapter later.
         const float height = 16*m_Scale;
         const float left = m_Left+(r.m_X+5)*m_Scale, top=m_Top+(r.m_Y+3)*m_Scale;
-        const float right=m_Left+(r.m_X+r.m_Width-5)*m_Scale, bottom=m_Top+(r.m_Y+r.m_Height)*m_Scale;
-        float x=left, y=top+height;
-        m_Font.ClearVertices();
-        for (std::size_t i=0; i<text.size(); ++i) {
-            const auto ch=static_cast<unsigned char>(text[i]);
-            if (ch != ' ' && ch != '\n' && (i == 0 || text[i-1] == ' ')) {
-                float word = 0;
-                for (std::size_t j=i; j<text.size() && text[j]!=' ' && text[j]!='\n'; ++j) word += std::max(.4f,m_Font.GetGlyph(static_cast<unsigned char>(text[j]))->aspect)*height;
-                if(x>left && x+word>right) {x=left; y+=height+2*m_Scale;}
+        const auto lines = Lines(r,text); m_Font.ClearVertices();
+        for (std::size_t line=0;line<lines.size() && line<LineCount(r);++line) {
+            float x=left; const float y=top+height+static_cast<float>(line)*18*m_Scale;
+            for (std::size_t i=0;i<lines[line].size();i+=TokenSize(lines[line],i)) {
+                const float width=Width(lines[line],i)*m_Scale;
+                m_Font.AddQuad(Glyph(lines[line],i),r.m_Y<110?0xffe8dfc0:muted?0xff70715f:0xff20291e,
+                    static_cast<int>(width),static_cast<int>(height),static_cast<int>(x),static_cast<int>(y),.02f); x+=width;
             }
-            float width=std::max(0.4f,m_Font.GetGlyph(ch)->aspect)*height;
-            if (ch=='\n' || x+width>right) { x=left; y+=height+2*m_Scale; if(ch=='\n') continue; }
-            if (y>bottom || right<=left) break;
-            m_Font.AddQuad(ch, r.m_Y<110?0xffe8dfc0:muted?0xff70715f:0xff20291e, static_cast<int>(width),static_cast<int>(height),static_cast<int>(x),static_cast<int>(y),.02f);
-            x+=width;
         }
-        GetIGraph()->SetRenderState(0,1);
-        m_Font.Flush();
+        GetIGraph()->SetRenderState(0,1); m_Font.Flush();
     }
     void Focus(const S_CampaignPreparationRect &r) override {
         Quad({r.m_X,r.m_Y,r.m_Width,2},0xfff5eac1);
@@ -198,6 +236,13 @@ int main(int argc, char **argv) {
             graph->ProcessWinMessages(); painter.Resize();
             auto press=[&held](int vk){const bool down=(GetAsyncKeyState(vk)&0x8000)!=0; const bool hit=down&&!held[vk];held[vk]=down;return hit;};
             for(int i=0;i<9;++i) if(press(VK_F1+i)) {scenario=i+1;Scenario(fake,ui,scenario);}
+            if (press('L')) {
+                fake.m_BriefingOverride.clear();
+                for (int i=1;i<=30;++i) fake.m_BriefingOverride += "Brief line "+std::to_string(i)+"\n";
+                fake.m_State.m_Findings.clear();
+                for (int i=1;i<=30;++i) {S_CampaignFinding f;f.m_Message=TextKey("fixture.line."+std::to_string(i));fake.m_State.m_Findings.push_back(f);}
+                fake.Publish();
+            }
             if (press('O')) {
                 if (ui.GetSelection()) {
                     auto &soldier = fake.m_State.m_Soldiers.at(static_cast<std::size_t>(ui.GetSelection()->Value()-1));
@@ -229,7 +274,7 @@ int main(int argc, char **argv) {
                 " stock=" + std::to_string(snapshot && !snapshot->m_Stock.empty() ? snapshot->m_Stock[0].m_State.m_Quantity : 9999) +
                 " generation=" + std::to_string(snapshot ? snapshot->m_Generation.Value() : 0) +
                 " revision=" + std::to_string(snapshot ? snapshot->m_PreparationRevision.Value() : 0) +
-                " notice=" + std::to_string(static_cast<int>(ui.GetNotice())) + " scenario=" + std::to_string(scenario) + " ready=" + std::to_string(readyCount) + " equip=" + std::to_string(equip) + " phase=" + std::to_string(snapshot ? static_cast<int>(snapshot->m_Context.m_Phase) : 0);
+                " notice=" + std::to_string(static_cast<int>(ui.GetNotice())) + " scenario=" + std::to_string(scenario) + " ready=" + std::to_string(readyCount) + " equip=" + std::to_string(equip) + " phase=" + std::to_string(snapshot ? static_cast<int>(snapshot->m_Context.m_Phase) : 0) + " page=" + std::to_string(ui.GetDocumentPage()) + " pages=" + std::to_string(ui.GetDocumentPageCount()) + " skills=" + std::to_string(ui.GetSkillPage());
             if(trace != previousTrace) {std::puts(trace.c_str());std::fflush(stdout);previousTrace=trace;}
             if(press(VK_F12) || (frames && frame==frames-1)) {
                 char path[80];std::snprintf(path,sizeof(path),"coop007-%d-%dx%d.tga",scenario,init.width,init.height);

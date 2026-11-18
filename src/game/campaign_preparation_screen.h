@@ -12,6 +12,9 @@ struct S_CampaignPreparationRect {
 class I_CampaignPreparationPainter {
 public:
     virtual ~I_CampaignPreparationPainter() = default;
+    // Return complete pages measured with exactly the same font/wrap rules as Text.
+    // Preserve UTF-8 boundaries; every line must be reachable at this rectangle size.
+    virtual std::vector<std::string> Paginate(const S_CampaignPreparationRect &rect, const std::string &text) = 0;
     virtual void Panel(const S_CampaignPreparationRect &rect, bool selected) = 0;
     virtual void Text(const S_CampaignPreparationRect &rect, const std::string &text,
                       bool muted = false) = 0;
@@ -26,6 +29,7 @@ public:
     virtual ~I_CampaignPreparationPresentation() = default;
     virtual std::string Text(TextKey key) const = 0;
     virtual std::string Item(ItemCatalogKey key) const = 0;
+    virtual std::string ItemDescription(ItemCatalogKey key) const = 0;
     virtual std::string Placement(PlacementKey key) const = 0;
     virtual std::string Skill(SkillKey key) const = 0;
     // Symbolic COOP_* labels: live binding localizes whole messages here.
@@ -38,7 +42,7 @@ public:
 enum class E_CampaignPreparationKey { Tab, BackTab, Enter, Space, Left, Right, Up, Down, Escape };
 enum class E_CampaignPreparationAction {
     Slot, Page, Findings, Inventory, Stock, InventoryPage, StockPage, BriefingPage, Destination, QuantityDown, QuantityUp,
-    Equip, Return, Skills, Claim, Release, Ready, Deploy, Leave, ConfirmLeave, CancelLeave
+    Equip, Return, Skills, SkillsPage, Claim, Release, Ready, Deploy, Leave, ConfirmLeave, CancelLeave
 };
 struct S_CampaignPreparationControl {
     E_CampaignPreparationAction m_Action;
@@ -66,6 +70,9 @@ public:
     bool IsPending() const { return m_Pending.has_value(); }
     std::optional<SoldierId> GetSelection() const { return m_Selected; }
     const std::vector<S_CampaignPreparationControl> &GetControls() const { return m_Controls; }
+    std::size_t GetDocumentPage() const { return m_BriefingPage; }
+    std::size_t GetDocumentPageCount() const { return m_TextPages; }
+    std::size_t GetSkillPage() const { return m_SkillPage; }
     std::size_t GetFocus() const { return m_Focus; }
     E_CampaignReason GetNotice() const { return m_Notice; }
     T_CampaignPreparationSnapshot GetSnapshot() const { return m_Snapshot; }
@@ -84,6 +91,7 @@ private:
     const S_CampaignStockEntry *Stock() const;
     const S_CampaignAllowedDestination *Destination() const;
     bool HasLocalSoldier() const;
+    std::string ItemState(const S_CampaignItemState &state) const;
     std::string Owner(const S_CampaignSoldierPresentation &soldier) const;
     void Refresh();
     void BuildControls();
@@ -105,7 +113,7 @@ private:
     std::optional<S_Pending> m_Pending;
     std::vector<S_CampaignPreparationControl> m_Controls;
     std::size_t m_Focus = 0;
-    std::size_t m_StockPage = 0, m_InventoryPage = 0, m_BriefingPage = 0;
+    std::size_t m_StockPage = 0, m_InventoryPage = 0, m_BriefingPage = 0, m_TextPages = 1, m_SkillPage = 0;
     std::uint32_t m_Quantity = 1;
     E_CampaignReason m_Notice = E_CampaignReason::None;
     bool m_Open = true, m_LeaveRequested = false, m_ConfirmLeave = false;

@@ -40,7 +40,7 @@ Copy the resulting `preview.exe`, the newly built `LS3DF.dll` and `rw_data.dll` 
 The preview mounts the campaign archives in the same priority/key order as `app.cpp`.
 It never loads a player profile, saves, connects to a server or modifies installed data.
 Texture caches and screenshots may be generated in that private runtime directory.
-Do not commit it. On Linux, data symlinks are sufficient, but runtime DLLs must be copies.
+Do not commit it. On Linux, archive symlinks are sufficient; copy loose Text files and runtime DLLs.
 
 The preview compiles the original `C_TextureFont` implementation preceding the explicit
 font-manager section marker into a generated, ignored source file. This reuses the actual
@@ -81,7 +81,8 @@ Controls:
   F6 restricted one-soldier spectator; F7 Frozen; F8 Disconnected; F9 scripted soldier.
 - F10 accepts the pending fake proposal, F11 rejects it as stale. O changes selected
   ownership to the guest and rejects the former editor; D disconnects guest to AI;
-  H unassigns the host; R sets fixture participants ready at the committed revision.
+  H unassigns the host; R sets fixture participants ready at the committed revision;
+  L installs 30 short briefing lines and 30 restriction findings for paging regression.
 - F12 writes `coop007-<scenario>-<width>x<height>.tga`. Optional third numeric argument
   limits frames and captures the last frame, e.g. `preview.exe 800 600 60`.
 
@@ -103,7 +104,7 @@ The script starts the real preview, focuses its own window by process ID, sends 
 mouse/keyboard input and asserts observable state traces. It checks host/guest rights,
 unchanged pending stock, accepted Equip/Return conservation, keyboard traversal, rejected
 edits, ownership loss during a pending edit, disconnect-to-AI, host without a soldier,
-readiness invalidation, deployment freeze, nine status fixtures, detail pages and leave
+readiness invalidation, deployment freeze, nine status fixtures, detail pages, all seven campaign skills, long multiline briefing/restriction paging and leave
 confirmation. It exits nonzero on a failed expectation or native process failure.
 Run input suites **serially** on a display; multiple foreground automation suites conflict.
 
@@ -142,12 +143,19 @@ artifacts are local prerequisites, not part of this source delivery.
   rejects a backward generation/view and requests resync; a current new generation clears
   pending presentation and stale selections. Readiness-only view updates preserve the
   expected PreparationRevision used in Ready/Deploy/Edit proposals.
-- Presentation resolves text, reasons, item/place/skill names and assets from verified
+- Presentation resolves text, reasons, item descriptions, item/place/skill names and assets from verified
   local catalogs. `COOP_*` labels are symbolic whole messages for localization; this task
   does not allocate numeric text IDs or overlay the legacy language table. Native fixture
-  text is English ASCII; production localized glyphs/fit remain a live-painter gate.
+  text is English ASCII; the sample font painter supports Latin UTF-8 tokens and uses
+  an explicit question-mark fallback for unsupported glyphs. Full production localization and glyph/fit checks remain a live-painter gate.
+  The details page labels eligible carriers separately from carried totals and exposes
+  selected stock/loadout ammunition, rounds, charges, condition and item descriptions.
   Treat player names as plain text, never markup or format strings. Painter `Preview`
   receives only the selected soldier's committed loadout; copy it if retaining it.
+- The painter supplies `Paginate` using exactly the same font metrics, wrapping and line
+  height as `Text`. The screen displays those complete pages without byte slicing, so
+  multiline blockers and UTF-8 boundaries remain reachable. Skills use independent
+  bounded pages, including every catalog entry beyond the base campaign's seven.
 - The painter draws native text/quads/assets and performs letterboxing; input uses the
   inverse transform. The component uses the 1024x768 safe area, with equipment/briefing/
   detail pages at every size. The included painter demonstrates 800x600 and widescreen.
