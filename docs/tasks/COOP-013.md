@@ -2,14 +2,14 @@
 
 ## Coordination
 
-- Status: active
-- Owner/session: Codex COOP-013, explicit user assignment on 2026-11-18
+- Status: review
+- Owner/session: Codex COOP-013, user assignment on 2026-11-18, thread `01a1edba-b5e3-7c73-bfa7-51e0b12fc205`
 - Canonical branch: `feature/coop-013-live-preparation`
 - Base commit: `fd5ad4c3e997be8a6d4a7211e04dd3319677e9a2`
 - Dependencies: [COOP-005](COOP-005.md) equipment transactions, [COOP-007](COOP-007.md) preparation screen, [COOP-012](COOP-012.md) session setup
-- Last checkpoint: `1b26199e` implements the deployment handoff
+- Last checkpoint: tested source `5632e7b8` includes the default menu route and loading recovery
 - Checkpoint location: canonical origin branch and `.worktrees/COOP-013`
-- Review/integration: draft while final runtime and regression evidence is collected
+- Review/integration: acceptance checks passed and candidate ready for integration review
 - Pull request: [#28](https://github.com/xcntroller/HD2_BaseCoop/pull/28)
 
 ## Branch authority and completion PR
@@ -54,49 +54,87 @@ of this flow on later campaign steps.
 
 ## Validation evidence
 
-Checkpoint tests used Sabre Squadron 1.12.0 from Steam build 2147249, Wine 11.21
-Staging, the matching port engine libraries, isolated MSVC 14.44 x86 and private
-Xvfb instances. Local scripts and results are under the task worktree's ignored
-`build/` directory. The first full MSVC deployment build compiled 292 units
-with zero compiler messages and linked a large-address-aware executable.
+The tested source is `5632e7b8`. The release build used Windows Python 3.13.9,
+MSVC 19.44.35230 x86 with x87 floats and Windows SDK 10.0.26100.0. A clean game
+build compiled 292 units with zero compiler diagnostics and linked a
+large-address-aware executable. The last source change recompiled one unit
+with zero diagnostics and linked again. See `build/evidence/build-final.log`
+and `build/evidence/build-final-starter.log`.
+
+Runtime checks used Sabre Squadron 1.12.0 from Steam build 2147249 with the
+matching LS3DF and rw_data port libraries, Wine 11.21 Staging, private Xvfb
+instances and an isolated IPv4 network namespace. The campaign menu runs
+launched the normal executable with `HD2_CAMPAIGN_COOP_MENU` unset. Local drivers,
+screenshots and logs are under the task worktree's ignored `build/` directory.
 
 | Check | Actual result |
 | --- | --- |
-| `python3 _re/harness/campaign_protocol/run.py --compiler gcc` | 567,404 checks passed, including resync direction and negotiated feature binding. |
-| `python3 _re/harness/campaign_preparation/run.py --compiler gcc` | Header, behavior and original-rule parity passed. |
-| `python3 _re/harness/campaign_preparation_ui/run.py --compiler gcc` | Screen behavior and input harness passed. |
-| `_re/harness/campaign_preparation/live.cpp` with the adapter, preparation, ownership, session and protocol implementations | Encoded host and guest traffic passed ownership, duplicate and stale requests, last-stock contention, snapshot gap, departure, freeze and new-generation reopen checks. |
-| `unshare --user --map-root-user --net bash build/menu_deploy_keys.sh 1 arctic1-menu-solo-retry` | One actual menu instance claimed a soldier, marked ready and deployed four original actors. Generation 1 and snapshot 1 started after host capture at mission time zero. The local `build/evidence/solo-menu-initial-world.log` records the barrier. |
-| `unshare --user --map-root-user --net bash build/menu_deploy_keys.sh 4 arctic1-menu-four` | Four actual menu instances claimed distinct soldiers and marked ready. All three guests reconstructed exactly 37,646 bytes with CRC32 770313502. The host accepted all three acknowledgments for snapshot 1 before starting simulation. Every guest applied the first live update. `build/evidence/four-menu-*-initial-world.log` and `arctic1-menu-four-*-world.png` capture the run. The preparation screens exposed missing guest item definitions before launch. |
+| `python3 _re/harness/campaign_protocol/run.py --compiler gcc` | 12 suites and 567,404 checks passed, including resync direction and negotiated feature checks. |
+| `python3 _re/harness/campaign_preparation/run.py --compiler gcc` and `python3 _re/harness/campaign_preparation_ui/run.py --compiler gcc` | Preparation behavior, legacy rules, permissions, lifecycle and UI input passed. |
+| `python3 _re/harness/campaign_ownership/run.py --compiler gcc`, `python3 _re/harness/campaign_control/run.py --compiler gcc` and `python3 _re/harness/campaign_mission/run.py --compiler gcc` | Ownership, controller composition, mission lifecycle and legacy source checks passed. |
+| Live adapter harness command below | Encoded request traffic passed duplicate, stale and unauthorized requests, last-stock contention, ownership and readiness changes, snapshot gap recovery, departure, freeze and reopen checks. The same harness passed with AddressSanitizer and UndefinedBehaviorSanitizer. |
+| `unshare --user --map-root-user --net bash build/menu_deploy_mouse_default.sh 1 arctic1-final-mouse` | Mouse claim, Ready and Deploy started Arctic1 with one human and three AI. The host captured 37,646 bytes and started generation 1, snapshot 1. See `final-one-host-initial-world.log` and `arctic1-final-mouse-world.png`. |
+| `unshare --user --map-root-user --net bash build/menu_deploy_keys_default.sh 4 arctic1-final-four` | Four actual instances claimed distinct soldiers. All three guests reconstructed 37,646 bytes with CRC32 4167523918. The host accepted three acknowledgments before starting generation 1, snapshot 1. All guests applied the first live update with four actors. See `final-four-*-initial-world.log` and `arctic1-final-four-*-world.png`. |
+| `unshare --user --map-root-user --net bash build/menu_two_edits_default.sh 2 arctic1-final-edits` | The host returned a Sten and the guest returned a Springfield from their own kits after concurrent submissions and a stale-revision retry. Both saw the other player's new kit as read-only. The original mission briefing, image, item names and 3D previews rendered. Confirming guest leave returned to campaign setup and restored AI control of the guest's slot on the host. See `arctic1-final-edits-*.png` and `final-edit-*-setup.log`. |
+| `unshare --user --map-root-user --net bash build/menu_ai_default.sh 1 arctic1-final-ai` | The host equipped Robert Czakowski from stock while he was AI-controlled. The Sten count fell from two to one, his De Lisle left the hands slot and his kit weight changed. See `arctic1-final-ai-*-equip.png`. |
+| `unshare --user --map-root-user --net bash build/menu_retry_default.sh 2 arctic1-final-recovery` | Suspending the guest before Deploy withheld its acknowledgment. The host timed out at mission time zero. Both returned to preparation on the same connection and readied again. Generation 2, snapshot 2 reconstructed 37,646 bytes with CRC32 1139519148 on both, then started and applied the first live update. See `final-recovery-*-initial-world.log`, `final-recovery-*-setup.log` and `arctic1-final-recovery-*.png`. |
+| Solo **Single Mission → Op. Snowball - First Strike** | A private test profile with Arctic1 unlocked reached original team selection. Automatic Selection and Recommended Selection filled the native inventory and its original Wire-cutter and Camera requirements. Continue reached the original briefing and aircraft intro. See `final-solo-after-heroes.png`, `final-solo-equipped.png` and `final-solo-running.png`. |
+| `unshare --user --map-root-user --net bash build/regress_native.sh` | Connected host and guest both displayed the original Sicily2 Player Setup with native soldier selection, equipment, chat and both players listed. No campaign setup or mission traffic was dispatched. See `final-native-host.png` and `final-native-guest.png`. |
+| `unshare --user --map-root-user --net bash build/regress_dev.sh` | The COOP-010 command-line host and guest negotiated, acknowledged the initial world and entered Running. The guest applied the first live update. See `final-dev-*-initial-world.log`. |
+
+Run the live adapter harness with GCC from the worktree root.
+
+```bash
+mkdir -p build/evidence
+g++ -std=c++17 -Wall -Wextra -Werror -Isrc \
+    _re/harness/campaign_preparation/live.cpp \
+    src/game/campaign_preparation_live.cpp src/game/campaign_preparation.cpp \
+    src/game/campaign_ownership.cpp src/game/campaign_session.cpp \
+    src/net/campaign_protocol.cpp -o build/evidence/preparation-live
+build/evidence/preparation-live
+```
 
 ## PR test instructions and delivery
 
-- Delivery: Source-only draft for integrated gameplay. Local executables and game data stay ignored.
-- Prerequisites: Use the [isolated build guide](../build_baseline.md), Sabre Squadron
-  1.12.0, matching engine libraries and an IPv4 LAN with one game instance per player.
-- In **Single Player → Co-op Campaign**, host or join by IPv4. On the host, open
-  **Prepare Mission**. Claim different soldiers and mark each player ready. The host
-  should be able to edit AI kits. The other players' kits should be read-only.
-  Deploy and check host capture and each required guest's acknowledgment before
-  the first live mission update. Repeat with one and four participants.
+**Source-only** integrated gameplay. The [isolated build guide](../build_baseline.md)
+covers the x86 build and copied runtime directories. Use Sabre Squadron 1.12.0,
+matching engine libraries and one copy per participant on an IPv4 LAN.
+Start `HD2_Port.exe` in each copied game directory.
+
+1. Open **Single Player Game → Co-op Campaign**. Host the campaign and join by
+   the host's IPv4 address. On the host, select **Prepare Mission**. Verify
+   **Op. Snowball - First Strike** and open the original briefing.
+2. In a two-player session, claim different soldiers and return or equip gear
+   on both players' kits at the same time. Retry a stale request against the
+   refreshed snapshot. Inspect the other player's changed kit and verify it
+   is read-only. Select an unclaimed soldier as host and equip their kit.
+3. Ready all players, then change a kit. Verify deployment waits for the new
+   revision to be readied. Ready both again. Confirm the guest can leave from
+   preparation and the host retains that soldier's committed kit under AI.
+4. Repeat with one and four participants. Claim different soldiers, mark
+   everyone ready, then Deploy. The host log must list each required
+   guest acknowledgment before Start. Compare the byte count and CRC32 in
+   each guest's reconstruction log against the host's capture.
+5. For a loading-recovery check, suspend a private test guest after both
+   players are ready, then deploy. Wait for the host's loading timeout and
+   resume the guest. Both should return to preparation. Ready and deploy
+   again, and check that the new generation and snapshot reach Running.
+6. On the original solo route, enter an unlocked Arctic1 Single Mission and
+   use Automatic Selection and Recommended Selection. In native LAN co-op,
+   host and join Sicily2 and verify the original Player Setup on both peers.
 
 ## Handoff
 
-- Completed: retained the admitted connection through preparation and the loading
-  barrier. Implemented authoritative preparation with immutable guest publications and
-  resync, original campaign equipment import, and per-player world transfer and acknowledgments.
-- Remaining: verify the guest equipment catalog fix, paired concurrent kit edits and
-  cancellation, failed loading and recovery, final four-instance repeat, and ordinary-mode
-  regressions. Enable the default menu route after those checks.
-- Next action: finish the updated x86 build and capture paired kit changes in the native menu.
-- Dependency status: COOP-005, COOP-007 and COOP-012 are integrated. COOP-012 merged at `4ef8b814` and documents the admitted-session contract.
-- Decisions: First Arctic1 uses four original roster entries and AI fills unclaimed
-  positions. Players claim their own soldier and every admitted player readies against
-  the same preparation revision. The host serializes edits, and a failed loading attempt
-  reopens preparation with retained kits and a fresh generation when the connection survives.
-  The playthrough soldier picker and additional rules are covered by the updated campaign design.
-- Local state: private builds, Wine prefixes and Xvfb displays :125, :126, :128 and :129
-  stay in the task worktree. Network namespace isolation separates the local DirectPlay port
-  from COOP-014. The guest catalog and briefing fixes are being built for the next checkpoint.
-- Review notes: Shared launcher fan-out, per-actor input queues and world acknowledgments
-  were coordinated with COOP-014. The preparation resync message reserves wire tag 21 and feature bit 7.
+- The menu route uses the first four original profiles and fills unclaimed slots
+  with squad AI. Each user claims a soldier and confirms readiness against the
+  same preparation revision. The host serializes equipment edits and publishes
+  per-player snapshots. Failed loading reopens preparation with retained kits
+  and a fresh generation when the connection survives.
+- COOP-005 merged at `06d999d7`, COOP-007 at `8067b471` and COOP-012
+  at `4ef8b814`. Shared launcher fan-out, per-actor input queues and world
+  acknowledgments were coordinated with COOP-014. Preparation resync uses
+  wire tag 21 and feature bit 7.
+- COOP-014 owns mission interaction and completion. COOP-015 combines the
+  preparation flow with later campaign steps after both dependencies merge.
+- Local build and runtime evidence stays under `build/evidence/`. The
+  copied game data, profiles and binaries stay in ignored directories.
