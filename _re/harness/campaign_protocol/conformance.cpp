@@ -378,6 +378,49 @@ void Chunks() {
     // Standard independent CRC check vector.
     CHECK(Crc32({'1','2','3','4','5','6','7','8','9'}) == 0xcbf43926);
 }
+void WorldSendSchedule()
+{
+    C_WorldSender sender;
+    const auto baseline = Baseline();
+    auto invalid = baseline;
+    invalid.m_PlayerEcho = PlayerId{};
+    CHECK(sender.Begin(invalid, T_Bytes{42}, 0) == R::Malformed);
+    CHECK(sender.Begin(baseline, {}, 0) == R::Malformed);
+    const T_Bytes world(kMaxWorldBytes, 0xa7);
+    CHECK(sender.Begin(baseline, world, 100) == R::None);
+    CHECK(sender.Begin(baseline, T_Bytes{42}, 100) == R::PendingTransaction);
+
+    C_WorldAssembler assembler;
+    std::uint32_t received = 0;
+    for (std::uint64_t now = 100; now < 9000 && !sender.IsComplete(); now += 17) {
+        std::uint32_t sentThisTick = 0;
+        CHECK(sender.Pump(now, [&](const S_WorldChunk &chunk) {
+            CHECK(chunk.m_Index == received++);
+            ++sentThisTick;
+            CHECK(assembler.Add(chunk, baseline, now) == R::None);
+            return true;
+        }) == R::None);
+        CHECK(sentThisTick <= 4);
+    }
+    CHECK(sender.IsComplete() && received == kMaxChunks);
+    CHECK(assembler.Take() == world);
+    sender.Reset();
+
+    CHECK(sender.Begin(baseline, world, 100) == R::None);
+    received = 0;
+    for (int i = 0; i < 100; ++i)
+        CHECK(sender.Pump(9100, [&](const S_WorldChunk &) { ++received; return true; }) == R::None);
+    CHECK(received == 96); // Absorb a delayed game frame while retaining the rate cap.
+    CHECK(sender.Pump(10100, [](const auto &) { return true; }) == R::Timeout);
+    CHECK(!sender.IsComplete());
+    CHECK(sender.Pump(10100, [](const auto &) { return true; }) == R::InvalidPhase);
+
+    CHECK(sender.Begin(baseline, T_Bytes{42}, 100) == R::None);
+    CHECK(sender.Pump(100, [](const auto &) { return false; }) == R::Disconnected);
+    CHECK(!sender.IsComplete());
+    CHECK(sender.Begin(baseline, T_Bytes{42}, 100) == R::None);
+    CHECK(sender.Pump(99, [](const auto &) { return true; }) == R::Timeout);
+}
 void TransportBits() {
     const auto frame = Frame(Hello());
     for (std::size_t offset = 0; offset < 64; ++offset) {
@@ -454,6 +497,6 @@ void Hostile() {
 int main(int argc, char **argv) {
     CHECK(argc >= 2);
     RoundTrips(argv[1], argc == 3 && std::string(argv[2]) == "--write-fixtures");
-    Malformed(); Negotiation(); Inputs(); Replicas(); Chunks(); TransportBits(); Hostile();
-    std::cout << "campaign protocol: 8 suites, " << g_Checks << " checks passed\n";
+    Malformed(); Negotiation(); Inputs(); Replicas(); Chunks(); WorldSendSchedule(); TransportBits(); Hostile();
+    std::cout << "campaign protocol: 9 suites, " << g_Checks << " checks passed\n";
 }

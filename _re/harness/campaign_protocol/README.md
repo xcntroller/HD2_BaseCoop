@@ -32,13 +32,13 @@ Alternatively pass `--vcvars C:\toolchain\vcvars32.bat` or set `HD2_VCVARS32`.
 Hostx64/x86 is supported; the fixture rejects an x64 MSVC target. The compiler
 uses `/std:c++17 /EHsc /W4 /WX /permissive- /Zc:__cplusplus /arch:IA32 /MT /O2`
 and `/MACHINE:X86`. The standalone-header probe and conformance executable must
-both compile; execution must print `campaign protocol: 8 suites, ... checks passed`.
+both compile; execution must print `campaign protocol: 9 suites, ... checks passed`.
 Outputs/logs/argv/environment go into a new private ignored
 `build/campaign_protocol/{gcc,msvc}-*` directory per invocation. No legacy fixed
 temporary output is used. Exact local validation is in
 [the task handoff](../../../docs/tasks/COOP-006.md).
 
-Eight suites cover 27 deterministic fixtures across all 17 message families and
+Nine suites cover paced world transmission and 27 deterministic fixtures across all 17 message families and
 all operation/state variants, fractional skill bits, signed64/unsigned64 extrema,
 zero actor coordinates, every byte truncation (also with a rewritten frame length
 so nested decoding is exercised), malformed counts/flags/enums/variants/UTF-8,

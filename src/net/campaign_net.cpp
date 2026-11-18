@@ -33,6 +33,7 @@ enum class E_Event { Connected, Packet, Departed };
 struct S_Event {
     E_Event m_Kind;
     S_Link m_Link;
+    std::uint64_t m_ReceivedAt;
     T_Bytes m_Packet;
 };
 
@@ -131,7 +132,7 @@ void Receive(C_NetGame &net, S_Peer &peer, const T_Bytes &packet, std::uint64_t 
     auto received = peer.m_Admission.Receive(frame, now);
     const bool replied = !received.m_Reply || Send(net, peer.m_Link.m_Connection, *received.m_Reply);
     if (received.m_Reason != R::None || !replied) {
-        Reject(net, peer, replied ? received.m_Reason : R::Disconnected, now, false);
+        Reject(net, peer, replied ? received.m_Reason : R::Disconnected, NowMs(), false);
         return;
     }
     if (!peer.m_Admitted && peer.m_Admission.GetState() == E_Admission::Admitted) {
@@ -139,7 +140,7 @@ void Receive(C_NetGame &net, S_Peer &peer, const T_Bytes &packet, std::uint64_t 
             ? g_config.m_Admitted(peer.m_Admission.GetAgreement(), peer.m_Link.m_Slot)
             : R::NotAdmitted;
         if (reason != R::None) {
-            Reject(net, peer, reason, now, true);
+            Reject(net, peer, reason, NowMs(), true);
             return;
         }
         peer.m_Admitted = true;
@@ -201,7 +202,7 @@ bool QueueCampaignPeer(std::uint32_t connection, int slot)
         return false;
     const S_Link link{connection, slot, PlayerId(++g_lastPlayer)};
     g_links.emplace(connection, link);
-    g_events.push_back({E_Event::Connected, link, {}});
+    g_events.push_back({E_Event::Connected, link, NowMs(), {}});
     return true;
 }
 
@@ -211,7 +212,7 @@ void QueueCampaignDeparture(std::uint32_t connection)
     const auto entry = g_links.find(connection);
     if (entry == g_links.end())
         return;
-    g_events.push_back({E_Event::Departed, entry->second, {}});
+    g_events.push_back({E_Event::Departed, entry->second, NowMs(), {}});
     g_links.erase(entry);
 }
 
@@ -226,7 +227,7 @@ void QueueCampaignPacket(std::uint32_t connection, int slot, const void *data, s
         size > kMaxQueuedBytes - g_queuedBytes)
         return;
     const auto *bytes = static_cast<const std::uint8_t *>(data);
-    g_events.push_back({E_Event::Packet, entry->second, T_Bytes(bytes, bytes + size)});
+    g_events.push_back({E_Event::Packet, entry->second, NowMs(), T_Bytes(bytes, bytes + size)});
     ++g_queuedPackets;
     g_queuedBytes += size;
 }
@@ -239,15 +240,14 @@ void ProcessCampaignNet(C_NetGame &net)
         events.swap(g_events);
         g_queuedPackets = g_queuedBytes = 0;
     }
-    const auto now = NowMs();
     for (const auto &event : events) {
         const auto &link = event.m_Link;
         if (event.m_Kind == E_Event::Connected) {
-            auto &peer = g_peers.try_emplace(link.m_Player, link, g_config, g_host, now).first->second;
+            auto &peer = g_peers.try_emplace(link.m_Player, link, g_config, g_host, event.m_ReceivedAt).first->second;
             if (auto hello = peer.m_Admission.Start()) {
                 g_awaitingServer = false;
                 if (!Send(net, kServerConnection, *hello))
-                    Reject(net, peer, R::Disconnected, now, false);
+                    Reject(net, peer, R::Disconnected, NowMs(), false);
             }
             continue;
         }
@@ -256,7 +256,7 @@ void ProcessCampaignNet(C_NetGame &net)
             continue;
         auto &peer = entry->second;
         if (event.m_Kind == E_Event::Packet) {
-            Receive(net, peer, event.m_Packet, now);
+            Receive(net, peer, event.m_Packet, event.m_ReceivedAt);
         } else {
             if (!peer.m_CloseAt)
                 NotifyDeparture(peer, R::Disconnected);
@@ -267,6 +267,7 @@ void ProcessCampaignNet(C_NetGame &net)
                 net.Close(false);
         }
     }
+    const auto now = NowMs();
     for (auto &entry : g_peers) {
         auto &peer = entry.second;
         if (peer.m_Admission.Tick(now) == R::Timeout)

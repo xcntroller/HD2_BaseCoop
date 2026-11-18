@@ -3,6 +3,7 @@
 
 #include "../game/campaign_contracts.h"
 #include <cstddef>
+#include <functional>
 
 // Engine-independent opt-in component. See _re/harness/campaign_protocol/README.md
 // for the normative wire schema and live attachment obligations. No native hooks.
@@ -155,6 +156,24 @@ private:
 };
 // At most ONE transfer per instance. Caller creates only one per connection;
 // fixed chunk size, bounded total, exact baseline, duplicate conflict and timeout.
+// Sender for one recipient's sealed baseline. Pump() sends a bounded number
+// of ordered chunks per game frame and keeps the sustained rate below Admission's
+// receive cap. The caller sends the matching manifest first and aborts the cut
+// on any non-success result.
+class C_WorldSender {
+public:
+    using T_SendChunk = std::function<bool(const S_WorldChunk &)>;
+    E_CampaignReason Begin(const S_CampaignSnapshotAck &baseline, T_Bytes world, std::uint64_t nowMs);
+    E_CampaignReason Pump(std::uint64_t nowMs, const T_SendChunk &send);
+    bool IsComplete() const { return m_Count != 0 && m_Next == m_Count; }
+    void Reset();
+private:
+    S_CampaignSnapshotAck m_Baseline;
+    T_Bytes m_World;
+    std::uint32_t m_Count = 0, m_Next = 0, m_Crc = 0, m_SentInWindow = 0;
+    std::uint64_t m_Started = 0, m_LastPump = 0, m_Window = 0;
+};
+
 // Take returns bytes only; lifecycle reconstruction must succeed BEFORE SnapshotAck.
 class C_WorldAssembler {
 public:

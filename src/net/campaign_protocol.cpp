@@ -947,6 +947,70 @@ S_CampaignPreparationView C_PreparationReplica::GetView() const {
     if (!m_Current) return {E_CampaignSyncStatus::Resyncing, E_CampaignReason::SnapshotGap, nullptr};
     return {E_CampaignSyncStatus::Current, E_CampaignReason::None, m_Snapshot};
 }
+E_CampaignReason C_WorldSender::Begin(const S_CampaignSnapshotAck &baseline, T_Bytes world, std::uint64_t nowMs)
+{
+    using R = E_CampaignReason;
+    if (m_Count != 0)
+        return R::PendingTransaction;
+    if (!Valid(baseline) || world.empty() || world.size() > kMaxWorldBytes)
+        return R::Malformed;
+    const auto count = (world.size() + kMaxChunkBytes - 1) / kMaxChunkBytes;
+    m_Baseline = baseline;
+    m_Crc = Crc32(world);
+    m_World = std::move(world);
+    m_Count = static_cast<std::uint32_t>(count);
+    m_Started = m_LastPump = m_Window = nowMs;
+    return R::None;
+}
+
+E_CampaignReason C_WorldSender::Pump(std::uint64_t nowMs, const T_SendChunk &send)
+{
+    using R = E_CampaignReason;
+    constexpr std::uint32_t chunksPerSecond = 96;
+    constexpr std::uint32_t chunksPerPump = 4;
+    if (!m_Count || !send)
+        return R::InvalidPhase;
+    if (IsComplete())
+        return R::None;
+    if (nowMs < m_LastPump || nowMs - m_Started >= kTimeoutMs) {
+        Reset();
+        return R::Timeout;
+    }
+
+    m_LastPump = nowMs;
+    if (nowMs - m_Window >= 1000) {
+        m_Window = nowMs;
+        m_SentInWindow = 0;
+    }
+    const auto due = static_cast<std::uint32_t>((nowMs - m_Started) * chunksPerSecond / 1000) + 1;
+    const auto limit = (std::min)({due, m_Next + chunksPerPump, m_Count,
+                                 m_Next + chunksPerSecond - m_SentInWindow});
+    while (m_Next < limit) {
+        const auto offset = m_Next * kMaxChunkBytes;
+        const auto size = (std::min)(kMaxChunkBytes, m_World.size() - offset);
+        const auto copied = m_World.data() + offset;
+        S_WorldChunk chunk{
+            m_Baseline, static_cast<std::uint32_t>(m_World.size()), m_Next, m_Count, m_Crc,
+            T_Bytes(copied, copied + size)
+        };
+        if (!send(chunk)) {
+            Reset();
+            return R::Disconnected;
+        }
+        ++m_Next;
+        ++m_SentInWindow;
+    }
+    if (IsComplete())
+        m_World = T_Bytes{};
+    return R::None;
+}
+
+void C_WorldSender::Reset()
+{
+    m_World = T_Bytes{};
+    m_Count = m_Next = m_Crc = m_SentInWindow = 0;
+}
+
 E_CampaignReason C_WorldAssembler::Add(const S_WorldChunk &chunk, const S_CampaignSnapshotAck &expected, std::uint64_t nowMs) {
     if (!Valid(chunk) || !Valid(chunk.m_Baseline) || !Valid(expected)) return E_CampaignReason::Malformed;
     if (!SameBaseline(chunk.m_Baseline, expected)) return E_CampaignReason::WrongGeneration;

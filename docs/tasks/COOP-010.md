@@ -7,7 +7,7 @@
 - Canonical branch: `feature/coop-010-two-player-mission`
 - Base commit: `6f1bdd96075b074a6a7b958257af5f56f8374fb5`
 - Dependencies: COOP-008, COOP-009 and their transitive merged dependencies
-- Last checkpoint: original Arctic1 host Loading with four bound soldiers (this commit)
+- Last checkpoint: bounded world-chunk scheduling and callback receive timestamps (this commit)
 - Checkpoint location: `.worktrees/COOP-010` and the canonical branch on origin
 - Review/integration: claim acknowledged by coordination ledger commit `69cb6361`
 - Pull request: [#22](https://github.com/xcntroller/HD2_BaseCoop/pull/22) (draft)
@@ -84,6 +84,10 @@ roster/loadouts/policies as fixtures, not approved production menu behavior.
   through the original PLAY step. Host and guest are assigned profiles 0 and 1.
   Profiles 2 and 3 use the original campaign squad AI. Assignment, ready
   actions, kit selection and essential distribution are development fixtures.
+  Added a per-recipient world sender that schedules chunks for a sealed baseline
+  and tested it against the existing assembler through the maximum 8 MiB cut.
+  DirectPlay now captures the per-packet monotonic arrival time before enqueueing
+  to account for frames received while world loading stalls the game thread.
 - Remaining: live attachment, startup synchronization, host/guest verification and fixes.
 - Next action: implement the versioned initial-world encoding and guest
   installation. Audit host and guest static actor creation before defining the
@@ -133,6 +137,12 @@ roster/loadouts/policies as fixtures, not approved production menu behavior.
     lifecycle and 104 native-source checks. The GCC preparation run passed
     behavior and original rule parity, including 810 capacity and 240
     mission-essential differential cases.
+  - The paced world-sender checkpoint passed GCC and MSVC x86 with nine
+    conformance suites and 564,472 checks each. Cases include the maximum
+    512-chunk transfer, the per-pump and per-window caps, transport send
+    failure, and elapsed-time and clock-rollback rejection. MSVC isolated
+    check compiled both changed network units with zero diagnostics and the
+    incremental game linked successfully.
   - Build and runtime evidence is preserved in the root checkout's ignored
     `build/coop-010-evidence/` directory. Guest initial-world reconstruction,
     synchronized gameplay, in-play AI handoff and the original-mode runtime
