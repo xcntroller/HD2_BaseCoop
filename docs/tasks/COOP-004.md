@@ -2,15 +2,15 @@
 
 ## Coordination
 
-- Status: planned (user assigned; coordinator acknowledgment pending)
+- Status: review
 - Owner/session: Codex COOP-004 / thread `01a1ebf9-60c7-74d0-9d39-cd09295875b0`, 2026-11-18
 - Canonical branch: `feature/coop-004-ownership`
 - Base commit: `0f367ed62af337633941bca0d22d3ff1932129ba`
 - Dependencies: COOP-002, COOP-011 (merged shared declarations)
-- Last checkpoint: branch/worktree preparation (this commit)
+- Last checkpoint: implementation and validated harness (this commit; preparation `e2bb8477`)
 - Checkpoint location: `.worktrees/COOP-004`; `origin/feature/coop-004-ownership`
-- Review/integration: none
-- Pull request: none
+- Review/integration: local API/scope review passed; independent review requested; not merged
+- Pull request: https://github.com/xcntroller/HD2_BaseCoop/pull/9 (draft pending independent review)
 
 ## Branch authority and completion PR
 
@@ -57,18 +57,76 @@ No legacy controller/profile layout edits.
 - Provide documented APIs and meaningful model tests. Runtime playability is not this
   module's deliverable; the live adapter and two-player gates remain separate.
 
+## Validation evidence
+
+**Source-only** engine-independent component. No game/menu/transport/controller route is
+connected, and no legacy engine, protocol, profile or serialized layout was changed.
+Runtime playability is explicitly outside this module's acceptance; controller handoff,
+world barrier/replication and host/guest evidence remain COOP-008/009/010.
+
+The [harness README](../../_re/harness/campaign_ownership/README.md) documents complete
+API/lifetime, thread/queue, policy, catalog, counter, journal and adapter obligations,
+plus prerequisites and exact reproduction commands. The harness compiles the actual
+session/ownership implementation, not a replacement fake. Its policy view is an explicitly
+permitted development fixture; selection/switching product policy remains unresolved.
+
+Checks actually run on 2026-11-18, final implementation and fixture in this checkpoint:
+
+- `python3 _re/harness/campaign_ownership/run.py --compiler gcc`: exit **0**;
+  GCC **16.2.1 20261029**, C++17, `-Wall -Wextra -Werror -pedantic`.
+  Nine suites, **10,618 checks passed**. Exact argv/environment/compile/execute logs:
+  `build/campaign_ownership/gcc-9iu_rw4s/`.
+- Intended target: MSVC **19.44.35230 x86**, toolset `14.44.35207`, SDK
+  `10.0.26100.0`, Windows Python `3.13.9`, Wine `11.21 (Staging)`. Exact command
+  from `.worktrees/COOP-004`:
+
+  ```bash
+  env -u WAYLAND_DISPLAY DISPLAY=:99 WINEPREFIX="$PWD/build/wine-prefix" WINEDEBUG=-all wine64 cmd /c 'Z:\home\control\Documents\Projects\HD2SS\HD2_BaseCoop\.worktrees\COOP-001\build\tooling\run-python.bat' 'Z:\home\control\Documents\Projects\HD2SS\HD2_BaseCoop\.worktrees\COOP-004\_re\harness\campaign_ownership\run.py' --compiler msvc
+  ```
+
+  Exit **0**. `/std:c++17 /EHsc /W4 /WX /permissive- /Zc:__cplusplus /arch:IA32
+  /MT /O2`; compile/link and executable execution passed, `_M_IX86`/32-bit pointer
+  assertions passed. Nine suites, **10,618 checks passed**, zero compiler warnings/errors.
+  Exact argv/environment/compiler version/logs: `build/campaign_ownership/msvc-m2p77ova/`.
+  Worktree-private Wine prefix and per-invocation build outputs; no baseline tool/prefix
+  modifications and no fixed legacy temporary directory used.
+- `git diff --check`: passed. Local documentation link checks and full changed-path/API
+  review passed; only the four reserved implementation files, ownership harness and own
+  record changed. No game assets, binaries, toolchain or outputs are committed.
+
+Coverage: validated roster (including profile zero), dual transport roles, exclusive
+claims and optimistic races; duplicate/invalid IDs, four-human/restricted squads; atomic
+switch/release, disconnect/reconnect incarnation, death and no revival; script entry/exit
+with owner retention and intervening disconnect; independent actor IDs/zero/slot-use
+reuse; stale control/generation/phase rejection and handoff gating; immutable old
+publications; cross-family sequence/content conflict/cache eviction; counter exhaustion;
+300 deterministic interleavings checking forward/reverse indexes and bounds.
+
+Not run: full game build, original singleplayer/native co-op runtime, real controller
+queue drains, transport authentication, loading peer acknowledgments or host/guest
+mission behavior. There are no calls into those paths in this component. Tests establish
+model behavior only, and do not imply the later adapters or campaign mode are playable.
+
 ## Handoff
 
-- Completed: read design/workflow/contracts; fetched origin, checked claims/branches/PRs;
-  created canonical branch and isolated worktree at merged COOP-011 foundation.
-- Remaining: session/catalog/ownership implementation, bounded request journal, model tests,
-  intended MSVC x86 compile/execution, separate review and completion PR.
-- Next action: obtain coordinator ledger acknowledgment before substantial implementation.
-  Requested from coordinator thread `01a1ebd1-3990-7553-920e-7cfee0148527`.
-- Dependencies: COOP-002 merged `9f59ff47`; COOP-011 merged `0f367ed6`.
-- Coordination: waiting for claim acknowledgment; coordinator ledger remains single-writer.
-  COOP-005 agreed an injected request-journal boundary for cross-family sequences;
-  shared declarations and legacy adapter files remain untouched.
-- Decisions: model follows confirmed campaign behavior and the reviewed contracts.
-- Validation: `git diff --check` passed for this preparation checkpoint; no implementation
-  build or behavioral checks yet.
+- Completed: isolated branch/worktree and published claim, session/context + roster,
+  atomic ownership/reverse index, lifecycle/control revision invalidation and handoff gate,
+  reusable bounded cross-family journal, meaningful model tests and MSVC x86 execution.
+- Files: `src/game/campaign_session.{h,cpp}`, `campaign_ownership.{h,cpp}`,
+  `_re/harness/campaign_ownership/{model_tests.cpp,run.py,README.md}`, this record.
+  Consume merged COOP-011 declarations without modifying that header or legacy code.
+- Checkpoint location: `origin/feature/coop-004-ownership`; `.worktrees/COOP-004`.
+  Claim acknowledged by coordinator ledger `f960e0c3`; owner remains thread
+  `01a1ebf9-60c7-74d0-9d39-cd09295875b0`.
+- COOP-005 coordination: exact Begin/Finish signatures agreed through worker threads;
+  preparation uses injected callbacks/behavioral fake, no dependency on this unmerged
+  header and no competing production journal. Later composition shares one authority
+  queue and journal and synchronizes rights/preparation revisions before publication.
+- Remaining: independent/separate final review, address findings, ready PR and integration;
+  record actual merge SHA after acceptance. No outstanding implementation/toolchain blocker.
+- Next action: review published checkpoint/PR #9 against current `main`, reproduce native
+  model harness and inspect target logs; integrate only after acceptance gates pass.
+- Decisions: no new product policy. Selection/switching fixture permissions are proposals;
+  production policy, peer/world barriers, host-loss and live adapter composition stay explicit.
+- Uncommitted work: none at the implementation checkpoint. All build/runtime evidence
+  stays ignored under this worktree's `build/`; source-only PR steps reproduce it.
