@@ -325,6 +325,7 @@ void CampaignProgression() {
     S_CampaignReport report{key, true,
         {{PlayerId(5), "Host", true, false}, {PlayerId(6), "Guest", false, true}},
         {{SoldierId(101), 795, 84, {0, 0, 1.5f}, 1, 2, 3, {1, 2}}}, {101, 402}};
+    report.m_ScriptValues[1] = 7;
     const S_ReportReady ready{key};
     S_CampaignStep step{key, 1, E_CampaignStep::Video, MissionKey("Arctic2"), "BriefArctic1b.bik", 0};
     auto local = Hello();
@@ -339,6 +340,7 @@ void CampaignProgression() {
     const auto &decoded = std::get<S_CampaignReport>(*accepted.m_Payload);
     CHECK(decoded.m_Report == key && decoded.m_Participants[1].m_Spectating);
     CHECK(decoded.m_Soldiers[0].m_Gains[2] == 1.5f && decoded.m_Diary == report.m_Diary);
+    CHECK(decoded.m_ScriptValues[1] == 7);
     CHECK(client.Receive(Frame(step), 6).m_Payload.has_value());
     CHECK(!server.Receive(Frame(step), 7).m_Payload);
     CHECK(!client.Receive(Frame(ready), 7).m_Payload);

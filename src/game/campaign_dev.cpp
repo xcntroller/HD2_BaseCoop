@@ -248,6 +248,7 @@ struct S_GuestSession {
     std::uint64_t m_LastWeaponEvent = 0;
     std::uint64_t m_LastInventoryEvent = 0;
     std::uint32_t m_HostMissionTime = 0;
+    Wire::E_MissionOutcome m_Outcome = Wire::E_MissionOutcome::Running;
     std::uint64_t m_InputSequence = 0;
     std::uint16_t m_PendingButtons = 0;
     ControlRevision m_InputRevision;
@@ -519,6 +520,7 @@ R ApplyMissionUpdate(S_GuestSession &guest, const Wire::S_MissionUpdate &update)
         const auto reason = guest.m_Control->InstallCommitted(ending);
         if (reason != R::None)
             return reason;
+        guest.m_Outcome = update.m_Outcome;
         const bool success = update.m_Outcome == Wire::E_MissionOutcome::Success;
         game->PresentCampaignMissionResult(success);
         LogDevelopmentCampaign("guest applied terminal mission outcome", success, update.m_MissionTime);
@@ -572,6 +574,9 @@ void ReceiveGuestWorld(PlayerId, Wire::T_Message message)
                                    manifest.m_Snapshot};
         if (!(key == report->m_Report))
             return;
+        if (guest.m_Outcome == Wire::E_MissionOutcome::Running ||
+            report->m_Success != (guest.m_Outcome == Wire::E_MissionOutcome::Success))
+            return FailGuest(R::ContentMismatch);
         g_report = std::move(*report);
         return;
     }
@@ -628,7 +633,7 @@ void ReceiveGuestWorld(PlayerId, Wire::T_Message message)
             FailGuest(reason);
     } else if (const auto *update = std::get_if<Wire::S_MissionUpdate>(&message)) {
         const auto reason = ApplyMissionUpdate(guest, *update);
-        if (reason != R::None && reason != R::StaleRevision)
+        if (reason != R::None && reason != R::StaleRevision && reason != R::WrongGeneration)
             FailGuest(reason);
     } else if (const auto *weapon = std::get_if<Wire::S_WeaponEvent>(&message)) {
         ReceiveWeaponEvent(guest, *weapon);
@@ -1382,6 +1387,8 @@ R CaptureCampaignReport(const S_CampaignMissionResult &result)
     Wire::S_CampaignReport report;
     report.m_Report = {result.m_Session, result.m_Generation, result.m_Snapshot};
     report.m_Success = result.m_Success;
+    const auto &scriptValues = result.m_Success ? result.m_ScriptValues : g_missionStartScriptValues;
+    std::copy(scriptValues.begin(), scriptValues.end(), report.m_ScriptValues.begin());
 
     for (const auto &[soldier, terminal] : result.m_Soldiers) {
         const auto profileIndex = g_ownership->GetSession().FindProfile(soldier);
@@ -1470,6 +1477,7 @@ R InstallCampaignReport(const Wire::S_CampaignReport &report)
     for (const auto id : report.m_Diary)
         g_campaignDiary.AddText(id);
     g_campaignDiary.CommitCurrent();
+    std::copy(report.m_ScriptValues.begin(), report.m_ScriptValues.end(), g_scriptModule.GetSaveGameValues());
     return R::None;
 }
 

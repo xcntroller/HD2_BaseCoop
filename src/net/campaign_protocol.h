@@ -220,6 +220,7 @@ struct S_CampaignReport {
     std::vector<S_ReportParticipant> m_Participants;
     std::vector<S_ReportSoldier> m_Soldiers;
     std::vector<std::int32_t> m_Diary;
+    std::array<std::int32_t, 256> m_ScriptValues{};
 };
 struct S_ReportReady {
     S_ReportKey m_Report;

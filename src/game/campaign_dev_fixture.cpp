@@ -464,7 +464,7 @@ R ImportCampaignReplicaCatalog(const C_CampaignSession &session,
         native.m_Placements.emplace(PlacementKey(placement.m_Name), placement.m_Slot);
     for (int stat = STAT_HEALTH; stat <= STAT_LOCKPICK; ++stat)
         native.m_Skills.emplace(SkillKey("original-stat/" + std::to_string(stat)), stat);
-    for (int type = 0; type <= INT16_MAX; ++type)
+    for (int type = 0; type < MAX_ITEM_TYPES; ++type)
         if (GetItemDef(type))
             native.m_Items.emplace(ItemKey(type), type);
     for (const auto &soldier : manifest.m_Soldiers) {

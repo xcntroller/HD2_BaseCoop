@@ -759,7 +759,7 @@ bool Valid(const S_InventoryEvent &x) {
 }
 
 template<class A> bool Fields(A &a, S_CampaignReport &x) {
-    return a(x.m_Report, x.m_Success, x.m_Participants, x.m_Soldiers, x.m_Diary) &&
+    return a(x.m_Report, x.m_Success, x.m_Participants, x.m_Soldiers, x.m_Diary, x.m_ScriptValues) &&
         !x.m_Participants.empty() && x.m_Participants.size() <= kMaxParticipants &&
         !x.m_Soldiers.empty() && x.m_Soldiers.size() <= kMaxParticipants &&
         Unique(x.m_Participants, [](const auto &peer) { return peer.m_Player; }) &&
