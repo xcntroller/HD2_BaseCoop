@@ -6,7 +6,7 @@ creating or updating the operational branch. Do not merge its WIP ledger into `m
 
 ## Coordinator
 
-- Owner/session: Codex COOP-013, explicit user assignment on 2026-11-18.
+- Owner/session: Codex COOP-013, explicit user assignment on 2026-11-18, thread `01a1edba-b5e3-7c73-bfa7-51e0b12fc205`.
 - Contact/shared channel: this ledger and the canonical COOP-013 task branch/PR.
 - Integrator: Codex COOP-013 for its own task, subject to the review and runtime acceptance gates.
 - Latest checkpoint: `HEAD` on `origin/coord/coop-work-queue`.
@@ -30,7 +30,7 @@ creating or updating the operational branch. Do not merge its WIP ledger into `m
 | COOP-010 | Codex COOP-010 (2026-11-18), user assignment | `feature/coop-010-two-player-mission` | done | PR #22 merged `738b124d`, completion PR #23 merged `dc41c6b7`, `.worktrees/COOP-010` | Arctic1 playable gate and original mode regressions recorded. |
 | COOP-012 | Codex COOP-012 (2026-11-18), user assignment | `feature/coop-012-session-setup` | done | PR #26 merged `4ef8b814`; completion PR #27 merged `fd5ad4c3` | Five-instance setup matrix, concurrent admission, route isolation, original-mode regressions and COOP-013 contract recorded. |
 | COOP-014 | Codex COOP-014, user assignment, thread `01a1ed7a-ddd9-7000-bbec-e292bd129d25` | `feature/coop-014-arctic1-completion` | active | PR #25 draft, base `9ec7fe48` | Arctic1 solo/dev reference, interactions, objectives and Running replication. |
-| COOP-013 | Codex COOP-013, explicit user assignment on 2026-11-18 | `feature/coop-013-live-preparation` | active | `.worktrees/COOP-013`, base `fd5ad4c3` | Live preparation authority, screen and first loading transition. |
+| COOP-013 | Codex COOP-013, explicit user assignment on 2026-11-18 | `feature/coop-013-live-preparation` | active | Draft PR #28, source `1b26199e`, handoff `04227337` | One- and four-instance Arctic1 barriers passed. Complete recovery and legacy regressions. |
 
 
 Only the coordinator adds or reassigns claims. A missing row is not sufficient evidence
@@ -241,3 +241,4 @@ missing fields. COOP-006 was notified explicitly before this stopped-writer hand
 
 - COOP-013 accepts the stopped COOP-012 coordination handoff at `204fbbb6` and acknowledges the user's assignment. The current main at `fd5ad4c3` contains the COOP-005, COOP-007 and COOP-012 merges. No competing COOP-013 branch, worktree or PR was found before creating the canonical task worktree.
 - COOP-013 owns preparation rule/catalog import, the live presenter and model adapter, setup handoff, preparation-family dispatch and the bounded first deployment/loading transition. COOP-014 retains Running behavior and mission completion. Keep preparation dispatch and first-load changes in separate functions or focused commits where the task touches shared files. Use private build and runtime outputs.
+- COOP-014 acknowledged COOP-013 ownership of per-player world send and acknowledgment state, Running recipients and per-actor input buffers. COOP-013 reserves the preparation resync wire tag 21 and feature bit 7. COOP-014 retains Running body semantics. COOP-013's private network namespace isolates its tests from COOP-014's fixed LAN port.
