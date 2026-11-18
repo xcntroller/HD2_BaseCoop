@@ -2,15 +2,15 @@
 
 ## Coordination
 
-- Status: review
+- Status: done
 - Owner/session: Codex COOP-007 / thread `01a1ec02-1d0b-7791-8a57-e16ee680b905`, user assignment 2026-11-18
 - Canonical branch: `feature/coop-007-preparation-screen`
 - Base commit: `dbc9a85a7161d8844f2907dbaf6586c7f3b67d19`
 - Dependencies: COOP-002, COOP-003, COOP-011 (merged shared declarations)
 - Last checkpoint: source `d3269c4a`; latest handoff/metadata is `HEAD`
 - Checkpoint location: `.worktrees/COOP-007`; `origin/feature/coop-007-preparation-screen`
-- Review/integration: independent COOP-003 full and targeted final review PASS; final integration pending
-- Pull request: https://github.com/xcntroller/HD2_BaseCoop/pull/12 (native component evidence complete; ready for review)
+- Review/integration: independent COOP-003 full, targeted final and metadata review PASS; PR #12 merged `8067b4710a5d68f46e37a8cfc5d4a83d4bd33219`
+- Pull request: https://github.com/xcntroller/HD2_BaseCoop/pull/12 (merged)
 
 ## Branch authority and completion PR
 
@@ -89,11 +89,11 @@ fake; no COOP-005 model implementation dependency is needed. Coordinate any `equ
 - Product policies: fixture-only all-connected-human readiness, release-before-claim and
   first-committed scarce stock are labeled synthetic proposals. No open production policy
   was silently resolved. Authority still validates every operation.
-- Remaining: final PR/integration gate and actual merge metadata. PR #12 is ready for review
-  after this handoff publication; task becomes `done` only after the actual merge.
-- Next action: review the final PR against current main, verify source/evidence unchanged,
-  merge through the authorized mechanism, then record actual merge in a reviewed completion
-  follow-up. Preserve this worktree/tooling/captures and other workers' checkpoints.
+- Remaining: none for COOP-007. The reviewed component is integrated through PR #12;
+  this documentation follow-up records the actual merge. Live preparation/menu/painter
+  integration remains later work with the explicit limits above.
+- Next action: preserve the task worktree/tooling/captures and hand coordinator state to
+  the active lifecycle workers. No further COOP-007 implementation work is required.
 
 ## Acceptance evidence
 
@@ -160,3 +160,16 @@ integrated build guide/configurator. Its `run-python.bat`/`vcvars-x86.bat` and n
 are preserved and may be borrowed **read-only**, with separate prefixes/outputs. COOP-004,
 005 and 006 completed target checks using that route; 008/009 have current authorization.
 Do not remove these resources while other active workers depend on them.
+
+## Integration outcome
+
+Actual feature merge: `8067b4710a5d68f46e37a8cfc5d4a83d4bd33219` via PR #12,
+exact reviewed head `4645f814` and source `d3269c4a`. COOP-003 independently reviewed
+the complete implementation and final fixes, reproduced strict GCC behavior checks twice,
+and inspected native captures including the final briefing/restriction lines and skills
+page 2 (skill 7); the automated regression checks cover all seven and eleven skills.
+It then passed the final read-only metadata check, confirmed all three native input-suite
+PASS logs and verified the preview hash. The integrator separately checked the exact PR
+head, final diff/history/scope, links and evidence, then merged normally with a head match.
+No task work remains. This completion metadata changes documentation only; no component,
+resource, build or runtime behavior changed after the reviewed source checkpoint.
