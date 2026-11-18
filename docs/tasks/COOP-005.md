@@ -2,15 +2,15 @@
 
 ## Coordination
 
-- Status: active (coordinator claim acknowledgment requested; no substantial implementation yet)
+- Status: active (implementation checkpoint; final target rerun/review pending)
 - Owner/session: Codex COOP-005 / thread `01a1ebf9-90e7-7ca2-8a1d-987711a3d8fe`, user assignment 2026-11-18
 - Canonical branch: `feature/coop-005-preparation-model`
 - Base commit: `4d6f8cc1bb96c50aee09d5c3ac0992ce716a3d39` (integrated `origin/main`)
 - Dependencies: COOP-002, COOP-011 (merged shared declarations)
-- Last checkpoint: this initial claim/audit checkpoint; implementation has not started
+- Last checkpoint: implementation checkpoint in this commit (parent claim/audit `278723cc`)
 - Checkpoint location: `.worktrees/COOP-005`; `origin/feature/coop-005-preparation-model`
-- Review/integration: none
-- Pull request: none
+- Review/integration: independent COOP-004 consumer review requested after this checkpoint
+- Pull request: draft [#8](https://github.com/xcntroller/HD2_BaseCoop/pull/8)
 
 ## Branch authority and completion PR
 
@@ -85,16 +85,45 @@ and COOP-007 notification before editing shared equipment files.
 
 ## Handoff
 
-- Completed: fetched origin, checked no existing COOP-005 branch/worktree; created
-  canonical branch/worktree from merged COOP-002/011. Read design, workflow,
-  task index, preparation contract and shared declarations; audited validators above.
-- Remaining: coordinator acknowledgment, atomic model, injected rules and shared
-  request-journal boundary, behavioral harness, MSVC x86 validation, publication/PR.
-- Next action: obtain coordinator acknowledgment, agree cross-family journal boundary
-  with COOP-004, then implement isolated authority and immutable publications.
-- Blockers: no product decision blocks isolated tests. Native adapter/parity and
-  production deploy policies remain explicit gates; source-only draft until proven.
-- Decisions: exact ownership permissions and aggregate/view revision semantics follow
-  merged contract. No shared equipment/header/index/ledger edits are planned.
-- Validation: read-only source/branch/dependency audit; no compile/runtime checks yet.
-- Uncommitted work: none after this checkpoint.
+- Claim: coordinator acknowledgment `f960e0c3`; canonical branch/worktree retained.
+- Completed: atomic candidate transactions, permissions/control fences, explicit bulk
+  targets, shared Begin/Finish journal injection agreed with COOP-004, immutable
+  viewer snapshots, ownership/presence/rule readiness invalidation, separate revision
+  domains, explicit deploy policy, freeze manifest and fail-closed membership changes.
+  Concrete detached campaign rule catalog/evaluator/planner handles native capacity,
+  placement, ammo/state variants, original essentials/carrier rules and supply mapping.
+- Files: only `src/game/campaign_preparation.{h,cpp}`, own harness and this record.
+  No shared header, legacy source, UI, index or generated-tier changes.
+- Behavioral evidence: GCC C++17 / warnings-as-errors passed, latest output
+  `build/campaign_preparation/gcc-deuf2wxd`. Harness checks permissions/bulk rejection,
+  last-item/stale/replay/conflict/expiry, invalid equipment/capacity, variant preservation,
+  per-variant conservation, rollback, ownership races/disconnect, ready/freeze and overflow.
+- Original-rule evidence: `legacy_source.py` extracts current original bodies into
+  ignored invocation-local output. 810 capacity/backpack and 240 mission-essential/
+  Axis-carrier cases compare concrete rules against those compiled source algorithms.
+  Concrete transaction checks cover displaced-backpack rollback, backpack+contents
+  return, ammunition supply conversion and bulk target permissions. See harness README.
+- Target evidence: MSVC 19.44.35230 x86 /W4 /WX with SDK 10.0.26100.0 under Wine 11.21
+  passed header, behavior and original-rule parity at
+  `build/campaign_preparation/msvc-47sttfxj`. Later changes (full-roster ownership input,
+  epoch normalization, extra bounds/identity checks and conservation assertions) need a
+  final target rerun; GCC passed after them. One earlier test assertion signedness
+  warning was corrected; the target run above passed afterward.
+- Commands: `python3 _re/harness/campaign_preparation/run.py --compiler gcc`;
+  Windows `python _re\harness\campaign_preparation\run.py --compiler msvc`.
+  Exact portable-Wine command, flags, prerequisites, expected output and queue/journal
+  composition are in `_re/harness/campaign_preparation/README.md`.
+- Environment change: COOP-001 worktree/ignored compiler resources disappeared after
+  the passing target run; its owner confirms they did not delete/move them. Historical
+  logs remain in this task's ignored build directory. Coordinate reprovisioning with
+  COOP-007 before final target validation; no missing artifact is claimed available.
+- Remaining: final review/bounds tests, current-head MSVC rerun, complete PR description,
+  independent review and integration gates. Native catalog/transport/UI composition is
+  downstream; this is a source-only component, not a connected preparation screen.
+- Decisions: selected ownership records must be eligible/alive/deployed (selected for
+  preparation, not actor-spawned); COOP-004 confirmed setup semantics. Production
+  readiness/departure policies remain unresolved and return PolicyRequired. The fixture's
+  all-ready quorum and explicit recipe auto-equip policy are labeled development inputs.
+- Next action: preserve this checkpoint, obtain independent COOP-004 review and restore
+  target tooling for final verification. No implementation files remain uncommitted after
+  this checkpoint; local output/logs are ignored.
