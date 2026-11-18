@@ -8,6 +8,7 @@ that blended into their panels.
 
 - Branch `fix/coop-playtest-menus` starts at integrated `ca5ae2f8`. The
   coordinator acknowledged the claim at `0a60a0bd`.
+- Available for review in [PR #32](https://github.com/xcntroller/HD2_BaseCoop/pull/32).
 - The changes cover the in-game menu and the preparation presentation. The
   mission exit uses the existing campaign teardown. COOP-015 retains ownership
   of progression, active mission briefing bindings and spectator readiness.
