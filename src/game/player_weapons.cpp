@@ -556,7 +556,7 @@ void C_PlayerController::UpdateZoom()
     C_Item *item = m_handsItem;
     if (!item || !m_buttons || m_buttons[BUTTON_7] == 0.0f) {
         // The binoculars key takes them out, or puts away what the player looks through.
-        if (!m_buttons || m_buttons[BUTTON_BINOCULARS] == 0.0f)   // (Fix: the original reads missing buttons)
+        if (!m_buttons || m_buttons[BUTTON_BINOCULARS] == 0.0f || (CampaignControlsActive() && !IsServer()))
             return;
         if (m_viewMode == VIEW_NORMAL) {
             SetViewMode(VIEW_BINOCULARS);

@@ -671,6 +671,8 @@ void C_PlayerController::HandleInput(float *held, float *pressed)
     if ((m_moveFlags & MOVE_DEAD) || m_spectating)
         return;
     if (CampaignControlsActive() && !IsServer()) {
+        if (pressed[BUTTON_7] != 0.0f)
+            UpdateZoom();
         CampaignProtocol::S_PlayerControls controls;
         controls.m_ViewDirection = {m_viewDir.x, m_viewDir.y, m_viewDir.z};
         for (const auto &axis : kCampaignHeld) {
