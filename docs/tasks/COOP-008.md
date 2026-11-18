@@ -2,7 +2,7 @@
 
 ## Coordination
 
-- Status: planned
+- Status: ready
 - Owner/session: unassigned
 - Canonical branch: `feature/coop-008-controller-adapters`
 - Base commit: not started
@@ -66,9 +66,11 @@ Full vehicle gameplay acceptance remains a later interaction gate.
 
 - Completed: high-level identity coupling identified in the campaign design.
 - Remaining: exact file split, adapters, handoff/input tests, legacy regression checks.
-- Next action: review merged dependencies and agree on overlapping-file edits with COOP-009.
-- Blockers: COOP-006 has not merged. COOP-004 session/ownership merged at
-  `59a480c8`; COOP-001 build/runtime baseline merged at
+- Next action: obtain coordinator claim acknowledgment, review merged dependencies,
+  and agree on overlapping-file edits with COOP-009.
+- Blockers: none for the isolated adapter task. COOP-006 protocol merged at
+  `59cb8944`; COOP-004 session/ownership merged at `59a480c8`;
+  COOP-001 build/runtime baseline merged at
   `15b572ff`; prerequisites and commands are in [the guide](../build_baseline.md).
 - Decisions: preserve soldier identity and explicit simulation authority.
 - Validation: none for this task.

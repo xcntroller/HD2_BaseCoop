@@ -2,15 +2,15 @@
 
 ## Coordination
 
-- Status: review
+- Status: done
 - Owner/session: Codex COOP-006 / thread `01a1ec01-a68f-7170-9f75-7536a079675b`, user assignment; coordinator acknowledgment published on `coord/coop-work-queue`
 - Canonical branch: `feature/coop-006-protocol`
 - Base commit: `dbc9a85a7161d8844f2907dbaf6586c7f3b67d19`
 - Dependencies: COOP-002, COOP-011 (merged shared declarations)
 - Last checkpoint: source `5c562770`; current-main sync `135efd77`; final review/evidence in this record
-- Checkpoint location: `.worktrees/COOP-006`, `origin/feature/coop-006-protocol` (after push)
-- Review/integration: independent COOP-001 full implementation + focused final review PASS; final GCC/MSVCx86/sanitizer checks PASS; awaiting PR merge
-- Pull request: [#13](https://github.com/xcntroller/HD2_BaseCoop/pull/13) (ready for independent review)
+- Checkpoint location: `.worktrees/COOP-006`, `origin/feature/coop-006-protocol`
+- Review/integration: independent COOP-001 full implementation + focused final review PASS; final GCC/MSVCx86/sanitizer checks PASS; merged `59cb89441c87b9398c9fe54fd3284c1e53a5ce87`
+- Pull request: [#13](https://github.com/xcntroller/HD2_BaseCoop/pull/13) (merged 2026-11-18 at `59cb8944`)
 
 ## Branch authority and completion PR
 
@@ -118,9 +118,13 @@ adapters merge. Tests must reject pre-admission mutation without claiming a live
 - `git diff --check` and full scope/history inspection pass. Ad-hoc checks confirmed
   all 53 normative field schemas match codec source and local task/harness Markdown
   links resolve. Malformed decode/extraction outputs/positions remain unchanged.
-- Remaining: merge reviewed PR #13; record actual merge and downstream readiness in
-  a reviewed completion follow-up. No component implementation work remains.
-- Next action: final exact-head PR gate, merge, then completion metadata review.
+- Integrated: PR #13 merged `59cb89441c87b9398c9fe54fd3284c1e53a5ce87` after
+  independent review and exact-head `cb946f2a` scope/mergeability gate. This
+  documentation-only follow-up records done and makes COOP-008/009 ready.
+- Remaining: none for COOP-006. All playable/live acceptance belongs to downstream
+  adapters/integration and remains unwaived.
+- Next action: claim ready COOP-008/009 through the coordinator when assigned;
+  use the codec/attachment contract and preserve COOP-007's active UI work.
 - Blockers: none. COOP-010 installs live admission/dispatch/replication and world
   reconstruction hooks after COOP-008/009. No live handshake, world synchronization,
   ordinary-game runtime regression or full game build is claimed by this component.
