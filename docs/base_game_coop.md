@@ -326,8 +326,9 @@ explosives, vehicles, scripted sequences, failure, and victory. Confirm soldier 
 stats persist in the host's campaign state. Keep all deployed soldiers visible to mission
 queries regardless of human ownership.
 
-**Acceptance:** the test mission completes through its original objectives, and the host
-reaches the original debrief and following campaign step with the correct squad state.
+**Technical acceptance:** reproduce the objective and terminal-result paths from
+controlled states, then verify the original debrief and next-step boundary with the
+correct squad state. The project owner verifies the original mission playthrough.
 
 ### 4 Singleplayer menu and campaign sessions
 
@@ -355,19 +356,20 @@ remain intact. A new connection cannot gain control before reconstructing the cu
 
 ### 6 Base campaign verification
 
-Track each base mission through completion with the relevant player counts and special
-sequences. Compare campaign outcomes and soldier state with ordinary singleplayer. Include
-missions with constrained squads, transitions, scripted control, and vehicle sequences.
+Track the project owner's full playtests of each base mission with relevant player
+counts and special sequences. Compare campaign outcomes and soldier state with ordinary
+singleplayer. Include constrained squads, transitions, scripted control, and vehicles.
+Use focused engineering checks for individual mission features and synchronization.
 
-**Acceptance:** campaign behavior is demonstrated mission by mission. Loading every map
-alone does not establish campaign compatibility.
+**Playtest acceptance:** record the genuine gameplay observed for each mission and keep
+remaining mission-completion checks open for the owner.
 
 ## Implementation handoff
 
 | Work | Scope and acceptance |
 | --- | --- |
 | [COOP-013](tasks/COOP-013.md) | Continue live preparation and first deployment with AI on. Apply the soldier ownership and stock rules above. Keep the final soldier-picker presentation and cross-player transfer request UI as follow-ups if the native preparation gate does not already require them. |
-| [COOP-014](tasks/COOP-014.md) | Continue Arctic1 interaction and completion. Host-directed scenes and guest skip prevention apply to the cutscenes exercised by this gate. Record additional cutscene coverage for campaign-wide verification. |
+| [COOP-014](tasks/COOP-014.md) | Verify Arctic1 interactions and terminal handling in focused host/guest runs. Exercise host-directed cutscenes and guest skip prevention at the relevant checkpoints. Record any remaining full-route checks for the owner. |
 | [COOP-015](tasks/COOP-015.md) | Deliver the original debrief with all-player readiness and one authoritative progression commit. |
 | [COOP-017](tasks/COOP-017.md) | Deliver isolated co-op save discovery, menu resume, and the save boundary for rule persistence. |
 | [COOP-018](tasks/COOP-018.md) and [COOP-019](tasks/COOP-019.md) | Keep reconnect distinct from first-time drop-in. Verify admission policy, synchronized handoff, and recovery from interrupted joins. |
@@ -539,11 +541,14 @@ The upstream [build instructions](../README.md#building) use MSVC x86 and x87 fl
 behavior for the runnable executable. `_re/tools/build_check.py` provides a fallback g++
 syntax check, which does not replace the runnable build or multiplayer verification.
 
-Use focused native tests for ownership and session logic, existing subsystem harnesses for
-changed legacy paths, and actual host/guest play for controller handoff, replication, and
-mission behavior. Test loadout permissions, simultaneous requests for scarce equipment,
-stale and repeated edits, ownership changes during editing, and readiness invalidation.
-Keep a small regression set for original singleplayer and native co-op.
+Follow the [campaign testing strategy](agent_workflow.md#campaign-testing-strategy).
+Use focused native tests for ownership and session logic, existing subsystem harnesses
+for changed legacy paths, and actual host/guest instances for controller handoff,
+replication, and mission boundaries. Start from controlled states or checkpoints when
+possible. The project owner runs full campaign playthroughs. Test loadout permissions,
+simultaneous requests for scarce equipment, stale and repeated edits, ownership changes
+during editing, and readiness invalidation. Keep a small regression set for original
+singleplayer and native co-op.
 Record host and client logs with mission generation, soldier identity, and control revision
 so divergence can be traced to a specific handoff or transition.
 

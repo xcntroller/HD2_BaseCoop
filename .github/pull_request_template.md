@@ -36,9 +36,13 @@ affects acceptance.
 Keep proposed reviewer steps above separate from checks already run. Source-only delivery
 does not waive runtime evidence required by the task's acceptance criteria.
 
+For campaign tasks, label each result **Simulated**, **Debug-assisted**, or
+**Genuine unmodified gameplay**. List any **Pending owner playtest** with its starting
+state, exact reproduction steps, and expected outcome.
+
 ## Integration review
 
-- [ ] Task acceptance criteria are met and the handoff is current.
+- [ ] Task acceptance criteria are met and the handoff is current, including any pending owner playtests.
 - [ ] Dependencies are integrated; the final diff against `main` contains only this task.
 - [ ] Confirmed product decisions are preserved; proposed defaults are clearly identified.
 - [ ] Relevant regression and integration checks passed, with limitations stated above.

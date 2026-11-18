@@ -68,9 +68,11 @@ User instructions and later confirmed design decisions take precedence over thes
   credentials, or local worktrees.
 - Agree on shared contracts before parallel consumers implement them. Declare file
   scope, coordinate changes to shared integration files, and avoid unrelated rewrites.
-- Run checks appropriate to the change. A syntax check does not establish a runnable
-  build; a runnable build does not establish host/guest behavior. Record limitations
-  honestly, and do not mark a playable feature complete without its runtime evidence.
+- For COOP-014 and later campaign tasks, follow the
+  [campaign testing strategy](docs/agent_workflow.md#campaign-testing-strategy).
+  Use deterministic setups, checkpoints and focused host/guest checks to verify the
+  systems. The project owner performs full campaign playtesting. Record the exact
+  steps and expected outcome for any gameplay acceptance check that needs a lengthy run.
 - Legacy builds share fixed temporary output paths. Isolate process-local build outputs
   or serialize those builds as described in the workflow; worktrees alone are insufficient.
 

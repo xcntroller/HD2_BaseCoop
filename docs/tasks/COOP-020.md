@@ -20,10 +20,11 @@ obtained before requesting review.
 
 ## Result and scope
 
-Produce a mission-by-mission verification record for the base campaign using
-the normal menu flow. Compare against original solo behavior and track campaign
-outcomes, progression and runtime regressions. File bounded follow-up tasks for
-discovered defects and retest their fixes before closing affected coverage.
+Prepare a mission-by-mission verification matrix and reproducible routes for the
+project owner's full base campaign playtests through the normal menu flow. Compare
+recorded results with original solo behavior. Use focused technical checks for
+individual interactions and transitions. File bounded follow-ups for discovered
+defects and retest their fixes before closing the affected checks.
 
 ## Files and shared contracts
 
@@ -35,15 +36,18 @@ separately scoped tasks.
 
 ## Acceptance criteria
 
-- Complete every base campaign mission and transition in the co-op path. Record
-  actual player counts per mission and cover one through four across the matrix,
-  including constrained squads. Compare objectives, debrief outcomes and persistent
-  soldier state against the original campaign rules.
+- Document the route and expected results for every base campaign mission and
+  transition. Plan coverage for one through four players, including constrained
+  squads. Record actual player counts and compare objectives, debrief outcomes
+  and persistent soldier state when owner playtest results arrive.
 - Exercise relevant scripted control, squad switching and orders, healing,
   transfers, disguise, doors, explosives and vehicles where present. Cover failure,
   restart, save/load and Running admission on representative missions.
-- Record each check as passed, failed or untested, with evidence for passes and
-  a linked task for failures. Keep unresolved or untested required cases open.
+- Classify evidence under the
+  [campaign testing strategy](../agent_workflow.md#campaign-testing-strategy).
+  Record each check as passed, failed, untested, or pending owner playtest. Link
+  evidence for passes and follow-ups for failures. Keep outstanding gameplay
+  checks open in the matrix as the technical evidence and playtest routes are delivered.
   Repeat relevant ordinary solo and native LAN regressions.
 
 ## Validation evidence
