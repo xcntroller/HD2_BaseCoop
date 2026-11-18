@@ -208,3 +208,5 @@ missing fields. COOP-006 was notified explicitly before this stopped-writer hand
 
 
 - Running update checkpoint `2cb0509e` with handoff `b316a31c` publishes the host's four squad actor records and original objective statuses. Both instances entered, the guest applied the objective activation and camera state, and live re-admission was rejected after a guest departure. Full playable acceptance and original-mode regressions remain open.
+
+- COOP-010 owns the host-side movement integration in `human_body.cpp`, `human_movement.cpp` and the corresponding `C_Human` predicates. The remote-owned soldier still needs to move through the original body controller even when the host never renders it. The test driver remains outside tracked source.
