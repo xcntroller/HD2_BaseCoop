@@ -141,8 +141,13 @@ int main() {
         Activate(ui,A::Stock,1); ui.Key(E_CampaignPreparationKey::Down);
         Activate(ui,A::Equip); Check(std::get<S_CampaignTakeFromStock>(fake.m_Edit->m_Operation).m_StockEntry == StockEntryId(2), "arrow selects stock identity");
         fake.Resolve(E_CampaignReason::MissionRestriction); ui.Tick();
-        Activate(ui,A::StockPage); Activate(ui,A::Stock,5);
-        Activate(ui,A::Equip); Check(std::get<S_CampaignTakeFromStock>(fake.m_Edit->m_Operation).m_StockEntry == StockEntryId(5), "mouse stock paging");
+        Activate(ui,A::StockPage);
+        Activate(ui,A::Equip); Check(std::get<S_CampaignTakeFromStock>(fake.m_Edit->m_Operation).m_StockEntry == StockEntryId(5),
+            "mouse stock paging selects a visible item");
+        fake.Resolve(E_CampaignReason::MissionRestriction); ui.Tick();
+        Activate(ui,A::StockPage,1);
+        Activate(ui,A::Equip); Check(std::get<S_CampaignTakeFromStock>(fake.m_Edit->m_Operation).m_StockEntry == StockEntryId(1),
+            "previous stock page selects its first item");
         fake.Resolve(E_CampaignReason::MissionRestriction); ui.Tick();
         Activate(ui,A::Findings); Check(!Enabled(ui,A::Equip), "restriction detail page has no equipment mutations");
         Activate(ui,A::Findings); Activate(ui,A::Equip);

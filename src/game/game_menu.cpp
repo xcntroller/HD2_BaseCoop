@@ -251,7 +251,8 @@ bool C_MissionDef::AreObjectivesDecided() const
 
 // ---- the menu
 
-C_GameMenu::C_GameMenu()
+C_GameMenu::C_GameMenu(bool campaignMenu)
+    : m_campaignMenu(campaignMenu)
 {
     m_presets.Load();
     if (IsLocalGame())
@@ -268,8 +269,9 @@ bool C_GameMenu::OnStart(void *)
     // Dropped: the copy protection's bookkeeping (the game window's handle and a value of it).
     m_hasPlayerSlotMember = g_teamManager.GetPlayerTeam()->HasMemberInPlayerSlots();
     m_options = new C_OptionsHandler(this);
-    GetSoundModule()->SetMasterVolume(0.0f);
-    if (!IsLocalGame()) {
+    if (!m_campaignMenu)
+        GetSoundModule()->SetMasterVolume(0.0f);
+    if (!IsLocalGame() && !m_campaignMenu) {
         m_infoScreen = new C_InfoScreen();
 #ifndef HD2_DEDICATED   // the server's info screen is not initialised (nor done in OnStop)
         // Fix: dropped when it could not be made (the original crashed in Init).
@@ -316,8 +318,19 @@ bool C_GameMenu::OnInput(float *, float *)
     return true;
 }
 
+void C_GameMenu::Update(int timeDelta)
+{
+    C_MenuState::Update(timeDelta);
+#ifndef HD2_DEDICATED
+    if (m_campaignMenu && (g_gameRole & GAME_ROLE_CLIENT) && m_game)
+        m_game->Update(timeDelta);
+#endif
+}
+
 void C_GameMenu::OnUpdate(int timeDelta)
 {
+    if (m_campaignMenu)
+        return;
     if (!IsLocalGame()) {
         m_panel.TickSoldier(timeDelta);
         UpdateLoadButton();
@@ -406,6 +419,10 @@ void C_GameMenu::OnMessage(S_ControlMessage *message)
                 return;
             }
         }
+        if (m_campaignMenu) {
+            m_state = GAME_STATE_CLOSE_GAME_MENU;
+            return;
+        }
         if (IsLocalGame()) {
             C_MissionDef *mission = ::GetGame()->GetMission();
             if (!mission || !mission->AreObjectivesDecided())
@@ -462,7 +479,8 @@ void C_GameMenu::OnMessage(S_ControlMessage *message)
         GetGameApp()->m_pendingCommand = APP_COMMAND_QUICK_LOAD;
         return;
     case GAME_MENU_MSG_QUIT:
-        static_cast<C_game *>(m_game)->SetMode(GAME_MODE_QUIT);
+        if (!m_campaignMenu)
+            static_cast<C_game *>(m_game)->SetMode(GAME_MODE_QUIT);
         m_state = GAME_STATE_MENU_END_MISSION;
         return;
     case GAME_MENU_MSG_END_MISSION:
@@ -479,7 +497,7 @@ bool C_GameMenu::BuildScreens()
     S_MenuDesc *menu = new S_MenuDesc();
     menu->AddScreen("MAIN_INGAME_MENU", "main ingame");
     menu->AddScreen("OPTIONS", "options");
-    if (!IsLocalGame())
+    if (!IsLocalGame() && !m_campaignMenu)
         menu->AddScreen("PLAYER SCREEN", g_gameProfile.IsCooperativeGame() ? "player screen 2" : "player screen");
     for (S_ScreenDesc *desc : menu->screens) {
         I3D_frame *model = LoadModel(desc->name.c_str(), desc->file.c_str());
@@ -515,7 +533,13 @@ bool C_GameMenu::BuildMainScreen(S_ScreenDesc *desc, I3D_frame *)
         AddDescMessage(control, 0, click, value);
         return control;
     };
-    if (IsLocalGame()) {
+    if (m_campaignMenu) {
+        button("button00", 0x9CF, CLICK | MENU_MSG_ESCAPE);
+        button("button04", 0x9D2, CLICK | OPTIONS_MSG_OPEN);
+        button("button05", 0x9D4, CLICK | GAME_MENU_MSG_QUIT_QUESTION);
+        for (const char *name : {"button01", "button02", "button03", "button06"})
+            AddDescMessage(desc->AddControl(CONTROL_BUTTON, name), 0, CONTROL_MSG_HIDE, 0);
+    } else if (IsLocalGame()) {
         // Dropped: the copy protection's message for the missions after the 7th.
         C_game *game = ::GetGame();
         S_ControlDesc *control = button("button06", 0x9DB, CLICK | GAME_MENU_MSG_END_MISSION_2);

@@ -9,6 +9,8 @@ struct S_CampaignPreparationRect {
     float m_X, m_Y, m_Width, m_Height;
     bool Contains(float x, float y) const;
 };
+enum class E_CampaignPreparationControlStyle { Card, Row, Button, Primary };
+
 class I_CampaignPreparationPainter {
 public:
     virtual ~I_CampaignPreparationPainter() = default;
@@ -18,6 +20,15 @@ public:
     virtual void Panel(const S_CampaignPreparationRect &rect, bool selected) = 0;
     virtual void Text(const S_CampaignPreparationRect &rect, const std::string &text,
                       bool muted = false) = 0;
+    virtual void Heading(const S_CampaignPreparationRect &rect, const std::string &text, bool)
+    {
+        Text(rect, text);
+    }
+    virtual void Control(const S_CampaignPreparationRect &rect, E_CampaignPreparationControlStyle,
+                         bool selected, bool)
+    {
+        Panel(rect, selected);
+    }
     // Missing catalog assets must be explicit placeholders, never unchecked frames.
     virtual void Preview(const S_CampaignPreparationRect &rect, AssetKey asset,
         const S_CampaignSoldierLoadout &loadout) = 0;
