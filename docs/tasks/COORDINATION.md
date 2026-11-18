@@ -29,6 +29,7 @@ creating or updating the operational branch. Do not merge its WIP ledger into `m
 
 | COOP-010 | Codex COOP-010 (2026-11-18), user assignment | `feature/coop-010-two-player-mission` | done | PR #22 merged `738b124d`, completion PR #23 merged `dc41c6b7`, `.worktrees/COOP-010` | Arctic1 playable gate and original mode regressions recorded. |
 | COOP-012 | Codex COOP-012 (2026-11-18), user assignment | `feature/coop-012-session-setup` | active | base `9ec7fe48`; `.worktrees/COOP-012` | Gated singleplayer menu and campaign setup/admission/teardown. |
+| COOP-014 | Codex COOP-014, user assignment, thread `01a1ed7a-ddd9-7000-bbec-e292bd129d25` | `feature/coop-014-arctic1-completion` | active | base `9ec7fe48`; `.worktrees/COOP-014` | Arctic1 solo/dev reference, interactions, objectives and Running replication. |
 
 
 Only the coordinator adds or reassigns claims. A missing row is not sufficient evidence
@@ -226,3 +227,5 @@ missing fields. COOP-006 was notified explicitly before this stopped-writer hand
 
 - The last coordinator's published COOP-010 checkpoint `c6ae9ea2` records completed integration. The user assigned COOP-012. As the sole current worker, COOP-012 acknowledges the claim and takes coordination for this task. Refreshed origin, checked branches/worktrees and open PRs, and verified the COOP-010 integration ancestor of base `9ec7fe48`. No competing writer or COOP-012 branch was found.
 - Reserved scope: singleplayer mode picker and setup resources, admitted session lifetime and campaign transport setup/teardown, and scoped application entry/return as needed. COOP-013 will consume the admitted setup session. COOP-014 is unclaimed and retains Running replication, mission interaction and completion. Keep development-world dispatch changes confined to separating the setup entry from the existing dev launch and record the seam before review.
+
+- Accepted parallel user assignment COOP-014 after confirming its worktree, matching base and no competing PR. COOP-012 owns setup UI, admission/lifetime and DirectPlay setup changes. COOP-014 owns Running behavior, interaction/presentation, scripts/objectives and mission outcome. Coordinate any common dispatch/launch edits before writing, with focused commits in each scope. Both workers will use private build output, prefixes and displays; serialize paired runs if shared fixed LAN binding requires it.
