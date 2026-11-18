@@ -10,7 +10,7 @@ creating or updating the operational branch. Do not merge its WIP ledger into `m
 - Contact/shared channel: this published ledger and the COOP-010 task branch/PR.
 - Integrator: Codex COOP-010 for this session, subject to the review and runtime acceptance gates.
 - Latest checkpoint: `HEAD` on `origin/coord/coop-work-queue`.
-- Next action: integrate COOP-010 PR #22 at the reviewed head `fd1572a3`.
+- Next action: COOP-010 has merged and its completion record is published.
 
 ## Accepted task claims
 
@@ -27,7 +27,7 @@ creating or updating the operational branch. Do not merge its WIP ledger into `m
 | COOP-009 | Codex COOP-009 / thread `01a1ec1f-ea8d-77f3-b0e9-7c683f367ec3`, user assignment | `feature/coop-009-campaign-adapters` | done | PR #19 merge `ce306626`; completion PR #21 merge `6f1bdd96`; canonical branch pushed to `6f1bdd96` | Dormant lifecycle/world-barrier/native rules complete; COOP-010 owns live attachment and actual two-instance evidence. |
 | COOP-001 | Codex / 2026-11-18 user assignment | `feature/coop-001-build-baseline` | done | PR #2 merge `15b572ff`; completion metadata PR #11 merge `1b9b307f` | Build/solo/native host-guest baseline and isolation accepted; guide/evidence integrated. Firing/reload/completion remain unverified downstream gates. |
 
-| COOP-010 | Codex COOP-010 (2026-11-18), user assignment | `feature/coop-010-two-player-mission` | review | PR #22, reviewed head `fd1572a3`, `.worktrees/COOP-010` | Merge the reviewed head and publish the completion record. |
+| COOP-010 | Codex COOP-010 (2026-11-18), user assignment | `feature/coop-010-two-player-mission` | done | PR #22 merged `738b124d`, completion PR #23 merged `dc41c6b7`, `.worktrees/COOP-010` | Arctic1 playable gate and original mode regressions recorded. |
 
 
 Only the coordinator adds or reassigns claims. A missing row is not sufficient evidence
@@ -218,3 +218,5 @@ missing fields. COOP-006 was notified explicitly before this stopped-writer hand
 - COOP-010 owns the native campaign map and small score overlay selection in `interface_map.cpp` and `interface_overlays.cpp`. The campaign map must remain usable after player ownership ends, and native multiplayer map, scoreboard, and respawn behavior stay under the original multiplayer path.
 
 - Separate integration review: PR #22 head `fd1572a33c15445e7fdd66a0950d9ead305420e1` was reviewed against `main` at `6f1bdd96`. Verified the transport and authority fences, the two-instance start barrier, paired controls, original objectives and forest patrol route, exact changed-kit takeover, ordinary Tutorial and Sicily2 regressions, matching runtime logs, x86 build, and controller/lifecycle/protocol/ownership harnesses. The review added the actor/navigation/sound fingerprint inputs and verified rejection of different navigation data and successful admission after restoration. The merge rehearsal produced the exact feature tree.
+
+- Integration complete: feature PR #22 merged the reviewed head as `738b124d57a85901c167cebf9b07ca079aac2ac9`. Documentation PR #23 recorded done and merged as `dc41c6b7bb920dbaf61522f92ce2cc5cb6670122`. The task worktree and local runtime evidence are retained.
