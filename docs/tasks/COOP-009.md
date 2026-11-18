@@ -2,15 +2,16 @@
 
 ## Coordination
 
-- Status: review
+- Status: done
 - Owner/session: Codex COOP-009, user assignment 2026-11-18; coordinator COOP-007 acknowledged claim; COOP-009 accepted its stopped-writer handoff at ledger `9e051608`
 - Canonical branch: `feature/coop-009-campaign-adapters`
 - Base commit: `0fcea78f85d0fe9348c3b8e13d1a0f23f50a482a`
 - Dependencies: COOP-001, COOP-004, COOP-005, COOP-006
 - Last checkpoint: source `6375ccad`, integrated-main sync `3a257b90`; final evidence in this documentation commit
 - Checkpoint location: `.worktrees/COOP-009`, canonical branch on origin
-- Review/integration: independent COOP-008 complete/final source review PASS; exact-head integration pending
-- Pull request: https://github.com/xcntroller/HD2_BaseCoop/pull/19 (draft)
+- Review/integration: independent COOP-008 full/final review PASS; PR #19 merged `ce30662659e4543ddca50ffa3d4f397f65aeb91e`
+- Pull request: https://github.com/xcntroller/HD2_BaseCoop/pull/19
+- Merged commit: `ce30662659e4543ddca50ffa3d4f397f65aeb91e` (reviewed source `6375ccad`, exact merged head `7cdb0237`)
 
 ## Branch authority and completion PR
 
@@ -78,12 +79,12 @@ and repeats affected checks; do not merge an unfinished dependency branch.
   GCC 409 + 104 checks (`gcc-kqvcy9yg`), inspected matching final MSVC/sanitizer
   and 282-unit full game evidence. Durable review comment is on PR #19.
   No source fixes remain.
-- Remaining: final exact-head independent review and integration of PR #19.
+- Remaining for this task: none. Final exact-head integration passed and PR #19 merged.
   COOP-008 implementation and actual-done metadata are merged (`d34b6900`, `934143aa`);
   the agreed public progress setter is now called after native mission initialization.
   No live attachment/menu or two-player campaign gameplay claim; COOP-010 owns those.
-- Next action: record final independent review and perform exact-head PR #19
-  integration gates, then actual-done/dependent-task metadata follow-up.
+- Next action: COOP-010 claims the ready development integration task and implements
+  the live world/dispatch path, retaining all stated runtime acceptance gates.
 - Validation run on final combined source `3a257b90` (own source `6375ccad`):
   strict GCC / ASan+UBSan and intended MSVC 19.44.35230 x86 `/W4 /WX` each PASS
   11 lifecycle/model-composition suites / 409 checks and 4 actual-source native
@@ -125,3 +126,17 @@ and repeats affected checks; do not merge an unfinished dependency branch.
   No shared DTO/legacy layout/wire changes or generated tier1 edits.
 - Prerequisites: 001 `15b572ff`, 004 `59a480c8`, 005 `06d999d7`, 006 `59cb8944` are merged.
   Final 009 source includes only merged dependencies; no draft branch is stacked.
+
+## Actual completion
+
+PR #19 merged on 2026-11-18 at `ce30662659e4543ddca50ffa3d4f397f65aeb91e`,
+exact head `7cdb0237`, approved source `6375ccad` / main synchronization `3a257b90`.
+COOP-008 independently reviewed the full implementation and final corrections,
+reproduced 409 + 104 native checks, and inspected final target/sanitizer/full-build
+evidence. The integrator verified the final documentation-only delta, dependency
+ancestry, 20-file acknowledged scope, clean whitespace and ready/CLEAN PR with no
+failing checks before the ordinary merge. No source changed after peer approval.
+
+This actual-done/dependency update is documentation-only. It does not introduce a
+live session or change COOP-010's required two-instance mission, input, initial-world
+and disconnect evidence. Tooling, local output, branches and worktrees are preserved.

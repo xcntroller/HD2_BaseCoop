@@ -2,7 +2,7 @@
 
 ## Coordination
 
-- Status: planned
+- Status: ready
 - Owner/session: unassigned
 - Canonical branch: `feature/coop-010-two-player-mission`
 - Base commit: not started
@@ -67,7 +67,18 @@ roster/loadouts/policies as fixtures, not approved production menu behavior.
 
 - Completed: task scope only; no cooperative campaign run exists yet.
 - Remaining: live attachment, startup synchronization, host/guest verification and fixes.
-- Next action: inspect merged adapters and choose a baseline mission exercised by COOP-001.
-- Blockers: dependencies have not merged; requires runnable host/guest game instances.
+- Next action: obtain coordinator claim acknowledgment, inspect the merged adapter
+  composition guides, and choose a baseline mission exercised by COOP-001.
+- Blockers: no adapter dependency blocker. COOP-008 merged at `d34b6900` and
+  COOP-009 at `ce306626`, with their transitive prerequisites integrated. This task
+  still requires actual runnable host/guest instances, a complete initial-world
+  format/reconstruction path and its stated runtime evidence; dormant components
+  do not establish those behaviors.
+- Local prerequisites: root-checkout ignored `build/coop-shared-tooling/run-python.bat`
+  configures preserved MSVC 14.44.35207 / SDK 10.0.26100.0 / Windows Python 3.13.9.
+  Its `engine/` directory retains the matching port import libraries/DLLs; final
+  COOP-009 logs/output are in root-checkout ignored `build/coop-009-evidence/`.
+  Confirm these local paths exist before borrowing read-only with separate prefixes
+  and isolated build outputs. No game installation/data is supplied by Git.
 - Decisions: use the agreed four-soldier host-led model and preserve original campaign rules.
 - Validation: none for this task.
