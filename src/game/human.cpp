@@ -1,3 +1,4 @@
+#include "game/campaign_control_runtime.h"
 // C_Human: creation, mission start / stop / restart, saved games, mission properties, soldier
 // setup and the per-frame / per-tick updates (original source 0x0059be30..0x0059ffd0 and
 // 0x005a8790..0x005a9980). Damage is in human_combat.cpp, the inventory in human_items.cpp,
@@ -94,7 +95,7 @@ C_Human::~C_Human()
 {
     if (m_periodicLink != -1)
         PeriodicLinks_Remove(m_periodicLink);
-    if (!IsLocalGame() && m_netId < C_ActorsModule::PLAYER_SLOTS) {
+    if (!IsLocalGame() && !CampaignControlsActive() && m_netId >= 0 && m_netId < g_netGame.GetPlayerCount()) {
         S_NetPlayerState *players = g_netGame.LockPlayers();
         players[m_netId].human = nullptr;
         g_netGame.UnlockPlayers();
@@ -732,7 +733,7 @@ void C_Human::Setup(S_SoldierState &state, int role, int group, const int *stats
     m_profileIndex = state.profileIndex;
     if (m_profileIndex >= 0)
         m_profile = GetSoldierProfile(m_profileIndex);
-    if (!IsLocalGame()) {
+    if (!IsLocalGame() && !CampaignControlsActive()) {
         if (m_controller)
             m_controller->SetSpectating(state.spectating);
         g_netGame.SetPlayerTeam(playerSlot, state.team, false);
@@ -805,7 +806,7 @@ void C_Human::ApplyDifficulty()
 void C_Human::StartMission(bool server)
 {
     Activate(server);
-    if (!IsLocalGame() && !server && IsClient() && g_localPlayerSlot == m_netId &&
+    if (!IsLocalGame() && !CampaignControlsActive() && !server && IsClient() && g_localPlayerSlot == m_netId &&
         g_mpSettings->spawnProtection > 0)
         GetGame()->GetInterface()->ShowTimer(TEXT_SPAWN_PROTECTION, g_mpSettings->spawnProtection * 1000);
 

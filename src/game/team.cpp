@@ -1,3 +1,4 @@
+#include "game/campaign_control_runtime.h"
 // Teams, formations and the team manager (see team.h).
 #include "game/first_person_view.h"
 #include "game/interface.h"
@@ -496,11 +497,28 @@ void C_Team::SelectMember(C_Human *human)               // 0x0045da60
     }
 }
 
+void C_Team::SelectCampaignMember(C_Human *human)
+{
+    if (!CampaignControlsActive()) return;
+    ShowLeftMember(GetActivePlayer());
+    m_active = m_selected = m_commanded = -1;
+    if (human && IsCampaignLocalActor(human->GetNetId())) SelectMember(human);
+}
+
 bool C_Team::SwitchTo(int index)                        // 0x0045dc20
 {
     if (index < 0 || index >= GetMemberCount())
         return false;
     C_Human *member = m_members[index];
+    if (CampaignControlsActive()) {
+        // Only committed ownership may change the local target. Selection of
+        // another soldier must submit an ownership request through the dispatcher.
+        if (!IsCampaignLocalActor(member->GetNetId())) return false;
+        SelectCampaignMember(member);
+        GetGame()->GetFirstPersonView()->Refresh();
+        UpdateCameraTarget();
+        return true;
+    }
     if (!member->IsAlive() || member->GetRole() != HUMAN_ROLE_PLAYER)
         return false;
     ShowLeftMember(m_members[m_active]);

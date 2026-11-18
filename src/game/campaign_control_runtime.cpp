@@ -5,11 +5,13 @@ namespace {
 const I_CampaignOwnershipView *g_View = nullptr;
 std::map<int, PlayerId> g_Players;
 C_CampaignControlAdapter *g_Adapter = nullptr;
+std::optional<S_CampaignControlToken> g_Dispatch;
 }
 void InstallCampaignControlView(const I_CampaignOwnershipView *view) {
     InstallCampaignControlRuntime(view, nullptr);
 }
 void InstallCampaignControlRuntime(const I_CampaignOwnershipView *view, C_CampaignControlAdapter *adapter) {
+    g_Dispatch.reset();
     g_View = view;
     g_Adapter = adapter;
     g_Players.clear();
@@ -78,4 +80,25 @@ std::optional<int> FindCampaignPlayerSlot(int actorId) {
     if (!admitted) return std::nullopt;
     for (const auto &entry : g_Players) if (entry.second == *record->m_Owner) return entry.first;
     return std::nullopt;
+}
+
+bool CampaignInputAuthorized(int actorId) {
+    if (!g_Dispatch) return false;
+    const auto record = FindCampaignActorControl(actorId);
+    const auto state = GetCampaignControlSnapshot();
+    return record && state && state->m_Context.m_Session == g_Dispatch->m_Session &&
+        state->m_Context.m_MissionGeneration == g_Dispatch->m_Generation &&
+        record->m_Actor == g_Dispatch->m_Actor &&
+        record->m_Soldier == g_Dispatch->m_Soldier && record->m_Owner == g_Dispatch->m_Player &&
+        record->m_ControlRevision == g_Dispatch->m_ControlRevision &&
+        record->m_Alive && record->m_Eligible && record->m_Deployed && !record->m_Scripted &&
+        state->m_Context.m_Phase == E_CampaignPhase::Running;
+}
+void DispatchCampaignInput(const S_CampaignControlToken &token, const std::function<void()> &execute) {
+    if (g_Dispatch || !execute) return; // nonreentrant authority queue
+    g_Dispatch = token;
+    try {
+        if (CampaignInputAuthorized(static_cast<int>(token.m_Actor.m_Actor.Value()))) execute();
+    } catch (...) { g_Dispatch.reset(); throw; }
+    g_Dispatch.reset();
 }

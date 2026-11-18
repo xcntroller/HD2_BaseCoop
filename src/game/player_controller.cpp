@@ -1,3 +1,4 @@
+#include "game/campaign_control_runtime.h"
 // C_PlayerController, the controller of the local player's soldier and the server's copy of a
 // network player (original source 0x0053b9a0..0x0053d870, 0x00540090..0x00540240,
 // 0x00542060..0x00542b10, 0x005449b0, 0x00545dd0..0x00546dc0): its life cycle, the keys and
@@ -384,7 +385,7 @@ void C_PlayerController::OnKilled()
     if (m_human->IsLocalPlayer())
         GetGame()->GetFirstPersonView()->SetWeaponView(nullptr, 0, -1);
     SetViewMode(VIEW_NORMAL);
-    if (IsLocalGame() || m_human->GetNetId() != g_localPlayerSlot)
+    if (IsLocalGame() || CampaignControlsActive() || m_human->GetNetId() != g_localPlayerSlot)
         return;
     // The player's own human: the co-op lives left.
     C_Interface *ui = GetGame()->GetInterface();
@@ -1207,7 +1208,7 @@ bool C_PlayerController::UseMedkit(int humanId, int itemUid)
     if (used)
         m_human->RemoveItem(itemUid, true);
     // A medic scores for healing another player.
-    if (!IsLocalGame() && humanId != m_human->GetNetId())
+    if (!IsLocalGame() && !CampaignControlsActive() && humanId != m_human->GetNetId())
         g_netGame.AddScore(m_human->GetNetId(), static_cast<int>(static_cast<float>(health) * MEDIC_SCORE_PER_HEALTH));
     return true;
 }

@@ -1,3 +1,4 @@
+#include "game/campaign_control_runtime.h"
 // C_Human: the controller (creation and the thin wrappers around its methods), the HUMAN_*
 // script commands, names, squad formations and small accessors (original source
 // 0x005a3de0..0x005a45f0, 0x005a5c70..0x005a6480, 0x005a6600..0x005a6710, 0x005a80d0..0x005a8820,
@@ -16,10 +17,10 @@
 
 // --------------------------------------------------------------------------- controller
 
-void C_Human::CreateController(E_HumanController type)
+void C_Human::CreateController(E_HumanController type, bool force)
 {
     C_HumanController *previous = m_controller;
-    if (previous && previous->GetType() == type)
+    if (previous && previous->GetType() == type && !force)
         return;
     switch (type) {
     case HUMAN_CONTROLLER_PLAYER:
@@ -47,17 +48,34 @@ void C_Human::CreateController(E_HumanController type)
         m_controller = nullptr;
         break;
     }
+    // Campaign detach must precede installing the replacement's handlers. Native
+    // controllers otherwise detach after Attach and erase the new handlers.
+    if (previous && CampaignControlsActive()) previous->Detach();
     // Fix: the original attaches without checking (an unknown type crashes).
     if (m_controller)
         m_controller->Attach(this, previous);
     if (previous) {
-        previous->Detach();
+        if (!CampaignControlsActive()) previous->Detach();
         delete previous;
     }
 }
 
 void C_Human::AssignPlayerController(bool active)
 {
+    if (CampaignControlsActive()) {
+        const auto record = FindCampaignActorControl(m_netId);
+        if (!record || !record->m_Alive || !record->m_Eligible || !record->m_Deployed) {
+            CreateController(HUMAN_CONTROLLER_REMOTE);
+        } else if (record->m_Scripted) {
+            CreateController(IsServer() ? HUMAN_CONTROLLER_AI : HUMAN_CONTROLLER_REMOTE);
+        } else if (record->m_Owner) {
+            CreateController(IsServer() || IsCampaignLocalActor(m_netId) ? HUMAN_CONTROLLER_PLAYER : HUMAN_CONTROLLER_REMOTE);
+        } else {
+            CreateController(IsServer() ? HUMAN_CONTROLLER_SQUAD : HUMAN_CONTROLLER_REMOTE);
+        }
+        m_body.SetPlayerControlled(IsCampaignLocalActor(m_netId));
+        return;
+    }
     if (!IsLocalGame()) {
         if (m_netId == g_localPlayerSlot) {
             CreateController(HUMAN_CONTROLLER_PLAYER);
@@ -533,12 +551,16 @@ void C_Human::SetUnknown94(float value)
 
 const char *C_Human::GetPlayerName() const
 {
+    if (CampaignControlsActive()) {
+        const auto slot = FindCampaignPlayerSlot(m_netId);
+        return slot ? g_netGame.GetPlayerName(*slot) : GetFullName();
+    }
     return g_netGame.GetPlayerName(m_netId);
 }
 
 const char *C_Human::GetLastName() const
 {
-    if (!IsLocalGame() && m_role == HUMAN_ROLE_PLAYER)
+    if (!IsLocalGame() && !CampaignControlsActive() && m_role == HUMAN_ROLE_PLAYER)
         return GetPlayerName();
     if (!m_profile)
         return m_frame->GetName();
@@ -548,7 +570,7 @@ const char *C_Human::GetLastName() const
 
 const char *C_Human::GetFirstName() const
 {
-    if (!IsLocalGame() && m_role == HUMAN_ROLE_PLAYER)
+    if (!IsLocalGame() && !CampaignControlsActive() && m_role == HUMAN_ROLE_PLAYER)
         return GetPlayerName();
     if (!m_profile)
         return m_frame->GetName();
@@ -557,7 +579,7 @@ const char *C_Human::GetFirstName() const
 
 const char *C_Human::GetShortName() const
 {
-    if (!IsLocalGame() && m_role == HUMAN_ROLE_PLAYER)
+    if (!IsLocalGame() && !CampaignControlsActive() && m_role == HUMAN_ROLE_PLAYER)
         return GetPlayerName();
     if (!m_profile)
         return const_cast<C_Human *>(this)->GetName()->c_str();
@@ -567,7 +589,7 @@ const char *C_Human::GetShortName() const
 
 const char *C_Human::GetFullName() const
 {
-    if (!IsLocalGame() && m_role == HUMAN_ROLE_PLAYER)
+    if (!IsLocalGame() && !CampaignControlsActive() && m_role == HUMAN_ROLE_PLAYER)
         return GetPlayerName();
     if (!m_profile)
         return m_frame->GetName();
@@ -577,7 +599,7 @@ const char *C_Human::GetFullName() const
 
 int C_Human::GetProfileUnknown24() const
 {
-    if (!IsLocalGame()) {
+    if (!IsLocalGame() && !CampaignControlsActive()) {
         // A network game: the rank the round's score gave the player, not the profile's.
         // (Fix: the original reads past the players for a human without a slot.)
         const S_NetPlayerState *players = g_netGame.LockPlayers();

@@ -2,6 +2,9 @@
 #include <algorithm>
 
 namespace {
+bool SameBinding(const S_CampaignOwnershipRecord &a, const S_CampaignOwnershipRecord &b) {
+    return a.m_Soldier == b.m_Soldier && a.m_Actor == b.m_Actor && a.m_ControlRevision == b.m_ControlRevision;
+}
 bool SameCut(const S_CampaignOwnershipSnapshot &a, const S_CampaignOwnershipSnapshot &b) {
     return a.m_Context.m_Session == b.m_Context.m_Session &&
         a.m_Context.m_MissionGeneration == b.m_Context.m_MissionGeneration &&
@@ -37,16 +40,28 @@ E_CampaignReason C_CampaignControlAdapter::SynchronizeCommitted() {
     if (IsSynchronized()) return E_CampaignReason::None;
     m_Ready = false;
     m_Inputs.clear();
+    const auto changed = [&](const S_CampaignOwnershipRecord &record) {
+        if (!m_Applied) return true;
+        const auto oldPlan = Plan(m_Applied->m_Context, record);
+        const auto newPlan = Plan(state->m_Context, record);
+        if (oldPlan.m_Controller != newPlan.m_Controller) return true;
+        for (const auto &old : m_Applied->m_Soldiers) if (SameBinding(old, record)) return false;
+        return true;
+    };
     // Failed ports are retried from the beginning, while input stays disabled.
     if (m_Applied) for (const auto &record : m_Applied->m_Soldiers)
-        if (record.m_Actor && !m_Sink.Drain(*record.m_Actor)) return E_CampaignReason::PendingTransaction;
+        if (record.m_Actor) {
+            bool retained = false;
+            for (const auto &next : state->m_Soldiers) if (SameBinding(record, next)) retained = true;
+            if (!retained && !m_Sink.Drain(*record.m_Actor)) return E_CampaignReason::PendingTransaction;
+        }
     for (const auto &record : state->m_Soldiers)
-        if (record.m_Actor && !m_Sink.Drain(*record.m_Actor)) return E_CampaignReason::PendingTransaction;
+        if (record.m_Actor && changed(record) && !m_Sink.Drain(*record.m_Actor)) return E_CampaignReason::PendingTransaction;
     std::optional<ActorRef> local;
     for (const auto &record : state->m_Soldiers) {
         if (!record.m_Actor) continue;
         const auto plan = Plan(state->m_Context, record);
-        if (!m_Sink.Apply(plan)) return E_CampaignReason::PendingTransaction;
+        if (changed(record) && !m_Sink.Apply(plan)) return E_CampaignReason::PendingTransaction;
         if (plan.m_LocalView) local = record.m_Actor;
     }
     if (!m_Sink.Present(local)) return E_CampaignReason::PendingTransaction;

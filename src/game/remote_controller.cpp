@@ -1,3 +1,4 @@
+#include "game/campaign_control_runtime.h"
 // C_RemoteController, a network client's copy of another player's human (original source
 // 0x00592140..0x005941b0): it replays what the server sends, the replicated position, view and
 // control bits, the actions of the human's net object and the controller messages; the few
@@ -99,6 +100,7 @@ void C_RemoteController::Update(int frameTime)
 
 void C_RemoteController::ProcessNetMessages()
 {
+    if (CampaignControlsActive()) return;
     while (C_NetObjectMessage *message = m_netObject->PopMessage(0)) {
         switch (message->type) {
         case NET_MSG_ACTION:
@@ -257,6 +259,10 @@ void C_RemoteController::RequestThrowItem(int uid, const S_vector &velocity)
 
 void C_RemoteController::FlushMessages(bool toClients)
 {
+    if (CampaignControlsActive()) {
+        if (toClients) ClearMessagesToClients(); else ClearMessagesToServer();
+        return;
+    }
     // Only the inventory moves (types 7, 8 and 10) are sent, in one reliable message.
     std::vector<S_ControllerMessage *> &queue = toClients ? m_toClients : m_toServer;
     C_BitStream *stream = nullptr;
@@ -281,6 +287,7 @@ void C_RemoteController::FlushMessages(bool toClients)
 
 void C_RemoteController::OnMessage(C_BitStream *stream)
 {
+    if (CampaignControlsActive() && !CampaignInputAuthorized(m_human->GetNetId())) return;
     // The server's messages about the human.
     C_NetMessage &msg = *static_cast<C_NetMessage *>(stream);
     for (;;) {

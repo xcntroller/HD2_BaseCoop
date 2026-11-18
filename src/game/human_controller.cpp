@@ -1,3 +1,4 @@
+#include "game/campaign_control_runtime.h"
 // C_HumanController, the base of every controller (original source 0x00582ff0..0x00589290 and
 // 0x0058b6c0..0x0058c510; the AI task pools between them are part of the AI controllers).
 //
@@ -1163,7 +1164,7 @@ bool C_HumanController::ExecuteCommand(const S_HumanCommand &command)
         return true;
     case HUMAN_COMMAND_CLIMB:
         // A client's copy of another player's human starts from the network position.
-        if (m_netObject && g_localPlayerSlot != m_human->GetNetId() && !IsServer()) {
+        if (m_netObject && !m_human->IsLocalPlayer() && !IsServer()) {
             // (Fix: the original does not check the property, unlike LeaveVehicle.)
             if (C_NetProperty *property = m_netObject->GetProperty(1)) {
                 const S_vector4 pos = property->GetTrack().GetTarget();

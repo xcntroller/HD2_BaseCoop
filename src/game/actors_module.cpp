@@ -1,3 +1,4 @@
+#include "game/campaign_control_runtime.h"
 // C_ActorsModule ("Actors", 0x004755d0..0x00476a50) and C_TemporaryActorsList
 // ("Temp. Actors", 0x00476ec0..0x00479600).
 #include "game/actors_module.h"
@@ -421,6 +422,7 @@ void C_ActorsModule::ReadState(C_BitStream *msg)
 
 bool C_ActorsModule::OnMessage(C_BitStream *msg)
 {
+    if (CampaignControlsActive()) return false; // untagged native dispatch quarantined
     const int index = static_cast<int>(msg->ReadBits(ACTOR_ID_BITS));
     if (index >= PLAYER_SLOTS)
         m_actors[index]->OnMessage(msg);
@@ -431,6 +433,7 @@ bool C_ActorsModule::OnMessage(C_BitStream *msg)
 
 bool C_ActorsModule::Unknown28(C_BitStream *msg)
 {
+    if (CampaignControlsActive()) return false; // untagged native dispatch quarantined
     const int index = static_cast<int>(msg->ReadBits(ACTOR_ID_BITS));
     if (index >= PLAYER_SLOTS)
         m_actors[index]->Unknown20(msg);
@@ -453,7 +456,7 @@ void C_ActorsModule::TickRemovals(int timeDelta)
         if (m_removed[i].timeLeft >= 0)
             continue;
         C_Actor *actor = m_removed[i].actor;
-        if (IsServer()) {
+        if (IsServer() && !CampaignControlsActive() && actor->GetNetId() >= 0 && actor->GetNetId() < g_netGame.GetPlayerCount()) {
             S_NetPlayerState *players = g_netGame.LockPlayers();
             players[actor->GetNetId()].left = false;
             g_netGame.UnlockPlayers();

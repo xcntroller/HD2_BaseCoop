@@ -80,3 +80,30 @@ Full vehicle gameplay acceptance remains a later interaction gate.
 - Claim acknowledged on `coord/coop-work-queue`; accepted COOP-006 stopped-writer coordinator handoff and notified COOP-007/009.
 - Declared scope follows COOP-002 reservations above. COOP-009 alone edits lifecycle/spawn files and consumes explicit adapter helpers; no live attachment before COOP-010.
 - Next checkpoint: engine-independent committed controller plan and input queue boundary, with real ownership/protocol composition regressions; then legacy consumer adapters and target build checks.
+
+## Implementation checkpoint (2026-11-18)
+
+- Component checkpoint `978b3b8a`; subsequent native adapter checkpoint is this commit.
+  Branch/worktree remain canonical; no lifecycle/spawn/profile layout edits.
+- Implemented dormant committed controller planning, ordered drain/apply/presentation
+  barrier, guarded bounded input queue with real ownership checks at enqueue/apply,
+  exact-incarnation disconnect helper, explicit authenticated slot mapping and native
+  engine sink. Native consumers now resolve local ownership and preserve campaign
+  profile names/skills; native class/scoring and untagged control paths are guarded.
+- Validation actually run: `python _re/harness/campaign_control/run.py --compiler gcc`
+  PASS 963 checks (`build/campaign_control/gcc-_wzqi6w6`); Windows Python/MSVC x86
+  `/W4 /WX` same suite PASS (`msvc-erdcovau`, earlier component checkpoint).
+  Isolated target compile of 18 changed/new translation units PASS, 0 errors/warnings.
+  One earlier compile invocation used shell-stripped backslashes and failed to locate
+  sources; corrected with forward-slash paths. First real compile caught C_Actor driver
+  cast; fixed and repeated successfully. Latest edits require repeat target checks.
+- Outputs are isolated under this worktree `build/isolated/check/default/temp` and
+  `build/campaign_control`; COOP-007 tooling borrowed read-only with private Wine prefix.
+- Not complete: guest committed-snapshot reconciler, full script/death events and
+  native queue/presentation regressions, remaining damage/inventory/vehicle/dispatch
+  audit, full game build and dormant solo/native evidence. No gameplay/runtime claim.
+- Next action: finish these adapters and regressions; run final GCC/MSVC/sanitizer and
+  full source build checks; publish draft PR with exact evidence until gates pass.
+- Coordination correction: COOP-007 had accepted coordination concurrently with kickoff;
+  008 stopped ledger writes at `bf838b1e`, 007 reconciled/accepted both 008/009 claims
+  and retains coordinator role. 008 does not own the live ledger.

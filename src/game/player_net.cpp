@@ -1,3 +1,4 @@
+#include "game/campaign_control_runtime.h"
 // The network side of C_PlayerController (original source 0x0053b370..0x0053b990 for the net
 // object's messages, the player's in 0x0053d340..0x005404f0 and 0x005406c0..0x00541cb0,
 // 0x00542920, 0x005441e0, 0x00544b40, 0x005470b0, 0x00547270).
@@ -65,7 +66,9 @@ bool HasAim(int action)
 void StampActivity(const C_Human *human)
 {
     S_NetPlayerState *players = g_netGame.LockPlayers();
-    players[human->GetNetId()].activityTime = timeGetTime();
+    const auto slot = CampaignControlsActive() ? FindCampaignPlayerSlot(human->GetNetId()) : std::optional<int>(human->GetNetId());
+    if (slot && *slot >= 0 && *slot < g_netGame.GetPlayerCount())
+        players[*slot].activityTime = timeGetTime();
     g_netGame.UnlockPlayers();
 }
 
@@ -73,6 +76,7 @@ void StampActivity(const C_Human *human)
 
 void ApplySoldierClass(C_Human *human, int soldierClass)
 {
+    if (CampaignControlsActive()) return; // campaign profile skills survive ownership changes
     g_netGame.GetPlayerStats(human->GetNetId())[5] = soldierClass;
     // The soldier's skills at that class (the defaults when the profile has none; the stats
     // asked for again, as the original).
@@ -176,7 +180,7 @@ C_NetObjectMessage *__fastcall NetCreateMessage(void * /*controller*/, C_BitStre
 void __fastcall NetReadControlBits(void *controller, C_BitStream *stream)
 {
     const uint32_t bits = stream->ReadBits(NET_CONTROL_BITS);
-    if (controller)
+    if (controller && !CampaignControlsActive())
         static_cast<C_HumanController *>(controller)->SetControlBits(bits);
 }
 
@@ -191,7 +195,7 @@ void C_PlayerController::UpdateRemote(int frameTime)
 {
     // The server's copy of a client's human.
     FlushMessages(true);
-    if (IsLocalGame() || g_localPlayerSlot == m_human->GetNetId())
+    if (IsLocalGame() || m_human->IsLocalPlayer())
         return;
     m_axes = m_controlAxes;
     m_buttons = m_controlButtons;
@@ -231,7 +235,7 @@ void C_PlayerController::UpdateRemote(int frameTime)
 void C_PlayerController::TickLocal(int timeDelta)
 {
     // The human of this machine's player (or of single player).
-    if (!IsLocalGame() && g_localPlayerSlot != m_human->GetNetId()) {
+    if (!IsLocalGame() && !m_human->IsLocalPlayer()) {
         FlushMessages(false);
         return;
     }
@@ -321,6 +325,7 @@ void C_PlayerController::TickLocal(int timeDelta)
 
 void C_PlayerController::ProcessNetMessages()
 {
+    if (CampaignControlsActive()) return; // raw net-object queues have no campaign token
     // The server carries a client's actions out and passes them on (marked as the server's);
     // the dive and the binoculars too.
     while (C_NetObjectMessage *message = m_netObject->PopMessage(0)) {
@@ -633,6 +638,11 @@ bool C_PlayerController::OnCollisionEx(C_Actor *other, const S_vector * /*pos*/,
 
 void C_PlayerController::FlushMessages(bool toClients)
 {
+    if (CampaignControlsActive()) {
+        // COOP-010 must encode these operations in negotiated tagged messages.
+        if (toClients) ClearMessagesToClients(); else ClearMessagesToServer();
+        return;
+    }
     // The control state goes unreliably, the rest reliably; types 5, 18 (the scripted
     // animations) and above 23 are not sent.
     std::vector<S_ControllerMessage *> &queue = toClients ? m_toClients : m_toServer;
@@ -662,6 +672,7 @@ void C_PlayerController::FlushMessages(bool toClients)
 
 void C_PlayerController::OnMessage(C_BitStream *stream)
 {
+    if (CampaignControlsActive() && !CampaignInputAuthorized(m_human->GetNetId())) return;
     // A client: the server's messages about the human.
     C_NetMessage &msg = *static_cast<C_NetMessage *>(stream);
     for (;;) {
@@ -808,6 +819,7 @@ void C_PlayerController::OnMessage(C_BitStream *stream)
 
 void C_PlayerController::OnMessage2(C_BitStream *stream)
 {
+    if (CampaignControlsActive() && !CampaignInputAuthorized(m_human->GetNetId())) return;
     // The server: a client's requests for its human. What the server carries out goes on to
     // the clients.
     C_NetMessage &msg = *static_cast<C_NetMessage *>(stream);
@@ -820,7 +832,7 @@ void C_PlayerController::OnMessage2(C_BitStream *stream)
             S_MsgControls *message = new S_MsgControls;
             message->Read(msg);
             // (The original also asks 0x005ac540, which always says yes.)
-            if (g_localPlayerSlot != m_human->GetNetId()) {
+            if (!m_human->IsLocalPlayer()) {
                 for (int i = 0; i < CONTROL_COUNT; i++)
                     m_controlAxes[i] = message->axes[i];
                 for (int i = 0; i < CONTROL_COUNT; i++)

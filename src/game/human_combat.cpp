@@ -1,3 +1,4 @@
+#include "game/campaign_control_runtime.h"
 // C_Human: damage and death, the multiplayer hit / kill messages, sides and hostility,
 // disguise, visibility and the bones shots aim at (original source 0x005a0220..0x005a2740,
 // 0x005a3ab0..0x005a3dd0 and smaller functions between 0x005a4600 and 0x005a8820).
@@ -268,7 +269,7 @@ void C_Human::Hit(E_HitType hitType, float amount, const S_vector &pos, const S_
     }
     const S_vector hitDir = dir.Normalized();
     int reflectPercent = 0;
-    if (!IsLocalGame()) {
+    if (!IsLocalGame() && !CampaignControlsActive()) {
         if (m_stats[STAT_HEALTH] > 0 && this != attacker && g_mpSettings->gameType != MP_GAME_DEATHMATCH && attacker &&
             attacker->GetTeam(false) == GetTeam(false)) {
             // Team damage: either the shooter takes a share of it or there is none (run
@@ -398,7 +399,7 @@ void C_Human::Hit(E_HitType hitType, float amount, const S_vector &pos, const S_
         if (data && data->script)
             data->script->OnDeath();
         OnDeath();
-        if (!IsLocalGame())
+        if (!IsLocalGame() && !CampaignControlsActive())
             g_netGame.OnPlayerKilled(m_netId, attacker ? attacker->m_netId : -1);
     }
     if (!IsClient() && attacker)
@@ -481,7 +482,7 @@ void C_Human::ApplyRemoteHit(int type, int zone, int health, int killerId, const
         m_body.ApplyHit(flags, pos, dir.Normalized() * damage);
     }
     if (m_stats[STAT_HEALTH] <= 0) {
-        if (m_role == HUMAN_ROLE_PLAYER && !IsLocalGame())
+        if (m_role == HUMAN_ROLE_PLAYER && !IsLocalGame() && !CampaignControlsActive())
             g_netGame.OnPlayerKilled(m_netId, killerId);
         ShowDeath();
     }
@@ -563,7 +564,7 @@ void C_Human::ShowDeath()
 
 void C_Human::OnKilledHuman(C_Human *victim, int type)
 {
-    if (!IsLocalGame())
+    if (!IsLocalGame() && !CampaignControlsActive())
         return;
     if (m_role == HUMAN_ROLE_PLAYER) {
         int experience;
@@ -713,6 +714,8 @@ void C_Human::NotifyShotAt(C_Actor *shooter, const S_vector &velocity)
 
 bool C_Human::IsLocalPlayer() const
 {
+    if (CampaignControlsActive())
+        return m_controller && IsCampaignLocalActor(m_netId);
     if (!m_controller)
         return false;
     if (IsLocalGame())
@@ -722,6 +725,10 @@ bool C_Human::IsLocalPlayer() const
 
 bool C_Human::IsServerSimulated() const
 {
+    if (CampaignControlsActive()) {
+        const auto record = FindCampaignActorControl(m_netId);
+        return IsServer() && (!record || !record->m_Owner || record->m_Scripted);
+    }
     return IsServer() && m_role != HUMAN_ROLE_PLAYER;
 }
 
