@@ -116,7 +116,7 @@ bool C_Car::SetInput(float throttle, float steering)    // 0x004d9280
     if (!m_driver || m_driver->IsDead())
         return false;
     Restrict(m_restrictions, throttle, steering);
-    if (IsLocalGame() || m_driver->IsLocalPlayer()) {
+    if (IsLocalGame() || IsCampaignOrLegacyLocalActor(m_driver->GetNetId(), g_localPlayerSlot)) {
         m_vehicle.SetThrottle(throttle, true);
         m_vehicle.SetSteering(steering);
     }

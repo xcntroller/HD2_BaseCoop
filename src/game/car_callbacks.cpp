@@ -413,7 +413,7 @@ bool __fastcall CarOnWheelOff(void *context, int index, const S_vector *velocity
     }
     // A client: the local driver's tells the server.
     C_Actor *driver = car->GetSeatOccupant(0);
-    if (driver && driver->GetType() == ACTOR_HUMAN && static_cast<C_Human *>(driver)->IsLocalPlayer())
+    if (driver && IsCampaignOrLegacyLocalActor(driver->GetNetId(), g_localPlayerSlot))
         car->SendMessageEx(msg);
     return true;
 }

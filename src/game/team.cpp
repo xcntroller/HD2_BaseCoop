@@ -501,6 +501,7 @@ void C_Team::SelectCampaignMember(C_Human *human)
 {
     if (!CampaignControlsActive()) return;
     ShowLeftMember(GetActivePlayer());
+    m_watchedHuman = nullptr;
     m_active = m_selected = m_commanded = -1;
     if (human && IsCampaignLocalActor(human->GetNetId())) SelectMember(human);
 }
@@ -770,6 +771,13 @@ void C_Team::ReleaseHoldingMembers(const C_Human *human)   // 0x0045f110
 
 bool C_Team::HasMemberInPlayerSlots() const             // 0x0045d120
 {
+    if (CampaignControlsActive()) {
+        for (const auto *member : m_members) {
+            const auto record = FindCampaignActorControl(member->GetNetId());
+            if (record && record->m_Deployed) return true;
+        }
+        return false;
+    }
     for (int i = 0; i < GetMemberCount(); ++i) {
         if (m_members[i]->GetNetId() < C_ActorsModule::PLAYER_SLOTS)
             return true;

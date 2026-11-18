@@ -286,7 +286,7 @@ void C_PlayerController::Attach(C_Human *human, C_HumanController *previous)
     m_throwDelay = 0;
     m_squadCombatOrder = SQUAD_ORDER_MODE0;
     C_CameraModule *camera = GetGame()->GetCameraModule();
-    if (previous && previous->GetType() == HUMAN_CONTROLLER_SQUAD) {
+    if (previous && previous->GetType() == HUMAN_CONTROLLER_SQUAD && (!CampaignControlsActive() || IsCampaignLocalActor(human->GetNetId()))) {
         // Taking over a squad member: the view of the camera, what the member went on with.
         camera->GetCameraDir(3, &m_viewDir);
         m_facingDir = m_viewDir;
@@ -296,7 +296,7 @@ void C_PlayerController::Attach(C_Human *human, C_HumanController *previous)
         m_squadCombatOrder = squad->GetCombatOrder();
     } else {
         m_squadFlags = 0;
-        camera->SetViewDir(m_viewDir);
+        if (!CampaignControlsActive() || IsCampaignLocalActor(human->GetNetId())) camera->SetViewDir(m_viewDir);
     }
     // The look around ends (pose 0).
     m_human->ExecuteBodyCommand(MakeBodyCommand(BODY_COMMAND_POSE, 0));

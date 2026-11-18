@@ -608,7 +608,8 @@ public:
     C_ScriptedController *GetScriptedController() const { return static_cast<C_ScriptedController *>(m_controller); }
     // Replaces the controller (no-op if it already has that type).
     void SetCampaignProgress(const S_SoldierProgress &progress) { m_progress = progress; }
-    void CreateController(E_HumanController type, bool force = false);      // 0x005a3f20
+    void CreateController(E_HumanController type);
+    void CreateController(E_HumanController type, bool force);      // 0x005a3f20
     // Player controller (single player: `active` = the player controls this soldier).
     void AssignPlayerController(bool active);           // 0x005a3e60
     // Marks a player / team human as script-controlled.

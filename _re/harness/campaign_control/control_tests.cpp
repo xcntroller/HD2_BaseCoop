@@ -31,7 +31,7 @@ S_CampaignSessionSetup Setup() {
     setup.m_Campaign = CampaignId(700);
     setup.m_Mission = MissionKey("base.sicily2.step1.v1");
     setup.m_Rules.m_Difficulty = 3;
-    setup.m_Rules.m_Content.m_Rules = "fixture.campaign";
+    setup.m_Rules.m_Content = {"sha256:" + std::string(64, 'a'), "sha256:" + std::string(64, 'b'), "sha256:" + std::string(64, 'c'), "sha256:" + std::string(64, 'd'), "sha256:" + std::string(64, 'e')};
     return setup;
 }
 const S_CampaignOwnershipRecord &Record(const S_CampaignOwnershipSnapshot &state, SoldierId soldier) {
@@ -232,6 +232,60 @@ void ScriptDeathCapacity() {
     CHECK(sink.m_Roles[f.m_A] == E_CampaignController::Suspended);
     CHECK(adapter.GetQueuedCount() == 0);
 }
+void ActorReuseAndGeneration() {
+    C_Fixture f;
+    CHECK(f.Claim(f.m_Host, f.m_A).m_Reason == R::None);
+    f.Run();
+    C_Sink sink;
+    C_CampaignControlAdapter adapter(f.m_Model, sink);
+    CHECK(adapter.SynchronizeCommitted() == R::None);
+    const auto stale = Input(f, f.m_Host, 1);
+    CHECK(adapter.Enqueue(f.m_Host, stale) == R::None);
+    CHECK(f.m_Model.UnbindActor(f.m_A) == R::None);
+    CHECK(f.m_Model.BindActor(f.m_A, stale.m_Control.m_Actor) == R::None);
+    CHECK(adapter.ApplyNext() == R::StaleRevision);
+    CHECK(adapter.SynchronizeCommitted() == R::None);
+    CHECK(adapter.Enqueue(f.m_Host, stale) == R::StaleRevision);
+    CHECK(f.m_Model.EndMission() == R::None);
+    CHECK(adapter.SynchronizeCommitted() == R::None);
+    CHECK(f.m_Model.ReturnToSetup(MissionKey("base.sicily2.step1.v1")) == R::None);
+    CHECK(f.m_Model.StartPreparation() == R::None);
+    f.Run(); // identical actor IDs/slotUse in a fresh mission generation
+    CHECK(adapter.SynchronizeCommitted() == R::None);
+    CHECK(adapter.Enqueue(f.m_Host, stale) == R::WrongGeneration);
+    CHECK(adapter.Enqueue(f.m_Host, Input(f, f.m_Host, 1)) == R::None);
+    CHECK(adapter.ApplyNext() == R::None);
+    CHECK(sink.m_Executed == 1);
+}
+void GuestReconciliation() {
+    C_Fixture f;
+    CHECK(f.Claim(f.m_Guest, f.m_B).m_Reason == R::None);
+    f.Run();
+    C_Sink sink;
+    C_CampaignReplicaControlAdapter replica(SessionId(901), f.m_Guest, sink);
+    CHECK(replica.InstallCommitted(f.m_Model.GetSnapshot()) == R::None);
+    CHECK(replica.IsSynchronized());
+    CHECK(!replica.GetSnapshot()->m_Context.m_IsTransportServer);
+    CHECK(sink.m_Roles[f.m_B] == E_CampaignController::LocalPlayer);
+    CHECK(sink.m_Roles[f.m_C] == E_CampaignController::Replica);
+    const auto old = f.m_Model.GetSnapshot();
+    const auto events = sink.m_Events.size();
+    CHECK(replica.InstallCommitted(old) == R::None);
+    CHECK(sink.m_Events.size() == events);
+    CHECK(f.m_Model.SetScripted(f.m_B, true) == R::None);
+    sink.m_Fail = true;
+    CHECK(replica.InstallCommitted(f.m_Model.GetSnapshot()) == R::PendingTransaction);
+    CHECK(!replica.IsSynchronized());
+    CHECK(replica.InstallCommitted(old) == R::StaleRevision);
+    sink.m_Fail = false;
+    CHECK(replica.InstallCommitted(f.m_Model.GetSnapshot()) == R::None);
+    CHECK(!sink.m_View);
+    CHECK(sink.m_Roles[f.m_B] == E_CampaignController::Replica);
+    auto conflicting = *f.m_Model.GetSnapshot();
+    conflicting.m_Soldiers[0].m_Alive = !conflicting.m_Soldiers[0].m_Alive;
+    CHECK(replica.InstallCommitted(std::make_shared<const S_CampaignOwnershipSnapshot>(conflicting)) == R::RequestConflict);
+    CHECK(replica.IsSynchronized());
+}
 void RuntimeAndGuestPlan() {
     CHECK(!CampaignControlsActive());
     CHECK(!IsCampaignLocalActor(17));
@@ -246,6 +300,16 @@ void RuntimeAndGuestPlan() {
     CHECK(FindCampaignPlayerSlot(17) == 6);
     CHECK(!FindCampaignPlayerSlot(34)); // AI actor, no fake connection
     CHECK(IsCampaignLocalActor(0));
+    const auto token = f.m_Model.GetControlToken(f.m_Guest);
+    CHECK(token);
+    int executions = 0;
+    CHECK(!CampaignInputAuthorized(17));
+    DispatchCampaignInput(*token, [&] { CHECK(CampaignInputAuthorized(17)); ++executions; });
+    CHECK(executions == 1);
+    CHECK(!CampaignInputAuthorized(17));
+    auto forged = *token; forged.m_Session = SessionId(1000);
+    DispatchCampaignInput(forged, [&] { ++executions; });
+    CHECK(executions == 1);
     CHECK(!IsCampaignLocalActor(17));
     auto snapshot = *f.m_Model.GetSnapshot();
     snapshot.m_Context.m_IsTransportServer = false;
@@ -257,11 +321,25 @@ void RuntimeAndGuestPlan() {
     CHECK(!FindCampaignPlayerSlot(17));
     ForgetCampaignTransportPlayer(f.m_Guest);
     CHECK(!FindCampaignActorControl(-1));
+    C_Sink sink;
+    C_CampaignControlAdapter adapter(f.m_Model, sink);
+    InstallCampaignControlRuntime(&f.m_Model, &adapter);
+    CHECK(adapter.SynchronizeCommitted() == R::None);
+    CHECK(BindCampaignTransportPlayer(9, f.m_Host));
+    CHECK(FindCampaignTransportPlayer(9) == f.m_Host);
+    const auto hostToken = f.m_Model.GetControlToken(f.m_Host);
+    CHECK(hostToken);
+    NotifyCampaignDeath(0);
+    CHECK(!f.m_Model.GetControlToken(f.m_Host));
+    CHECK(!adapter.IsSynchronized());
+    CHECK(adapter.SynchronizeCommitted() == R::None);
+    CHECK(HandleCampaignDisconnect(f.m_Host) == R::None);
+    CHECK(!FindCampaignTransportPlayer(9));
     InstallCampaignControlView(nullptr);
     CHECK(!CampaignControlsActive());
 }
 }
 int main() {
-    TransfersAndQueues(); ScriptDeathCapacity(); RuntimeAndGuestPlan();
+    TransfersAndQueues(); ScriptDeathCapacity(); RuntimeAndGuestPlan(); GuestReconciliation(); ActorReuseAndGeneration();
     std::cout << "PASS: controller adapters: " << g_Checks << " checks\n";
 }

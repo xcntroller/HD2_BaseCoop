@@ -102,3 +102,13 @@ void DispatchCampaignInput(const S_CampaignControlToken &token, const std::funct
     } catch (...) { g_Dispatch.reset(); throw; }
     g_Dispatch.reset();
 }
+
+E_CampaignReason HandleCampaignScripted(int actorId, bool scripted) {
+    const auto record = FindCampaignActorControl(actorId);
+    if (!g_Adapter || !record) return E_CampaignReason::ActorUnavailable;
+    return g_Adapter->OnScripted(record->m_Soldier, scripted);
+}
+void NotifyCampaignDeath(int actorId) {
+    const auto record = FindCampaignActorControl(actorId);
+    if (g_Adapter && record) g_Adapter->OnDeath(record->m_Soldier);
+}

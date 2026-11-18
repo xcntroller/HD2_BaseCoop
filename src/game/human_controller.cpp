@@ -1164,7 +1164,7 @@ bool C_HumanController::ExecuteCommand(const S_HumanCommand &command)
         return true;
     case HUMAN_COMMAND_CLIMB:
         // A client's copy of another player's human starts from the network position.
-        if (m_netObject && !m_human->IsLocalPlayer() && !IsServer()) {
+        if (m_netObject && !IsCampaignOrLegacyLocalActor(m_human->GetNetId(), g_localPlayerSlot) && !IsServer()) {
             // (Fix: the original does not check the property, unlike LeaveVehicle.)
             if (C_NetProperty *property = m_netObject->GetProperty(1)) {
                 const S_vector4 pos = property->GetTrack().GetTarget();

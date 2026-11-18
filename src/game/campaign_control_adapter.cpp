@@ -112,3 +112,81 @@ E_CampaignReason C_CampaignControlAdapter::ApplyNext() {
     m_Sink.Execute(queued.m_Input);
     return E_CampaignReason::None;
 }
+
+E_CampaignReason C_CampaignControlAdapter::OnScripted(SoldierId soldier, bool scripted) {
+    // Script VM callbacks may be executing on the controller being replaced.
+    // Commit now; the authority queue reconciles once that stack has returned.
+    return m_Ownership.SetScripted(soldier, scripted);
+}
+E_CampaignReason C_CampaignControlAdapter::OnDeath(SoldierId soldier) {
+    // Do not replace/delete a controller from its own OnDeath call stack. The
+    // authority queue reconciles after that event returns, before further input.
+    return m_Ownership.OnDeath(soldier);
+}
+
+E_CampaignReason C_CampaignReplicaControlAdapter::InstallCommitted(T_CampaignOwnershipSnapshot snapshot) {
+    if (!snapshot) return E_CampaignReason::SnapshotUnavailable;
+    if (snapshot->m_Context.m_Session != m_Session ||
+        snapshot->m_Context.m_Kind != E_CampaignSessionKind::CampaignCoop) return E_CampaignReason::WrongSession;
+    CampaignProtocol::T_Bytes encoded;
+    if (CampaignProtocol::Encode(CampaignProtocol::T_Message(*snapshot), encoded) != E_CampaignReason::None)
+        return E_CampaignReason::Malformed;
+    if (m_View) {
+        if (snapshot->m_Context.m_MissionGeneration < m_View->m_Context.m_MissionGeneration)
+            return E_CampaignReason::WrongGeneration;
+        if (snapshot->m_Revision < m_View->m_Revision) return E_CampaignReason::StaleRevision;
+        if (snapshot->m_Revision == m_View->m_Revision && encoded == m_LastWire && m_Ready)
+            return E_CampaignReason::None;
+        // Phase can advance without catalog revision (Loading -> Running), but
+        // a same-revision different catalog must not overwrite committed state.
+        if (snapshot->m_Revision == m_View->m_Revision && encoded != m_LastWire) {
+            auto normalized = *snapshot;
+            normalized.m_Context.m_Phase = m_View->m_Context.m_Phase;
+            normalized.m_Context.m_LocalPlayer = m_View->m_Context.m_LocalPlayer;
+            normalized.m_Context.m_IsTransportServer = m_View->m_Context.m_IsTransportServer;
+            normalized.m_Context.m_IsTransportClient = m_View->m_Context.m_IsTransportClient;
+            CampaignProtocol::T_Bytes normalizedWire, oldWire;
+            if (CampaignProtocol::Encode(CampaignProtocol::T_Message(normalized), normalizedWire) != E_CampaignReason::None ||
+                CampaignProtocol::Encode(CampaignProtocol::T_Message(*m_View), oldWire) != E_CampaignReason::None ||
+                normalizedWire != oldWire) return E_CampaignReason::RequestConflict;
+            const auto from = m_View->m_Context.m_Phase;
+            const auto to = snapshot->m_Context.m_Phase;
+            if (to != from && !(from == E_CampaignPhase::Loading && to == E_CampaignPhase::Running) &&
+                !(from == E_CampaignPhase::Preparation && to == E_CampaignPhase::Frozen)) return E_CampaignReason::InvalidPhase;
+        }
+    }
+    m_Ready = false;
+    auto localView = *snapshot;
+    localView.m_Context.m_IsTransportServer = false;
+    localView.m_Context.m_IsTransportClient = true;
+    localView.m_Context.m_LocalPlayer = m_LocalPlayer;
+    // Native Resolve uses this new immutable catalog while installing handlers;
+    // caller must withhold input/world acknowledgment until this method succeeds.
+    m_View = std::make_shared<const S_CampaignOwnershipSnapshot>(std::move(localView));
+    m_LastWire = std::move(encoded);
+    const auto changed = [&](const S_CampaignOwnershipRecord &record) {
+        if (!m_Applied) return true;
+        for (const auto &old : m_Applied->m_Soldiers)
+            if (SameBinding(record, old) &&
+                C_CampaignControlAdapter::Plan(m_Applied->m_Context, old).m_Controller ==
+                C_CampaignControlAdapter::Plan(m_View->m_Context, record).m_Controller) return false;
+        return true;
+    };
+    if (m_Applied) for (const auto &record : m_Applied->m_Soldiers) if (record.m_Actor) {
+        bool retained = false;
+        for (const auto &next : m_View->m_Soldiers) if (SameBinding(record, next)) retained = true;
+        if (!retained && !m_Sink.Drain(*record.m_Actor)) return E_CampaignReason::PendingTransaction;
+    }
+    for (const auto &record : m_View->m_Soldiers)
+        if (record.m_Actor && changed(record) && !m_Sink.Drain(*record.m_Actor)) return E_CampaignReason::PendingTransaction;
+    std::optional<ActorRef> local;
+    for (const auto &record : m_View->m_Soldiers) if (record.m_Actor) {
+        const auto plan = C_CampaignControlAdapter::Plan(m_View->m_Context, record);
+        if (changed(record) && !m_Sink.Apply(plan)) return E_CampaignReason::PendingTransaction;
+        if (plan.m_LocalView) local = record.m_Actor;
+    }
+    if (!m_Sink.Present(local)) return E_CampaignReason::PendingTransaction;
+    m_Applied = m_View;
+    m_Ready = true;
+    return E_CampaignReason::None;
+}

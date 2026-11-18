@@ -19,6 +19,7 @@ SOURCES = ROOT / "_re" / "harness" / "campaign_control"
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--sanitize", action="store_true", help="GCC ASan/UBSan supplemental run")
     parser.add_argument("--compiler", choices=("gcc", "msvc"), required=True)
     parser.add_argument("--vcvars", default=os.environ.get("HD2_VCVARS32"))
     parser.add_argument("--output-root", type=Path, default=ROOT / "build" / "campaign_control")
@@ -71,14 +72,22 @@ def main():
                       "/Feownership.exe", "/link", "/MACHINE:X86", "/SUBSYSTEM:CONSOLE",
                       "/INCREMENTAL:NO"], use_vcvars=True)
         run("execute", [str(output / "ownership.exe")])
+        native_sources = [str(SOURCES / "native_tests.cpp"), *sources[1:], str(ROOT / "src/game/campaign_control_native.cpp")]
+        run("native", ["cl", *flags, "/I" + str(SOURCES / "stub"), *native_sources,
+                       "/Fenative.exe", "/link", "/MACHINE:X86", "/SUBSYSTEM:CONSOLE", "/INCREMENTAL:NO"], use_vcvars=True)
+        run("native-execute", [str(output / "native.exe")])
     else:
         compiler = shutil.which("g++")
         if not compiler:
             raise SystemExit("g++ is required for the supplementary native check")
         flags = ["-std=c++17", "-Wall", "-Wextra", "-Werror", "-pedantic"]
+        if args.sanitize: flags += ["-fsanitize=address,undefined", "-fno-omit-frame-pointer", "-g"]
         run("version", [compiler, "--version"])
         run("model", [compiler, *flags, *sources, "-o", "ownership"])
         run("execute", [str(output / "ownership")])
+        native_sources = [str(SOURCES / "native_tests.cpp"), *sources[1:], str(ROOT / "src/game/campaign_control_native.cpp")]
+        run("native", [compiler, *flags, "-I" + str(SOURCES / "stub"), *native_sources, "-o", "native"])
+        run("native-execute", [str(output / "native")])
     print("PASS: campaign controller/input composition suites")
     print("Commands and compiler diagnostics:", output)
 

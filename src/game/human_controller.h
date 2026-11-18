@@ -205,6 +205,7 @@ uint32_t EncodeControlBits(const float *axes, uint32_t moveFlags);   // 0x005ac5
 // completes, the inventory requests, speech, and the controls of the player and remote
 // controllers (ApplyMoveControls / ApplyWeaponControls).
 class alignas(16) C_HumanController {
+    friend class C_CampaignNativeControlSink;
 public:
     // Its own 16-byte aligned blocks (the original's new inlines _aligned_malloc; an exception in the
     // constructor frees with this delete).
@@ -462,6 +463,7 @@ protected:
 // and requests to the server, whose copy replays the state and carries the requests out (the
 // net object's messages and the controller messages).
 class C_PlayerController : public C_HumanController {
+    friend class C_CampaignNativeControlSink;
 public:
     // The view modes (GetViewMode).
     enum : int {
@@ -1697,6 +1699,7 @@ public:
 // remote_controller.cpp): it replays what the server sends (the replicated position, view and
 // control bits, the actions of its net object, the controller messages).
 class C_RemoteController : public C_HumanController {
+    friend class C_CampaignNativeControlSink;
 public:
     C_RemoteController() : C_HumanController(HUMAN_CONTROLLER_REMOTE) {}   // inline in C_Human::CreateController
     ~C_RemoteController() override = default;           // 0x005a4450 (0x005a4430)

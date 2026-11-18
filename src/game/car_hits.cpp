@@ -200,7 +200,7 @@ void C_Car::OnCollision(C_Actor *other, const S_vector *pos, int a3, int a4, int
 void C_Car::TakePush(int id, const S_vector4 &point)    // 0x004d3d10
 {
     C_Actor *driver = GetSeatOccupant(0);
-    if (!driver || (CampaignControlsActive() ? (driver->GetType() != ACTOR_HUMAN || !static_cast<C_Human *>(driver)->IsLocalPlayer()) : driver->GetNetId() != g_localPlayerSlot)) {
+    if (!driver || !IsCampaignOrLegacyLocalActor(driver->GetNetId(), g_localPlayerSlot)) {
         if (!(g_gameRole & GAME_ROLE_SERVER))
             return;
         if (driver) {

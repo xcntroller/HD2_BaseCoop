@@ -443,7 +443,7 @@ void C_Car::UpdateNetwork(int time)                     // 0x004d3380
 {
     m_netObject->SetLive(7);
     const bool server = (g_gameRole & GAME_ROLE_SERVER) != 0;
-    if ((m_driver && m_driver->IsLocalPlayer()) ||
+    if ((m_driver && IsCampaignOrLegacyLocalActor(m_driver->GetNetId(), g_localPlayerSlot)) ||
         (server && (!m_driver || m_driver->GetRole() != HUMAN_ROLE_PLAYER))) {
         // Driven here: the place, the rotation and the velocity to the others.
         m_netObject->SetSendMask(7);
@@ -471,7 +471,7 @@ void C_Car::UpdateNetwork(int time)                     // 0x004d3380
         if (!server)
             return;
     }
-    if (server && !(m_driver && !m_driver->IsLocalPlayer() && m_driver->GetRole() == HUMAN_ROLE_PLAYER))
+    if (server && !(m_driver && !IsCampaignOrLegacyLocalActor(m_driver->GetNetId(), g_localPlayerSlot) && m_driver->GetRole() == HUMAN_ROLE_PLAYER))
         return;
 
     // Driven elsewhere: the replicated place, rotation and velocity.

@@ -59,7 +59,7 @@ bool S_HumanBody::Create(C_Human *human, int bodyGroup)
     work->SetLook(0, nullptr);
     crippled = false;
     // Network games: only the humans this machine simulates (or controls) push others.
-    if (!IsLocalGame() && !owner->IsLocalPlayer() && !owner->IsServerSimulated())
+    if (!IsLocalGame() && !IsCampaignOrLegacyLocalActor(owner->GetNetId(), g_localPlayerSlot) && !owner->IsServerSimulated())
         movement->SetUnknown18C(false);
     return true;
 }

@@ -204,7 +204,7 @@ bool C_Car::ExitSeat(int seat)                          // 0x004d9be0
         return false;
     C_Human *human = static_cast<C_Human *>(occupant);
 #ifndef HD2_DEDICATED   // the server has only the server's side
-    if (IsNetClient() && human->IsLocalPlayer() && seat == 0)
+    if (IsNetClient() && IsCampaignOrLegacyLocalActor(human->GetNetId(), g_localPlayerSlot) && seat == 0)
         SendFuel();
 #endif
     m_vehicle.SetSeatLoad(seat, 0.0f);

@@ -506,6 +506,7 @@ void C_Human::ApplyRemoteHit(int type, int zone, int health, int killerId, const
 
 void C_Human::OnDeath()
 {
+    if (CampaignControlsActive() && IsServer()) NotifyCampaignDeath(m_netId);
     m_bleeding = 0.0f;
     m_deadTime = 0;
     m_controller->OnDeath();
@@ -751,7 +752,7 @@ bool C_Human::IsFriendOfInNetGame(const C_Human *other) const
 
 bool C_Human::IsFriendOf(const C_Actor *otherActor) const
 {
-    if (!IsLocalGame()) {
+    if (!IsLocalGame() && !CampaignControlsActive()) {
         // (Network games only meet humans here.)
         return IsFriendOfInNetGame(static_cast<const C_Human *>(otherActor));
     }

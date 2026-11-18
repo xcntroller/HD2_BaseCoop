@@ -17,6 +17,11 @@
 
 // --------------------------------------------------------------------------- controller
 
+void C_Human::CreateController(E_HumanController type)
+{
+    CreateController(type, false);
+}
+
 void C_Human::CreateController(E_HumanController type, bool force)
 {
     C_HumanController *previous = m_controller;
@@ -101,6 +106,10 @@ void C_Human::AssignPlayerController(bool active)
 
 void C_Human::SetScripted(bool on)
 {
+    if (CampaignControlsActive() && FindCampaignActorControl(m_netId)) {
+        if (IsServer()) HandleCampaignScripted(m_netId, on);
+        return;
+    }
     if (!m_controller)
         return;
     if (on) {
@@ -402,16 +411,19 @@ void C_Human::GetAIPathPoints(uint16_t *current, uint16_t *next)
 // Player controller members.
 void C_Human::HandlePlayerInput(float *held, float *pressed)
 {
+    if (CampaignControlsActive() && (!IsCampaignLocalActor(m_netId) || !m_controller || m_controller->GetType() != HUMAN_CONTROLLER_PLAYER)) return;
     static_cast<C_PlayerController *>(m_controller)->HandleInput(held, pressed);
 }
 
 void C_Human::PlayerRequestEquipment(int humanId)
 {
+    if (CampaignControlsActive() && (!IsCampaignLocalActor(m_netId) || !m_controller || m_controller->GetType() != HUMAN_CONTROLLER_PLAYER)) return;
     static_cast<C_PlayerController *>(m_controller)->RequestEquipment(humanId);
 }
 
 void C_Human::PlayerSendActionCommand(const S_ActionCommand &command)
 {
+    if (CampaignControlsActive() && (!IsCampaignLocalActor(m_netId) || !m_controller || m_controller->GetType() != HUMAN_CONTROLLER_PLAYER)) return;
     static_cast<C_PlayerController *>(m_controller)->SendActionCommand(command);
 }
 
@@ -423,6 +435,7 @@ void C_Human::PlayerSetViewMode(int arg)
 
 void C_Human::PlayerRequestDamage(int type, int damage, int attackerId, int zone)
 {
+    if (CampaignControlsActive() && (!IsCampaignLocalActor(m_netId) || !m_controller || m_controller->GetType() != HUMAN_CONTROLLER_PLAYER)) return;
     if (!IsLocalGame() && m_role == HUMAN_ROLE_PLAYER)
         static_cast<C_PlayerController *>(m_controller)->RequestDamage(type, damage, attackerId, zone);
 }

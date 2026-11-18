@@ -66,9 +66,13 @@ bool HasAim(int action)
 void StampActivity(const C_Human *human)
 {
     S_NetPlayerState *players = g_netGame.LockPlayers();
-    const auto slot = CampaignControlsActive() ? FindCampaignPlayerSlot(human->GetNetId()) : std::optional<int>(human->GetNetId());
-    if (slot && *slot >= 0 && *slot < g_netGame.GetPlayerCount())
-        players[*slot].activityTime = timeGetTime();
+    if (CampaignControlsActive()) {
+        const auto slot = FindCampaignPlayerSlot(human->GetNetId());
+        if (slot && *slot >= 0 && *slot < g_netGame.GetPlayerCount())
+            players[*slot].activityTime = timeGetTime();
+    } else {
+        players[human->GetNetId()].activityTime = timeGetTime();
+    }
     g_netGame.UnlockPlayers();
 }
 
@@ -186,7 +190,7 @@ void __fastcall NetReadControlBits(void *controller, C_BitStream *stream)
 
 void __fastcall NetWriteControlBits(void *controller, C_BitStream *stream)
 {
-    stream->WriteBits(static_cast<C_HumanController *>(controller)->GetControlBits(), NET_CONTROL_BITS);
+    stream->WriteBits(controller && !CampaignControlsActive() ? static_cast<C_HumanController *>(controller)->GetControlBits() : 0, NET_CONTROL_BITS);
 }
 
 // ------------------------------------------------------------------------- the replication
@@ -195,7 +199,7 @@ void C_PlayerController::UpdateRemote(int frameTime)
 {
     // The server's copy of a client's human.
     FlushMessages(true);
-    if (IsLocalGame() || m_human->IsLocalPlayer())
+    if (IsLocalGame() || IsCampaignOrLegacyLocalActor(m_human->GetNetId(), g_localPlayerSlot))
         return;
     m_axes = m_controlAxes;
     m_buttons = m_controlButtons;
@@ -235,7 +239,7 @@ void C_PlayerController::UpdateRemote(int frameTime)
 void C_PlayerController::TickLocal(int timeDelta)
 {
     // The human of this machine's player (or of single player).
-    if (!IsLocalGame() && !m_human->IsLocalPlayer()) {
+    if (!IsLocalGame() && !IsCampaignOrLegacyLocalActor(m_human->GetNetId(), g_localPlayerSlot)) {
         FlushMessages(false);
         return;
     }
@@ -832,7 +836,7 @@ void C_PlayerController::OnMessage2(C_BitStream *stream)
             S_MsgControls *message = new S_MsgControls;
             message->Read(msg);
             // (The original also asks 0x005ac540, which always says yes.)
-            if (!m_human->IsLocalPlayer()) {
+            if (!IsCampaignOrLegacyLocalActor(m_human->GetNetId(), g_localPlayerSlot)) {
                 for (int i = 0; i < CONTROL_COUNT; i++)
                     m_controlAxes[i] = message->axes[i];
                 for (int i = 0; i < CONTROL_COUNT; i++)

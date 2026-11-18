@@ -9,6 +9,8 @@ class C_CampaignControlAdapter;
 void InstallCampaignControlRuntime(const I_CampaignOwnershipView *view, C_CampaignControlAdapter *adapter);
 std::optional<PlayerId> FindCampaignTransportPlayer(int slot);
 E_CampaignReason HandleCampaignDisconnect(PlayerId exactIncarnation);
+E_CampaignReason HandleCampaignScripted(int actorId, bool scripted);
+void NotifyCampaignDeath(int actorId);
 void InstallCampaignControlView(const I_CampaignOwnershipView *view);
 bool CampaignControlsActive();
 bool CampaignInputAuthorized(int actorId);
@@ -16,6 +18,9 @@ void DispatchCampaignInput(const S_CampaignControlToken &token, const std::funct
 T_CampaignOwnershipSnapshot GetCampaignControlSnapshot();
 std::optional<S_CampaignOwnershipRecord> FindCampaignActorControl(int actorId);
 bool IsCampaignLocalActor(int actorId);
+inline bool IsCampaignOrLegacyLocalActor(int actorId, int legacyLocalSlot) {
+    return CampaignControlsActive() ? IsCampaignLocalActor(actorId) : actorId == legacyLocalSlot;
+}
 // Authenticated transport adapter supplies these; actor IDs are never slots.
 bool BindCampaignTransportPlayer(int slot, PlayerId incarnation);
 void ForgetCampaignTransportPlayer(PlayerId incarnation);

@@ -396,6 +396,7 @@ void C_RemoteController::OnMessage(C_BitStream *stream)
         case CTRL_MSG_SOLDIER_CLASS: {
             S_MsgSoldierClass message;
             message.Read(msg);
+            if (CampaignControlsActive()) break;
             // The skills at the class the net game knows (unlike the player controller, before
             // this message sets it), then the new class.
             int skills[STAT_COUNT] = {HUMAN_FULL_HEALTH, 80, 80, 80, 80, 80, 50, 30, 20, 50, 0, 80};
