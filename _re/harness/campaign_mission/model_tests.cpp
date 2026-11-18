@@ -229,6 +229,14 @@ void TestGuestNativeGate() {
     InstallCampaignMissionReconstruction(nullptr);InstallCampaignMissionView(nullptr);
 }
 
+void TestHostNativeGate() {
+    Fixture f;CHECK(f.adapter.Begin(f.frozen)==R::None);f.BindAll();
+    // A phase publication alone cannot impersonate lifecycle Start/barrier success.
+    CHECK(f.ownership.StartSimulation()==R::None);
+    SetCampaignMissionAdapter(&f.adapter);CHECK(IsCampaignSimulationAuthority());CHECK(!CanCampaignSimulate());
+    CHECK(!f.adapter.CanSimulate());SetCampaignMissionAdapter(nullptr);
+}
+
 void TestMergedControllerComposition() {
     struct Sink:I_CampaignControlSink {
         int drains=0,executions=0;
@@ -273,7 +281,7 @@ void TestMergedControllerComposition() {
 
 }
 int main() {
-    try { TestDormancy(); TestFrozenRejection(); TestBarrier(); TestAckFences(); TestInvalidation(); TestNewGeneration(); TestStartupScripts(); TestReconstruction(); TestGuestNativeGate(); TestMergedControllerComposition(); }
+    try { TestDormancy(); TestFrozenRejection(); TestBarrier(); TestAckFences(); TestInvalidation(); TestNewGeneration(); TestStartupScripts(); TestReconstruction(); TestGuestNativeGate(); TestHostNativeGate(); TestMergedControllerComposition(); }
     catch(const std::exception &e) { std::cerr<<"FAIL after "<<g_Checks<<": "<<e.what()<<'\n'; return 1; }
-    std::cout<<"PASS: 10 lifecycle suites / "<<g_Checks<<" checks\n";
+    std::cout<<"PASS: 11 lifecycle suites / "<<g_Checks<<" checks\n";
 }

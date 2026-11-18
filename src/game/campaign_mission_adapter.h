@@ -44,6 +44,7 @@ private:
     T_CampaignOwnershipSnapshot m_LoadingState;
     E_CampaignReason RefreshStartupScripts();
     E_CampaignReason m_Failure = E_CampaignReason::None;
+    bool m_Started = false;
 };
 
 // Guest/host-local reconstruction seam AFTER negotiated, integrity-checked world

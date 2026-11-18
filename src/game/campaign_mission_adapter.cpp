@@ -82,7 +82,7 @@ E_CampaignReason C_CampaignMissionAdapter::Begin(const S_CampaignMissionManifest
         return R::StaleRevision;
     const auto reason = m_Ownership.BeginMissionGeneration(c.m_Mission);
     if (reason != R::None) return reason;
-    m_LastSnapshot = *next; m_Manifest.reset(); m_Acknowledged.clear(); m_Failure = R::None;
+    m_LastSnapshot = *next; m_Manifest.reset(); m_Acknowledged.clear(); m_Failure = R::None; m_Started = false;
     m_Loading = frozen; m_Loading->m_Snapshot = *next;
     m_Loading->m_Context = GetContext();
     m_LoadingState = m_Ownership.GetSnapshot();
@@ -173,17 +173,27 @@ E_CampaignReason C_CampaignMissionAdapter::Start(S_CampaignStartSimulation &star
     auto reason = CheckBaseline(); if (reason != R::None) return reason;
     for (auto p : m_Manifest->m_RequiredParticipants) if (!m_Acknowledged.count(p)) return R::SnapshotUnavailable;
     reason = m_Ownership.StartSimulation(); if (reason != R::None) return reason;
+    m_Started = true;
     start = {m_Manifest->m_Context.m_Session, m_Manifest->m_Context.m_MissionGeneration, m_Manifest->m_Snapshot};
     return R::None;
 }
-E_CampaignReason C_CampaignMissionAdapter::End() { return m_Ownership.EndMission(); }
+E_CampaignReason C_CampaignMissionAdapter::End() {
+    m_Started = false;
+    if (GetContext().m_Phase == P::Ending) return R::None;
+    const auto reason = m_Ownership.EndMission();
+    if (reason != R::None) m_Failure = reason;
+    return reason;
+}
 void C_CampaignMissionAdapter::Abort(E_CampaignReason reason) {
     m_Failure = reason == R::None ? R::SnapshotUnavailable : reason;
-    m_Acknowledged.clear();
+    m_Acknowledged.clear(); m_Started = false;
     if (GetContext().m_Phase == P::Running) m_Ownership.EndMission();
 }
 bool C_CampaignMissionAdapter::CanSimulate() const {
-    return m_Failure == R::None && GetContext().m_Phase == P::Running;
+    const auto context = GetContext();
+    return m_Started && m_Manifest && m_Failure == R::None && context.m_Phase == P::Running &&
+        context.m_Session == m_Manifest->m_Context.m_Session &&
+        context.m_MissionGeneration == m_Manifest->m_Context.m_MissionGeneration;
 }
 C_CampaignMissionReconstruction::C_CampaignMissionReconstruction(SessionId session, PlayerId player,
     const I_CampaignOwnershipView &view) : m_Session(session), m_Player(player), m_View(view) {}
