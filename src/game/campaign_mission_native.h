@@ -30,6 +30,9 @@ struct S_CampaignMissionResult {
     SessionId m_Session;
     MissionGeneration m_Generation;
     MissionKey m_Mission;
+    SnapshotId m_Snapshot;
+    std::uint32_t m_MissionTime = 0;
+    std::array<int, 256> m_ScriptValues{};
     bool m_Success = false;
     std::vector<std::uint8_t> m_Objectives;
     std::vector<std::pair<SoldierId, S_SquadSoldier>> m_Soldiers;

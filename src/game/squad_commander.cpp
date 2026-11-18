@@ -1,3 +1,4 @@
+#include "game/campaign_mission_adapter.h"
 // The squad's commands (C_SquadCommander, the object 0x0089ad40): the HUD's commands to the
 // player's soldiers, the commands on actors, the manoeuvres, the groups and the idle reports.
 #include "game/squad_commander.h"
@@ -527,6 +528,9 @@ void C_SquadCommander::ApplyOrder(C_Human *member, const S_ActionCommand &comman
 
 void C_SquadCommander::ExecuteActionCommand(const S_ActionCommand &command)   // 0x00456020
 {
+    if (IsCampaignMission() && (!IsCampaignSimulationAuthority() || !CanCampaignSimulate() ||
+        (command.member && !IsSquadControlled(command.member))))
+        return;
     C_Human *selected = SelectedMember();
     const int action = command.action;
     switch (action) {

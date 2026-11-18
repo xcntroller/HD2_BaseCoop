@@ -52,7 +52,7 @@ struct S_PreparationDelta {
     ViewRevision m_Base;
     S_CampaignPreparationSnapshot m_Replacement;
 };
-enum class E_InputKind { ControlBits, ActorAction, VehicleAction };
+enum class E_InputKind { ControlBits, ActorAction, VehicleAction, DoorAction };
 struct S_Input {
     S_CampaignControlToken m_Control;
     std::uint64_t m_Sequence = 0; // strictly increasing per control token and connection
@@ -104,7 +104,7 @@ enum class E_MissionOutcome : std::uint8_t { Running, Success, Failure };
 
 enum class E_MissionPresentation : std::uint8_t {
     FrameOn, Speech, SubtitlesOn, Subtitle, ClearHints, Hint,
-    Animation, StopAnimation, Track, Sound, CutsceneMusic, WeatherOn, WeatherMode, Clouds
+    Animation, StopAnimation, Sound, CutsceneMusic, WeatherOn, WeatherMode, Clouds, Door, Clone, Attach, ReleaseClone
 };
 
 // Commands already evaluated by the host VM. A guest executes only the
@@ -113,8 +113,12 @@ struct S_MissionPresentation {
     E_MissionPresentation m_Action = E_MissionPresentation::FrameOn;
     std::string m_Frame;
     std::string m_Resource;
-    std::string m_Parent;
     std::array<std::int32_t, 3> m_Args{};
+};
+
+struct S_PresentationFramePose {
+    std::string m_Frame;
+    std::array<float, 3> m_Position{}, m_Direction{}, m_Up{};
 };
 
 struct S_AmbientHumanState {
@@ -137,6 +141,7 @@ struct S_MissionUpdate {
     std::vector<std::uint8_t> m_Objectives;
     std::vector<S_MissionPresentation> m_Presentation;
     std::vector<S_AmbientHumanState> m_Ambient;
+    std::vector<S_PresentationFramePose> m_FramePoses;
 };
 enum class E_WeaponEvent : std::uint8_t { Fire, Reload };
 struct S_WeaponEvent {
@@ -159,6 +164,14 @@ struct S_ItemMove {
 };
 E_CampaignReason EncodeItemMove(const S_ItemMove &move, T_Bytes &out);
 E_CampaignReason DecodeItemMove(const T_Bytes &bytes, S_ItemMove &out);
+enum class E_DoorAction : std::uint8_t { Open, Close, Lock, Unlock, PickLock };
+struct S_DoorAction {
+    std::uint32_t m_Door = 0;
+    E_DoorAction m_Action = E_DoorAction::Open;
+};
+E_CampaignReason EncodeDoorAction(const S_DoorAction &action, T_Bytes &out);
+E_CampaignReason DecodeDoorAction(const T_Bytes &bytes, S_DoorAction &out);
+
 struct S_InventoryEvent {
     ActorRef m_Actor;
     SnapshotId m_Snapshot;

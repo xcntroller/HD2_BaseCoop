@@ -1,5 +1,8 @@
 // C_Door: see door.h.
 #include "game/door.h"
+#include "game/campaign_dev.h"
+#include "game/campaign_mission_adapter.h"
+#include "net/campaign_protocol.h"
 
 #include <cctype>
 #include <cmath>
@@ -286,6 +289,14 @@ int C_Door::GetSide(const S_vector4 &pos) const         // 0x00602320
 
 void C_Door::SendMessage(uint32_t kind)                 // 0x00601f40
 {
+    if (IsCampaignMission()) {
+        if (IsCampaignSimulationAuthority()) {
+            PresentDoorEvent(kind);
+            QueueDevelopmentCampaignPresentation({CampaignProtocol::E_MissionPresentation::Door,
+                {}, {}, {m_netId, static_cast<int>(kind)}});
+        }
+        return;
+    }
     C_BitStream *msg = CreateActorMessage(m_netId, true);
     msg->WriteBits(kind, MSG_BITS);
     SendActorMessage(msg);
@@ -319,7 +330,12 @@ void C_Door::StartMovingSound()
 
 void C_Door::OnMessage(C_BitStream *msg)                // 0x00601f90
 {
-    switch (msg->ReadBits(MSG_BITS)) {
+    PresentDoorEvent(msg->ReadBits(MSG_BITS));
+}
+
+void C_Door::PresentDoorEvent(uint32_t kind)
+{
+    switch (kind) {
     case MSG_OPEN:
         PlaySound(m_sounds[SOUND_OPEN]);
         StartMovingSound();

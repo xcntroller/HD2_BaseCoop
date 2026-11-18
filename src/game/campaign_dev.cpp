@@ -21,6 +21,7 @@
 #include "game/campaign_ownership.h"
 #include "game/console.h"
 #include "game/controls.h"
+#include "game/door.h"
 #include "game/game.h"
 #include "game/game_app.h"
 #include "game/human.h"
@@ -306,6 +307,7 @@ bool g_liveSendFailed = false;
 OwnershipRevision g_publishedOwnership;
 std::vector<std::uint8_t> g_publishedObjectives;
 std::vector<Wire::S_MissionPresentation> g_presentation;
+std::vector<std::string> g_trackedFrames;
 
 struct S_DevelopmentMotion {
     std::optional<S_vector> m_Origin;
@@ -350,9 +352,16 @@ bool g_loggedInput = false;
 std::uint16_t g_lastGuestMovement = 0;
 
 bool ApplyInventoryMove(const S_CampaignControlToken &token, Wire::S_ItemMove move);
+bool ApplyDoorAction(const S_CampaignControlToken &token, const Wire::S_DoorAction &action);
 
 void StoreDevelopmentControls(const Wire::S_Input &input)
 {
+    if (input.m_Kind == Wire::E_InputKind::DoorAction) {
+        Wire::S_DoorAction action;
+        if (Wire::DecodeDoorAction(input.m_Payload, action) == R::None)
+            ApplyDoorAction(input.m_Control, action);
+        return;
+    }
     if (input.m_Kind == Wire::E_InputKind::ActorAction) {
         Wire::S_ItemMove move;
         if (Wire::DecodeItemMove(input.m_Payload, move) == R::None)
@@ -464,6 +473,16 @@ R ApplyMissionUpdate(S_GuestSession &guest, const Wire::S_MissionUpdate &update)
     ObserveSquadMotion(update, "guest applied host squad movement cm");
     for (const auto &event : update.m_Presentation)
         g_scriptModule.ApplyCampaignPresentation(event);
+    for (const auto &pose : update.m_FramePoses) {
+        auto *frame = game->GetScene()->FindFrame(pose.m_Frame.c_str(), FRAME_MASK_ALL);
+        if (frame && !GetFrameActor(frame)) {
+            const auto vec = [](const auto &v) { return S_vector(v[0], v[1], v[2]); };
+            frame->SetWorldPosDir3(vec(pose.m_Position), vec(pose.m_Direction), vec(pose.m_Up));
+            frame->Update();
+        }
+    }
+    if (guest.m_CutsceneCamera && !update.m_CutsceneCamera)
+        g_scriptModule.ClearCampaignCutsceneCopies();
 
     for (std::size_t index = 0; index < update.m_Objectives.size(); ++index) {
         auto *objective = mission->GetObjective(static_cast<int>(index));
@@ -477,8 +496,10 @@ R ApplyMissionUpdate(S_GuestSession &guest, const Wire::S_MissionUpdate &update)
                                "guest ended host cutscene view", update.m_MissionTime);
     guest.m_CutsceneCamera = update.m_CutsceneCamera;
     game->SetPlayerInputEnabled(update.m_PlayerInputEnabled);
-    if (!guest.m_LastUpdate)
+    if (!guest.m_LastUpdate) {
         LogDevelopmentCampaign("guest applied first live mission state", update.m_MissionTime, update.m_Squad.size());
+        LogDevelopmentCampaign("guest applied ambient humans", update.m_Ambient.size());
+    }
     guest.m_LastUpdate = update.m_Sequence;
     guest.m_HostMissionTime = update.m_MissionTime;
     if (update.m_Outcome != Wire::E_MissionOutcome::Running) {
@@ -732,9 +753,11 @@ void ReceiveHostWorld(PlayerId player, Wire::T_Message message)
             return;
         Wire::S_PlayerControls controls;
         Wire::S_ItemMove move;
-        const bool valid = input->m_Kind == Wire::E_InputKind::ControlBits
-            ? Wire::DecodePlayerControls(input->m_Payload, controls) == R::None
-            : input->m_Kind == Wire::E_InputKind::ActorAction && Wire::DecodeItemMove(input->m_Payload, move) == R::None;
+        Wire::S_DoorAction door;
+        const bool valid =
+            (input->m_Kind == Wire::E_InputKind::ControlBits && Wire::DecodePlayerControls(input->m_Payload, controls) == R::None) ||
+            (input->m_Kind == Wire::E_InputKind::ActorAction && Wire::DecodeItemMove(input->m_Payload, move) == R::None) ||
+            (input->m_Kind == Wire::E_InputKind::DoorAction && Wire::DecodeDoorAction(input->m_Payload, door) == R::None);
         if (!valid)
             return;
         const auto result = g_control->Enqueue(player, *input);
@@ -798,6 +821,59 @@ bool ApplyInventoryMove(const S_CampaignControlToken &token, Wire::S_ItemMove mo
     return !g_liveSendFailed;
 }
 
+constexpr std::array<int, 5> kNativeDoorCommands{
+    HUMAN_COMMAND_OPEN_DOOR, HUMAN_COMMAND_CLOSE_DOOR, HUMAN_COMMAND_LOCK_DOOR,
+    HUMAN_COMMAND_UNLOCK_DOOR, HUMAN_COMMAND_PICK_LOCK
+};
+
+bool ApplyDoorAction(const S_CampaignControlToken &token, const Wire::S_DoorAction &action)
+{
+    auto *game = GetGame();
+    if (!game || !game->IsPlayerInputEnabled() || !CanCampaignSimulate())
+        return false;
+    const auto record = FindCampaignActorControl(static_cast<int>(token.m_Actor.m_Actor.Value()));
+    auto *human = record ? ResolveCampaignHuman(*record) : nullptr;
+    auto *target = g_actorsModule.GetActorById(static_cast<int>(action.m_Door));
+    if (!human || !human->IsAlive() || human->IsUnconscious() || human->GetVehicle() || human->HasOrder() ||
+        !human->GetBodyFrame() || !human->GetController() || !target || target->GetType() != ACTOR_DOOR ||
+        !target->IsActive() || !target->GetFrame()->IsOn())
+        return false;
+    auto &door = *static_cast<C_Door *>(target);
+    // The roll menu verifies the picked surface. On the authority, check the
+    // same reach against the nearest point in the door's local bound.
+    const auto &box = door.GetFrame()->GetBound().bbox;
+    const auto position = human->GetBodyFrame()->GetWorldPos();
+    const auto &matrix = door.GetFrame()->GetMatrix();
+    S_matrix inverse;
+    if (!inverse.Inverse(matrix))
+        return false;
+    const S_vector local = position * inverse;
+    const S_vector nearest(std::clamp(local.x, box.min.x, box.max.x),
+                           std::clamp(local.y, box.min.y, box.max.y),
+                           std::clamp(local.z, box.min.z, box.max.z));
+    const float reach = door.GetUnknown118() ? 0.65f : 1.8f;
+    if ((nearest * matrix - position).Square() > reach * reach)
+        return false;
+
+    const int native = kNativeDoorCommands[static_cast<std::size_t>(action.m_Action)];
+    if ((native == HUMAN_COMMAND_OPEN_DOOR && (door.IsLocked() || door.GetMotion() != DOOR_CLOSED)) ||
+        (native == HUMAN_COMMAND_CLOSE_DOOR && (door.IsLocked() || door.GetMotion() != DOOR_OPEN)) ||
+        (native == HUMAN_COMMAND_LOCK_DOOR && (door.IsLocked() || door.GetMotion() != DOOR_CLOSED ||
+            !human->FindItem(door.GetLockKey()))) ||
+        (native == HUMAN_COMMAND_UNLOCK_DOOR && (!door.IsLocked() || !human->FindItem(door.GetLockKey()))) ||
+        (native == HUMAN_COMMAND_PICK_LOCK && (!door.IsLocked() || !door.CanPickLock())))
+        return false;
+
+    S_HumanCommand command;
+    command.category = HUMAN_COMMAND_VEHICLE;
+    command.type = native;
+    command.param1 = static_cast<int>(action.m_Door);
+    if (!human->GetController()->ExecuteCommand(command))
+        return false;
+    LogDevelopmentCampaign("host accepted door action", action.m_Door, static_cast<unsigned>(action.m_Action));
+    return true;
+}
+
 bool PublishMissionUpdate(Clock::time_point now, const S_CampaignOwnershipSnapshot &state,
                           const S_CampaignMissionResult *terminal = nullptr)
 {
@@ -848,18 +924,38 @@ bool PublishMissionUpdate(Clock::time_point now, const S_CampaignOwnershipSnapsh
         for (int index = 0; index < mission->GetObjectiveCount(); ++index)
             update.m_Objectives.push_back(static_cast<std::uint8_t>(mission->GetObjective(index)->status));
     }
+    for (const auto &name : g_trackedFrames) {
+        const auto *frame = game->GetScene()->FindFrame(name.c_str(), FRAME_MASK_ALL);
+        if (!frame)
+            continue;
+        const auto &matrix = frame->GetMatrix();
+        const auto direction = matrix(2).Normalized();
+        const auto up = (matrix(1) - direction * matrix(1).Dot(direction)).Normalized();
+        update.m_FramePoses.push_back({name, VectorFields(matrix(3)), VectorFields(direction), VectorFields(up)});
+    }
     update.m_Presentation.swap(g_presentation);
     g_nextMissionUpdate = now + std::chrono::milliseconds(66);
-    if (!SendCampaignMessage(g_netGame, g_transferPlayer, update))
+    if (!SendCampaignMessage(g_netGame, g_transferPlayer, update)) {
+        Wire::T_Bytes bytes;
+        const auto reason = Wire::Encode(update, bytes);
+        LogDevelopmentCampaign("host mission update send or encoding failed", update.m_Sequence,
+                               static_cast<std::uint64_t>(reason));
+        if (reason != R::None) {
+            for (const auto &event : update.m_Presentation)
+                LogDevelopmentCampaign(event.m_Frame.c_str(), static_cast<unsigned>(event.m_Action), event.m_Args[0]);
+        }
         return false;
+    }
     ObserveSquadMotion(update, "host measured authoritative squad movement cm");
     for (std::size_t index = 0; index < update.m_Objectives.size(); ++index) {
         if (index >= g_publishedObjectives.size() || g_publishedObjectives[index] != update.m_Objectives[index])
             LogDevelopmentCampaign("host published objective state", index + 1, update.m_Objectives[index]);
     }
     g_publishedObjectives = update.m_Objectives;
-    if (update.m_Sequence == 1)
+    if (update.m_Sequence == 1) {
         LogDevelopmentCampaign("host published first live mission state", update.m_MissionTime, update.m_Squad.size());
+        LogDevelopmentCampaign("host published ambient humans", update.m_Ambient.size());
+    }
     return true;
 }
 
@@ -1135,6 +1231,7 @@ void ReleaseDevelopmentCampaign()
     g_publishedOwnership = {};
     g_publishedObjectives.clear();
     g_presentation.clear();
+    g_trackedFrames.clear();
     g_squadMotion = {};
     g_receivedControls.reset();
     g_loggedInput = false;
@@ -1158,6 +1255,17 @@ void QueueDevelopmentCampaignPresentation(Wire::S_MissionPresentation event)
         return;
     }
     g_presentation.push_back(std::move(event));
+}
+
+void TrackDevelopmentCampaignFrame(const I3D_frame &frame)
+{
+    if (!g_transferPlayer.Value() || !IsCampaignSimulationAuthority() || !CanCampaignSimulate() ||
+        frame.GetType() == FRAME_CAMERA || GetFrameActor(&frame))
+        return;
+    const char *name = frame.GetName();
+    if (*name && g_trackedFrames.size() < 64 &&
+        std::find(g_trackedFrames.begin(), g_trackedFrames.end(), name) == g_trackedFrames.end())
+        g_trackedFrames.emplace_back(name);
 }
 
 bool IsDevelopmentCampaignCutscene()
@@ -1314,4 +1422,35 @@ bool RequestDevelopmentCampaignInventoryMove(int actor, int itemUid, int fromAct
     input.m_Sequence = ++guest.m_InputSequence;
     input.m_Kind = Wire::E_InputKind::ActorAction;
     return Wire::EncodeItemMove(move, input.m_Payload) == R::None && SendCampaignMessage(g_netGame, guest.m_Agreement.m_Player, input);
+}
+
+bool RequestDevelopmentCampaignDoorAction(int actor, const S_HumanCommand &command)
+{
+    const auto requested = std::find(kNativeDoorCommands.begin(), kNativeDoorCommands.end(), command.type);
+    if (requested == kNativeDoorCommands.end() || command.param1 < 0 ||
+        !CanCampaignSimulate() || !IsCampaignLocalActor(actor))
+        return false;
+
+    const Wire::S_DoorAction action{static_cast<std::uint32_t>(command.param1),
+        static_cast<Wire::E_DoorAction>(requested - kNativeDoorCommands.begin())};
+    if (g_ownership) {
+        const auto token = g_ownership->GetControlToken(kHostPlayer);
+        if (!token || token->m_Actor.m_Actor.Value() != static_cast<std::uint32_t>(actor) || !g_control->IsSynchronized())
+            return false;
+        bool accepted = false;
+        DispatchCampaignInput(*token, [&] { accepted = ApplyDoorAction(*token, action); });
+        return accepted;
+    }
+    const auto state = GetCampaignControlSnapshot();
+    const auto record = FindCampaignActorControl(actor);
+    if (!state || !record || !record->m_Actor || !g_guest || g_guest->m_Aborted || !g_guest->m_LastUpdate)
+        return false;
+    auto &guest = *g_guest;
+    Wire::S_Input input;
+    input.m_Control = {state->m_Context.m_Session, state->m_Context.m_MissionGeneration, guest.m_Agreement.m_Player,
+                       record->m_Soldier, *record->m_Actor, record->m_ControlRevision};
+    input.m_Sequence = ++guest.m_InputSequence;
+    input.m_Kind = Wire::E_InputKind::DoorAction;
+    return Wire::EncodeDoorAction(action, input.m_Payload) == R::None &&
+        SendCampaignMessage(g_netGame, guest.m_Agreement.m_Player, input);
 }

@@ -215,7 +215,12 @@ camera, up to 64 uniquely bound squad actors and the original ordered objective
 statuses. This layout requires feature bit 6. The original live update used bit 3,
 which is reserved. Terminal updates disable input, omit the cutscene camera and
 report final objective statuses. Critical objective failure cannot encode as
-success. Positions, direction axes,
+success. Each update can also include static ambient human poses, transforms
+for scripted scene frames and up to 64 ordered presentation commands. These
+commands describe events already evaluated by the host, including scene
+visibility, cutscene copies, sound, subtitle, weather and door events. The
+guest resolves them in the verified mission scene and presents them without
+evaluating mission scripts. Positions, direction axes,
 velocity and the camera FOV are finite IEEE binary32 values. The receiver checks
 the negotiated feature and host direction before handing the typed state to the
 mission adapter. The mission adapter must check its installed baseline and
@@ -233,6 +238,12 @@ choose a container using original mission inventory rules. The InventoryEvent
 returns the resolved destination and slot with the exact actor, initial snapshot,
 ownership revision and sequence. Containers and item UIDs are resolved on the
 assigned soldier.
+
+The DoorAction payload uses version byte 1, a u32 static door actor ID and an
+action enumeration (open, close, lock, unlock, pick). The host resolves the
+exact ownership token and checks the door's reach, lock and motion before
+starting the corresponding native command. Realized effects go out with the
+next host mission update.
 
 The development ControlBits payload uses version byte 1, two little-endian
 u16 held and pressed masks, and the unit view direction as three IEEE binary32

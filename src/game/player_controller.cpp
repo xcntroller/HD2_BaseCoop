@@ -800,7 +800,7 @@ bool C_PlayerController::OnSquadCommand(const S_MsgAction &message)
         return DesignateTarget(id, XYZ(message.pos), XYZ(command.dir));
     int gesture = GESTURE_NONE;
     int sentence = SENTENCE_NONE;
-    if (!IsLocalGame()) {
+    if (!IsLocalGame() && !CampaignControlsActive()) {
         // The server: the soldier's gesture and sentence for the others.
         if (id != SQUAD_COMMAND_ON_ACTOR && id != SQUAD_COMMAND_ON_ACTOR_QUIET && GetCommandSpeech(id, &gesture, &sentence)) {
             if (gesture != GESTURE_NONE)

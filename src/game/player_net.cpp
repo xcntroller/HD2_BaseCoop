@@ -1,5 +1,6 @@
 #include "game/campaign_control_runtime.h"
 #include "game/campaign_dev.h"
+#include "game/campaign_mission_adapter.h"
 #include "net/campaign_protocol.h"
 
 #include <algorithm>
@@ -535,6 +536,10 @@ void C_PlayerController::RequestAction(int action, const S_vector4 *pos, const S
 
 void C_PlayerController::IssueCommand(const S_HumanCommand &command)
 {
+    if (CampaignControlsActive()) {
+        RequestDevelopmentCampaignDoorAction(m_human->GetNetId(), command);
+        return;
+    }
     // The server carries it out (OnMessage2).
     S_MsgCommand *message = new S_MsgCommand;
     message->command = command.type;
@@ -545,16 +550,21 @@ void C_PlayerController::IssueCommand(const S_HumanCommand &command)
 
 void C_PlayerController::SendActionCommand(const S_ActionCommand &command)
 {
-    S_MsgAction *message = new S_MsgAction;
-    message->pos = WorldPos4Of(m_human->GetBodyFrame());
-    message->command.category = command.category;
-    message->command.dir = command.dir;
-    message->command.action = command.action;
-    message->command.command = command.command;
-    message->command.actor = command.actor;
-    message->command.value = command.value;
-    message->command.member = command.member;
-    SendToServer(message);
+    S_MsgAction message;
+    message.pos = WorldPos4Of(m_human->GetBodyFrame());
+    message.command.category = command.category;
+    message.command.dir = command.dir;
+    message.command.action = command.action;
+    message.command.command = command.command;
+    message.command.actor = command.actor;
+    message.command.value = command.value;
+    message.command.member = command.member;
+    if (CampaignControlsActive()) {
+        if (IsCampaignSimulationAuthority() && CanCampaignSimulate() && IsCampaignLocalActor(m_human->GetNetId()))
+            OnSquadCommand(message);
+        return;
+    }
+    SendToServer(new S_MsgAction(message));
 }
 
 void C_PlayerController::OnUniformChanged(int uid)

@@ -146,6 +146,9 @@ public:
     void SetPauseSoundsPaused(bool paused);                        // 0x00428f00
     void BroadcastGlobalAlarm();                                   // 0x00428b00
 
+    I3D_frame *DuplicateCutsceneHuman(I3D_frame *source, const char *name);
+    void AttachScriptFrame(I3D_frame *moving, I3D_frame *target, bool link);
+    void ClearCampaignCutsceneCopies();
     void ApplyCampaignPresentation(const CampaignProtocol::S_MissionPresentation &event);
     bool IsCutsceneRunning() const { return m_cutsceneRunning; }   // 0x0041d5d0 (DS 0x0043dfd0)
     // The cutscene running (RunCutscene's; -1: the scripts' own camera).

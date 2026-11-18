@@ -1,5 +1,6 @@
 // C_ScriptModule's saved games, its state for a joining client and its network messages (part 11a; the rest of the module is
 // script_module.cpp). See script_module.h.
+#include <algorithm>
 #include <cstdio>
 #include <cstring>
 #include <new>
@@ -8,6 +9,8 @@
 #include "common/chunk.h"
 #include "game/actor.h"
 #include "game/animation_actor.h"
+#include "game/actors_module.h"
+#include "game/door.h"
 #include "game/game.h"
 #include "game/geffects.h"
 #include "game/human.h"
@@ -19,7 +22,6 @@
 #include "game/resource_cache.h"
 #include "game/sound_module.h"
 #include "game/team.h"
-#include "game/track.h"
 #include "ls3d/i3d.h"
 #include "net/bitstream.h"
 #include "net/campaign_protocol.h"
@@ -588,6 +590,80 @@ void C_ScriptModule::SetScriptFrameOn(I3D_frame *frame, bool on)
     frame->Update();
 }
 
+I3D_frame *C_ScriptModule::DuplicateCutsceneHuman(I3D_frame *source, const char *name)
+{
+    // Model copy of the human, placed where the original stands.
+    auto *copy = static_cast<I3D_model *>(I3DGetDriver()->CreateFrame(FRAME_MODEL));
+    if (!copy)
+        return nullptr;
+    if (source->GetType() == FRAME_MODEL) {
+        copy->DuplicateModel(static_cast<I3D_model *>(source));
+        GetGEffects()->SetModelTransparency(copy, 0.0f);
+    }
+    copy->LinkTo(source->GetParent(), 0);
+    copy->SetPosInline(source->GetPos());
+    copy->SetRot(source->GetRot());
+    // Named after the third argument unless that name is already taken.
+    I3D_scene *scene = GetGame()->GetScene();
+    if (!I3DGetDriver()->FindFrame(scene, name) && !(scene && scene->FindFrame(name, FRAME_MASK_ALL)))
+        copy->SetName(name);
+    copy->Update();
+
+    // The weapon at the right hand's place, on its holster joint.
+    I3D_frame *holster = copy->FindChildFrame("hw1", 0xFFFF);
+    I3D_frame *hand = copy->FindChildFrame("rw", 0xFFFF);
+    if (holster && hand) {
+        if (holster->NumChildren() > 0) {
+            if (I3D_frame *weapon = holster->GetChild(0)) {
+                weapon->LinkTo(holster, 4);       // (Re-linked where it is, to the holster joint: "rw" is below it.)
+                weapon->SetPosInline(hand->GetPos() * hand->GetParent()->GetLocalMatrix());
+                weapon->SetWorldDir(S_vector(1.0f, 0, 0), 0.0f);
+                weapon->Update();
+            }
+        }
+        holster->SetPosInline(S_vector(0.075f, -0.023f, -0.004f));
+        holster->Update();
+    }
+    GetGEffects()->SetModelLightLevel(copy, 1.0f);
+    RegisterDuplicate(copy);
+    return copy;
+}
+
+void C_ScriptModule::ClearCampaignCutsceneCopies()
+{
+    while (!m_duplicates.empty()) {
+        auto *copy = m_duplicates.back();
+        UnregisterAnimatedModel(copy);
+        RestoreFrame(copy);
+        UnregisterDuplicate(copy);
+    }
+}
+
+void C_ScriptModule::AttachScriptFrame(I3D_frame *moving, I3D_frame *target, bool link)
+{
+    // Put `moving` at the target's origin, keeping its parent...
+    RememberFrame(moving, SCRIPT_FRAME_LINK);
+    I3D_frame *parent = moving->GetParent();
+    moving->LinkTo(target, I3DLINK_KEEP_WORLD);
+    moving->SetPosInline(S_vector(0, 0, 0));
+    moving->SetWorldDir(S_vector(0, 0, 1), 0.0f);
+    moving->Update();
+    moving->LinkTo(parent, I3DLINK_KEEP_WORLD);
+    moving->Update();
+    // ...then optionally link it to the target, otherwise to the target's sector.
+    if (link) {
+        RememberFrame(moving, SCRIPT_FRAME_LINK | SCRIPT_FRAME_LINKED);
+        moving->LinkTo(target, I3DLINK_KEEP_WORLD);
+    } else {
+        I3D_scene *scene = GetGame()->GetScene();
+        I3D_frame *sector = scene->GetSector(target->GetWorldPos() + S_vector(0, 0.5f, 0));
+        if (!sector)
+            sector = scene->GetPrimarySector();
+        RememberFrame(moving, SCRIPT_FRAME_LINK);
+        moving->LinkTo(sector, I3DLINK_KEEP_WORLD);
+    }
+}
+
 void C_ScriptModule::ApplyCampaignPresentation(const CampaignProtocol::S_MissionPresentation &event)
 {
     using Action = CampaignProtocol::E_MissionPresentation;
@@ -646,13 +722,6 @@ void C_ScriptModule::ApplyCampaignPresentation(const CampaignProtocol::S_Mission
             UnregisterAnimatedModel(model);
         }
         break;
-    case Action::Track:
-        if (frame && frame->GetType() != FRAME_CAMERA) {
-            auto *parent = event.m_Parent.empty() ? nullptr : FindFrameAnywhere(event.m_Parent.c_str());
-            if (parent || event.m_Parent.empty())
-                g_trackModule.CreatePlayer(event.m_Resource.c_str(), frame, parent);
-        }
-        break;
     case Action::Sound:
         if (frame) {
             S_SoundRequest request;
@@ -680,6 +749,29 @@ void C_ScriptModule::ApplyCampaignPresentation(const CampaignProtocol::S_Mission
         break;
     case Action::Clouds:
         GetGEffects()->SetCloudsOn(value != 0);
+        break;
+    case Action::Door:
+        if (auto *actor = g_actorsModule.GetActorById(value); actor && actor->GetType() == ACTOR_DOOR)
+            static_cast<C_Door *>(actor)->PresentDoorEvent(second);
+        break;
+    case Action::Clone:
+        if (frame && !FindFrameAnywhere(event.m_Resource.c_str())) {
+            if (auto *copy = DuplicateCutsceneHuman(frame, event.m_Resource.c_str()))
+                copy->Release();
+        }
+        break;
+    case Action::Attach:
+        if (frame && !GetFrameActor(frame)) {
+            if (auto *target = FindFrameAnywhere(event.m_Resource.c_str()); target && target != frame)
+                AttachScriptFrame(frame, target, value != 0);
+        }
+        break;
+    case Action::ReleaseClone:
+        if (frame && std::find(m_duplicates.begin(), m_duplicates.end(), frame) != m_duplicates.end()) {
+            UnregisterAnimatedModel(frame);
+            RestoreFrame(frame);
+            UnregisterDuplicate(frame);
+        }
         break;
     }
 }

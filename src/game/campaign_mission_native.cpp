@@ -7,6 +7,8 @@
 #include "pending.h"
 #include "spawn_point.h"
 #include "team.h"
+#include "world.h"
+#include "script/script_module.h"
 #include <algorithm>
 #include <cmath>
 #include <limits>
@@ -190,7 +192,7 @@ void HandleCampaignMissionDeparture(int connection) {
 bool PublishCampaignMissionResult()
 {
     auto *adapter = GetCampaignMissionAdapter();
-    if (!IsCampaignSimulationAuthority() || !adapter || !adapter->CanSimulate() || g_Result)
+    if (!IsCampaignSimulationAuthority() || !adapter || !adapter->CanSimulate())
         return false;
 
     const auto state = GetCampaignMissionSnapshot();
@@ -203,11 +205,16 @@ bool PublishCampaignMissionResult()
     result.m_Session = state->m_Context.m_Session;
     result.m_Generation = state->m_Context.m_MissionGeneration;
     result.m_Mission = state->m_Context.m_Mission;
+    result.m_Snapshot = adapter->GetManifest()->m_Snapshot;
+    result.m_MissionTime = game->GetMissionTime();
+    static_assert(std::tuple_size<decltype(result.m_ScriptValues)>::value == SAVE_GAME_VALUES);
+    std::copy_n(g_scriptModule.GetSaveGameValues(), result.m_ScriptValues.size(), result.m_ScriptValues.begin());
     result.m_Success = !game->IsMissionFailed();
     for (int index = 0; index < mission->GetObjectiveCount(); ++index) {
-        const auto status = mission->GetObjective(index)->status;
+        const auto *objective = mission->GetObjective(index);
+        const auto status = objective->status;
         result.m_Objectives.push_back(static_cast<std::uint8_t>(status));
-        if (status == OBJECTIVE_FAILED_CRITICAL)
+        if (status == OBJECTIVE_FAILED_CRITICAL || (status == OBJECTIVE_FAILED && !objective->bonus))
             result.m_Success = false;
     }
     for (const auto &record : state->m_Soldiers) {
@@ -248,5 +255,10 @@ bool PublishCampaignMissionResult()
 
 const S_CampaignMissionResult *GetCampaignMissionResult()
 {
-    return g_Result ? &*g_Result : nullptr;
+    const auto state = GetCampaignMissionSnapshot();
+    if (!state || state->m_Context.m_Phase != E_CampaignPhase::Ending || !g_Result ||
+        g_Result->m_Session != state->m_Context.m_Session ||
+        g_Result->m_Generation != state->m_Context.m_MissionGeneration)
+        return nullptr;
+    return &*g_Result;
 }

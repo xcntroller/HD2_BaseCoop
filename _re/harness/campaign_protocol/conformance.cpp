@@ -99,7 +99,7 @@ S_WorldChunk Chunk() { return {Baseline(), 3, 0, 1, Crc32({1,2,3}), {1,2,3}}; }
 S_MissionUpdate MissionUpdate() {
     S_MissionUpdate state{Context().m_Session, MissionGeneration(3), SnapshotId(13), OwnershipRevision(6),
         25, 7500, false, E_MissionOutcome::Running, S_MissionCamera{{10, 20, -30}, {0, 0, 1}, {0, 1, 0}, 1.3f},
-        {{*Soldier().m_Actor, {1, 2, -3}, {0, 0, 1}, {1, 0, 0}, {2, 0, 0}, 740, 2}}, {0, 1, 4}, {}, {}};
+        {{*Soldier().m_Actor, {1, 2, -3}, {0, 0, 1}, {1, 0, 0}, {2, 0, 0}, 740, 2}}, {0, 1, 4}, {}, {}, {}};
     return state;
 }
 
@@ -381,6 +381,40 @@ void MissionUpdates() {
     state.m_Objectives[1] = 2;
     state.m_PlayerInputEnabled = true;
     CHECK(Encode(state, encoded) == R::Malformed);
+
+    state = MissionUpdate();
+    state.m_Presentation = {
+        {E_MissionPresentation::Speech, "instructor", {}, {1990274, 1000, 1000}},
+        {E_MissionPresentation::Door, {}, {}, {32, 1}}
+    };
+    auto ambient = state.m_Squad.front();
+    ambient.m_Actor.m_Actor = ActorId(32);
+    ambient.m_Actor.m_SlotUse = ActorSlotUse(0);
+    state.m_Ambient = {{ambient, true}};
+    state.m_FramePoses = {{"aircraft", {10, 220, -50}, {0, 0, 1}, {0, 1, 0}}};
+    CHECK(Encode(state, encoded) == R::None);
+    CHECK(Decode(encoded, terminal) == R::None);
+    const auto &presentation = std::get<S_MissionUpdate>(terminal);
+    CHECK(presentation.m_Presentation[0].m_Args[2] == 1000);
+    CHECK(presentation.m_FramePoses[0].m_Frame == "aircraft");
+    CHECK(presentation.m_Ambient[0].m_Visible);
+    state.m_Presentation[1].m_Args[1] = 6;
+    CHECK(Encode(state, encoded) == R::Malformed);
+    state.m_Presentation.pop_back();
+    state.m_Ambient.push_back(state.m_Ambient.front());
+    CHECK(Encode(state, encoded) == R::Malformed);
+    state.m_Ambient.pop_back();
+    state.m_FramePoses.front().m_Up = {0, 0, 1};
+    CHECK(Encode(state, encoded) == R::Malformed);
+
+    const S_DoorAction door{32, E_DoorAction::Unlock};
+    S_DoorAction decodedDoor;
+    CHECK(EncodeDoorAction(door, encoded) == R::None);
+    CHECK(DecodeDoorAction(encoded, decodedDoor) == R::None);
+    CHECK(decodedDoor.m_Door == door.m_Door && decodedDoor.m_Action == door.m_Action);
+    encoded.back() = 255;
+    CHECK(DecodeDoorAction(encoded, decodedDoor) == R::Malformed);
+    CHECK(decodedDoor.m_Action == E_DoorAction::Unlock);
 }
 void WeaponEvents() {
     auto local = Hello();
