@@ -320,6 +320,49 @@ void Negotiation() {
         CHECK(client.Receive(Frame(accept), 0).m_Reason == expected);
     }
 }
+void CampaignProgression() {
+    const S_ReportKey key{Context().m_Session, MissionGeneration(3), SnapshotId(13)};
+    S_CampaignReport report{key, true,
+        {{PlayerId(5), "Host", true, false}, {PlayerId(6), "Guest", false, true}},
+        {{SoldierId(101), 795, 84, {0, 0, 1.5f}, 1, 2, 3, {1, 2}}}, {101, 402}};
+    const S_ReportReady ready{key};
+    S_CampaignStep step{key, 1, E_CampaignStep::Video, MissionKey("Arctic2"), "BriefArctic1b.bik", 0};
+    auto local = Hello();
+    local.m_Offered |= kCampaignProgression;
+    local.m_Required |= kCampaignProgression;
+    auto server = C_Admission(E_CampaignSessionKind::CampaignCoop, true, local, Context().m_Session, PlayerId(6), 0);
+    auto client = C_Admission(E_CampaignSessionKind::CampaignCoop, false, local, {}, {}, 0);
+    Admit(server, client);
+    CHECK(server.Receive(Frame(ready), 5).m_Payload.has_value());
+    const auto accepted = client.Receive(Frame(report), 5);
+    CHECK(accepted.m_Payload.has_value());
+    const auto &decoded = std::get<S_CampaignReport>(*accepted.m_Payload);
+    CHECK(decoded.m_Report == key && decoded.m_Participants[1].m_Spectating);
+    CHECK(decoded.m_Soldiers[0].m_Gains[2] == 1.5f && decoded.m_Diary == report.m_Diary);
+    CHECK(client.Receive(Frame(step), 6).m_Payload.has_value());
+    CHECK(!server.Receive(Frame(step), 7).m_Payload);
+    CHECK(!client.Receive(Frame(ready), 7).m_Payload);
+
+    auto oldServer = Server();
+    auto oldClient = Client();
+    Admit(oldServer, oldClient);
+    CHECK(!oldServer.Receive(Frame(ready), 5).m_Payload);
+    CHECK(!oldClient.Receive(Frame(report), 5).m_Payload);
+
+    T_Bytes bytes;
+    CHECK(Encode(S_ReportReady{{key.m_Session, {}, key.m_Snapshot}}, bytes) == R::Malformed);
+    step.m_Ordinal = 0;
+    CHECK(Encode(step, bytes) == R::Malformed);
+    step.m_Ordinal = 1;
+    step.m_Screen = 4;
+    CHECK(Encode(step, bytes) == R::Malformed);
+    report.m_Participants.push_back(report.m_Participants.front());
+    CHECK(Encode(report, bytes) == R::Malformed);
+    report.m_Participants.pop_back();
+    report.m_Soldiers[0].m_Gains[2] = std::numeric_limits<float>::infinity();
+    CHECK(Encode(report, bytes) == R::Malformed);
+}
+
 void MissionUpdates() {
     auto local = Hello();
     local.m_Offered |= kMissionUpdates;
@@ -749,6 +792,6 @@ void Hostile() {
 int main(int argc, char **argv) {
     CHECK(argc >= 2);
     RoundTrips(argv[1], argc == 3 && std::string(argv[2]) == "--write-fixtures");
-    Malformed(); Negotiation(); MissionUpdates(); WeaponEvents(); InventoryEvents(); PreparationResync(); Inputs(); Replicas(); Chunks(); WorldSendSchedule(); TransportBits(); Hostile();
-    std::cout << "campaign protocol: 12 suites, " << g_Checks << " checks passed\n";
+    Malformed(); Negotiation(); MissionUpdates(); WeaponEvents(); InventoryEvents(); PreparationResync(); CampaignProgression(); Inputs(); Replicas(); Chunks(); WorldSendSchedule(); TransportBits(); Hostile();
+    std::cout << "campaign protocol: 13 suites, " << g_Checks << " checks passed\n";
 }

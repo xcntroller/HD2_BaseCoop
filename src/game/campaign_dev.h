@@ -5,6 +5,7 @@
 #include <functional>
 
 class C_GameApp;
+class C_Diary;
 class I3D_scene;
 class I3D_frame;
 struct S_HumanCommand;
@@ -12,12 +13,21 @@ namespace CampaignProtocol {
 enum class E_WeaponEvent : std::uint8_t;
 struct S_PlayerControls;
 struct S_MissionPresentation;
+struct S_CampaignReport;
 }
 
 // Returns true when the explicit development launch switch was handled.
 bool StartDevelopmentCampaign(C_GameApp &app);
 void TickDevelopmentCampaign(C_GameApp &app);
 void ReleaseDevelopmentCampaign();
+bool IsLiveCampaignProgression();
+C_Diary *GetLiveCampaignDiary();
+const CampaignProtocol::S_CampaignReport *GetLiveCampaignReport();
+bool CanAdvanceLiveCampaignReport();
+bool IsLocalLiveCampaignReportReady();
+bool IsLiveCampaignReportHost();
+void ReadyLiveCampaignReport();
+void AdvanceLiveCampaignReport();
 bool RenderDevelopmentCampaignCutscene(I3D_scene &scene);
 bool IsDevelopmentCampaignCutscene();
 void QueueDevelopmentCampaignPresentation(CampaignProtocol::S_MissionPresentation event);

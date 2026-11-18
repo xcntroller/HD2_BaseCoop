@@ -25,6 +25,7 @@ public:
     std::shared_ptr<const S_CampaignMissionManifest> GetFrozenManifest() const;
     bool IsFrozenPublished() const;
     E_CampaignReason ReopenHost();
+    E_CampaignReason OpenNextHost(S_CampaignPreparationSnapshot initial, S_CampaignEquipmentRuleCatalog catalog);
 
     S_CampaignPreparationView GetSnapshot() const override;
     T_CampaignSubmission SubmitEdit(const S_CampaignEditRequest &request) override;
@@ -39,6 +40,7 @@ private:
     public:
         S_CampaignDeployEvaluation Evaluate(const S_CampaignPreparationSnapshot &state) const override;
         std::optional<PlacementKey> m_Uniform;
+        bool m_AllowSpectators = false;
     };
 
     T_CampaignSubmission Submit(const S_CampaignRequestContext &context, E_CampaignRequestFamily family,

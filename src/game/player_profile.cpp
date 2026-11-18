@@ -1,3 +1,4 @@
+#include "game/campaign_dev.h"
 // The player's profile: the profile directories and the name map of the unicode font,
 // profile.sav (the old profile.pr), Options.bin with the options and the key bindings, the
 // options' effects, the campaign progress and the saves' bookkeeping. Original source file
@@ -803,6 +804,10 @@ int C_PlayerProfile::GetProgress(int campaign) const   // 0x006b16e0
 
 C_Diary *C_PlayerProfile::GetDiary()                    // 0x006ae7c0
 {
+#ifndef HD2_DEDICATED
+    if (auto *diary = GetLiveCampaignDiary())
+        return diary;
+#endif
     return g_campaign->GetCurrentIndex() == 1 ? &m_diaries[1] : &m_diaries[0];
 }
 

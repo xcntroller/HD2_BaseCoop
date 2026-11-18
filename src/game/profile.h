@@ -169,6 +169,7 @@ public:
     // Takes up to `count`; what it took.
     int Take(int type, int count);                      // 0x006a5df0
     int Get(int type) const;                            // 0x006a5f00
+    const std::vector<int> &GetCounts() const { return m_counts; }
     // For every type with a count: chunk 0x4D2 with the type, then the count after the chunk.
     bool SaveGame(C_chunk &chunk);                      // 0x006a5a80
     bool LoadGame(C_chunk &chunk);                      // 0x006a5b60

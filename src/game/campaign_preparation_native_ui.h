@@ -7,7 +7,7 @@ class C_Cursor;
 
 class C_CampaignPreparationNativeUI {
 public:
-    explicit C_CampaignPreparationNativeUI(C_CampaignPreparationLive &model);
+    explicit C_CampaignPreparationNativeUI(C_CampaignPreparationLive &model, int campaign = 0, int mission = 1, bool allowSpectators = false);
     ~C_CampaignPreparationNativeUI();
     bool IsUsable() const;
     void Update(int timeDelta);

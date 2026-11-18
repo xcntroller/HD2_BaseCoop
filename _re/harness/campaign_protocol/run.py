@@ -96,7 +96,7 @@ def main():
         run("header", [compiler, *flags, "-c", str(SOURCES / "header_only.cpp"), "-o", "header.o"])
         run("compile", [compiler, *flags, cpp, harness, "-o", "conformance"])
         run("execute", [str(output / "conformance"), str(SOURCES / "fixtures")])
-    print("PASS: independent scalar fixtures, standalone header and twelve conformance suites")
+    print("PASS: independent scalar fixtures, standalone header and thirteen conformance suites")
 
 
 if __name__ == "__main__":

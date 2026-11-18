@@ -357,6 +357,132 @@ R ImportInitialCampaignPreparation(const C_CampaignSession &session, int mission
     return R::None;
 }
 
+R ImportContinuedCampaignPreparation(const C_CampaignSession &session, int missionNumber,
+    const C_CampaignScreen &equipment, S_CampaignNativeCatalog &native,
+    S_CampaignEquipmentRuleCatalog &catalog, S_CampaignPreparationSnapshot &snapshot)
+{
+    for (const auto &placement : kPlacements) {
+        PlacementKey key(placement.m_Name);
+        native.m_Placements.emplace(key, placement.m_Slot);
+        catalog.m_Placements.push_back({key, placement.m_Container});
+    }
+    for (int stat = STAT_HEALTH; stat <= STAT_LOCKPICK; ++stat)
+        native.m_Skills.emplace(SkillKey("original-stat/" + std::to_string(stat)), stat);
+
+    std::uint64_t nextEntry = 0;
+    for (const auto &soldier : snapshot.m_Soldiers) {
+        const auto profileIndex = session.FindProfile(soldier.m_Soldier);
+        if (!profileIndex)
+            return R::InvalidSoldier;
+        const auto *profile = GetSoldierProfile(*profileIndex);
+        const auto *carried = g_gameProfile.FindSoldierState(*profileIndex);
+        if (!profile || !carried || profile->dead)
+            return R::InvalidSoldier;
+
+        auto &loadout = snapshot.m_Loadouts.emplace_back();
+        loadout.m_Soldier = soldier.m_Soldier;
+        for (const auto &stat : native.m_Skills)
+            loadout.m_Skills.push_back({stat.first, profile->stats[stat.second]});
+
+        const auto add = [&](const S_SoldierItem &item, const char *placement, std::uint32_t index = 0) {
+            if (item.typeId < 0)
+                return true;
+            if (item.present <= 0 || !ImportDefinition(item.typeId, native, catalog, true))
+                return false;
+            S_CampaignLoadoutItem entry;
+            entry.m_Entry = PreparationItemId(++nextEntry);
+            entry.m_State.m_Item = ItemKey(item.typeId);
+            entry.m_State.m_Quantity = item.present;
+            entry.m_Placement = {PlacementKey(placement), index};
+            loadout.m_Items.push_back(std::move(entry));
+            return true;
+        };
+        if (!add(carried->head, "head") || !add(carried->uniform, "uniform") ||
+            !add(carried->hands, "hands") || !add(carried->backpack, "backpack") ||
+            !add(carried->longGun, "long-gun"))
+            return R::InvalidItem;
+        for (std::uint32_t i = 0; i < carried->belt.size(); ++i)
+            if (!add(carried->belt[i], "belt", i))
+                return R::InvalidItem;
+        for (std::uint32_t i = 0; i < carried->backpackContents.size(); ++i)
+            if (!add(carried->backpackContents[i], "backpack-contents", i))
+                return R::InvalidItem;
+
+        auto seed = *carried;
+        seed.progress = {};
+        seed.autoEquip = false;
+        seed.deployed = true;
+        seed.unknown34 = -1;
+        seed.unknown38 = -1;
+        native.m_Soldiers.emplace(soldier.m_Soldier, std::move(seed));
+        catalog.m_Soldiers.push_back({soldier.m_Soldier, profile->stats[STAT_STRENGTH], {}});
+    }
+
+    C_MissionItems missionItems;
+    missionItems.Setup(0);
+    const auto *mission = missionItems.GetMissionRecord(missionNumber);
+    if (!mission)
+        return R::SnapshotUnavailable;
+    for (const auto &[item, quantity] : mission->required) {
+        if (quantity < 1 || !ImportDefinition(item, native, catalog, true))
+            return R::InvalidItem;
+        catalog.m_Required.push_back({ItemKey(item), static_cast<std::uint32_t>(quantity)});
+    }
+
+    std::vector<S_CampaignSupplyItem> supply;
+    if (equipment.GetKind() == C_CampaignScreen::KIND_EQUIPMENT) {
+        for (const auto &item : equipment.GetItems()) {
+            if (item.count < 0 || !ImportDefinition(item.itemId, native, catalog, true))
+                return R::InvalidItem;
+            supply.push_back({ItemKey(item.itemId), static_cast<std::uint32_t>(item.count), item.ammunition});
+        }
+    } else {
+        // Kind 4 uses the field stock, which includes returned casualty gear.
+        // The authored 4 screen's equipment rows are not used by the original menu.
+        const auto &counts = g_gameProfile.m_itemStock1C->GetCounts();
+        for (int type = 0; type < static_cast<int>(counts.size()); ++type) {
+            if (counts[type] <= 0)
+                continue;
+            if (!ImportDefinition(type, native, catalog, true))
+                return R::InvalidItem;
+            supply.push_back({ItemKey(type), static_cast<std::uint32_t>(counts[type]), false});
+        }
+    }
+    try {
+        C_CampaignEquipmentRules rules(catalog);
+        snapshot.m_Stock = rules.NormalizeSupply(supply);
+        return IssueRequiredEquipment(rules, native, snapshot, nextEntry);
+    } catch (const std::invalid_argument &) {
+        return R::InvalidItem;
+    }
+}
+
+R ImportCampaignReplicaCatalog(const C_CampaignSession &session,
+    const S_CampaignMissionManifest &manifest, S_CampaignNativeCatalog &native)
+{
+    for (const auto &placement : kPlacements)
+        native.m_Placements.emplace(PlacementKey(placement.m_Name), placement.m_Slot);
+    for (int stat = STAT_HEALTH; stat <= STAT_LOCKPICK; ++stat)
+        native.m_Skills.emplace(SkillKey("original-stat/" + std::to_string(stat)), stat);
+    for (int type = 0; type <= INT16_MAX; ++type)
+        if (GetItemDef(type))
+            native.m_Items.emplace(ItemKey(type), type);
+    for (const auto &soldier : manifest.m_Soldiers) {
+        const auto index = session.FindProfile(soldier.m_Soldier);
+        if (!index || soldier.m_Profile != SoldierProfileKey("original-roster/" + std::to_string(*index)))
+            return R::InvalidSoldier;
+        const auto *profile = GetSoldierProfile(*index);
+        S_SquadSoldier seed;
+        if (!profile || !seed.SetProfile(*index, 0))
+            return R::InvalidSoldier;
+        seed.name = profile->fullName;
+        seed.team = 0;
+        seed.speechSet = -1;
+        native.m_Soldiers.emplace(soldier.m_Soldier, std::move(seed));
+    }
+    return R::None;
+}
+
 R FreezeDevelopmentCampaign(C_CampaignOwnership &ownership, C_CampaignRequestJournal &journal,
     int missionNumber, PlayerId guest, S_CampaignNativeCatalog &native, S_CampaignMissionManifest &manifest)
 {

@@ -56,7 +56,7 @@ struct S_CampaignPreparationControl {
 class C_CampaignPreparationScreen {
 public:
     C_CampaignPreparationScreen(I_CampaignPreparation &model,
-        I_CampaignPreparationPresentation &presentation);
+        I_CampaignPreparationPresentation &presentation, bool allowSpectators = false);
     ~C_CampaignPreparationScreen();
     C_CampaignPreparationScreen(const C_CampaignPreparationScreen &) = delete;
     C_CampaignPreparationScreen &operator=(const C_CampaignPreparationScreen &) = delete;
@@ -101,6 +101,7 @@ private:
     std::string Label(const char *key) const;
     I_CampaignPreparation &m_Model;
     I_CampaignPreparationPresentation &m_Presentation;
+    bool m_AllowSpectators;
     T_CampaignPreparationSnapshot m_Snapshot;
     SessionId m_LastSession;
     PreparationGeneration m_LastGeneration;

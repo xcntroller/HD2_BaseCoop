@@ -17,4 +17,10 @@ E_CampaignReason ImportInitialCampaignPreparation(const C_CampaignSession &sessi
     const C_CampaignScreen &equipment, S_CampaignNativeCatalog &native,
     S_CampaignEquipmentRuleCatalog &catalog, S_CampaignPreparationSnapshot &snapshot);
 
+E_CampaignReason ImportContinuedCampaignPreparation(const C_CampaignSession &session, int missionNumber,
+    const C_CampaignScreen &equipment, S_CampaignNativeCatalog &native,
+    S_CampaignEquipmentRuleCatalog &catalog, S_CampaignPreparationSnapshot &snapshot);
+E_CampaignReason ImportCampaignReplicaCatalog(const C_CampaignSession &session,
+    const S_CampaignMissionManifest &manifest, S_CampaignNativeCatalog &native);
+
 #endif

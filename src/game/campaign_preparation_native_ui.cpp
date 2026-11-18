@@ -27,8 +27,6 @@ namespace {
 using R = E_CampaignReason;
 using Rect = S_CampaignPreparationRect;
 
-constexpr int kOriginalCampaign = 0;
-constexpr int kArcticMission = 1;
 constexpr float kFontHeight = 16, kLinePitch = 18;
 
 int CatalogIndex(std::string_view key, std::string_view prefix)
@@ -46,9 +44,9 @@ std::string LocalText(int id)
     return id >= 0 && g_texts.Has(id) ? g_texts.Get(id).c_str() : "";
 }
 
-std::string OriginalBriefing()
+std::string OriginalBriefing(int campaign, int number)
 {
-    const auto *mission = g_campaign->GetMissionDefinition(kOriginalCampaign, kArcticMission);
+    const auto *mission = g_campaign->GetMissionDefinition(campaign, number);
     if (!mission)
         return {};
     std::string briefing;
@@ -113,6 +111,7 @@ constexpr std::pair<std::string_view, const char *> kLabels[] = {
     {"COOP_OWNER_NO_SOLDIER", "Claim a soldier to take part."},
     {"COOP_BRIEFING_TITLE", "MISSION BRIEFING"}, {"COOP_BRIEFING_PAGE", "Open briefing"}, {"COOP_EQUIP_PAGE", "Equipment"},
     {"COOP_PAGE_PREVIOUS", "Previous page"}, {"COOP_PAGE_NEXT", "Next page"},
+    {"COOP_OWNER_SPECTATOR", "You can ready up as a spectator."},
     {"COOP_SKILLS", "Skills / equipment"}, {"COOP_PAGE_KEYS", "Arrow keys: page"},
     {"COOP_EQUIP_NO_DESTINATION", "No available placement"}, {"COOP_EQUIP_TAKE", "Equip"},
     {"COOP_EQUIP_RETURN", "Return"}, {"COOP_EQUIP_WEIGHT", "Weight"}, {"COOP_EQUIP_BELT_PACK", "Belt / backpack"},
@@ -128,16 +127,16 @@ constexpr std::pair<std::string_view, const char *> kLabels[] = {
 
 class C_Presentation final : public I_CampaignPreparationPresentation {
 public:
-    explicit C_Presentation(C_CampaignPreparationLive &model)
-        : m_Model(model), m_Briefing(OriginalBriefing()) {}
+    C_Presentation(C_CampaignPreparationLive &model, int campaign, int mission)
+        : m_Model(model), m_Campaign(campaign), m_Mission(mission), m_Briefing(OriginalBriefing(campaign, mission)) {}
 
     std::string Text(TextKey key) const override
     {
-        if (key.Value() == "original-arctic1/operation")
-            return LocalText(g_campaign->GetMissionOperationId(kOriginalCampaign, kArcticMission));
-        if (key.Value() == "original-arctic1/mission")
-            return LocalText(g_campaign->GetMissionId(kOriginalCampaign, kArcticMission));
-        if (key.Value() == "original-arctic1/briefing")
+        if ((key.Value() == "original-arctic1/operation" || key.Value() == "original-campaign/operation"))
+            return LocalText(g_campaign->GetMissionOperationId(m_Campaign, m_Mission));
+        if ((key.Value() == "original-arctic1/mission" || key.Value() == "original-campaign/mission"))
+            return LocalText(g_campaign->GetMissionId(m_Campaign, m_Mission));
+        if ((key.Value() == "original-arctic1/briefing" || key.Value() == "original-campaign/briefing"))
             return m_Briefing;
         if (key.Value() == "campaign.equipment.unarmed_confirmation")
             return "A soldier has no weapon.";
@@ -213,12 +212,15 @@ public:
 
 private:
     C_CampaignPreparationLive &m_Model;
+    int m_Campaign;
+    int m_Mission;
     std::string m_Briefing;
 };
 
 class C_Painter final : public I_CampaignPreparationPainter {
 public:
-    C_Painter() : m_Fonts(AcquireFontManager()), m_Font(m_Fonts->FindFont(FONT_SMALL)) {}
+    explicit C_Painter(const C_str &missionImage)
+        : m_MissionImage(missionImage), m_Fonts(AcquireFontManager()), m_Font(m_Fonts->FindFont(FONT_SMALL)) {}
     ~C_Painter() override
     {
         ReleasePreview();
@@ -352,13 +354,14 @@ public:
 
     void Asset(const Rect &rect, AssetKey asset) override
     {
-        const auto &image = g_campaign->GetMissionImage(kOriginalCampaign, kArcticMission);
+        const auto &image = m_MissionImage;
         if (asset.Value() == image.c_str())
             if (auto *texture = Image(image.c_str()))
                 Quad(rect, 0xffffffff, texture);
     }
 
 private:
+    C_str m_MissionImage;
     using T_PreviewItem = std::tuple<E_MenuSoldierPlace, int, std::uint32_t>;
 
     void ReleasePreview()
@@ -469,7 +472,9 @@ private:
 } // namespace
 
 struct C_CampaignPreparationNativeUI::S_View {
-    explicit S_View(C_CampaignPreparationLive &model) : m_Presentation(model), m_Screen(model, m_Presentation) {}
+    S_View(C_CampaignPreparationLive &model, int campaign, int mission, bool allowSpectators)
+        : m_Presentation(model, campaign, mission), m_Painter(g_campaign->GetMissionImage(campaign, mission)),
+          m_Screen(model, m_Presentation, allowSpectators) {}
     C_Presentation m_Presentation;
     C_Painter m_Painter;
     C_CampaignPreparationScreen m_Screen;
@@ -477,8 +482,9 @@ struct C_CampaignPreparationNativeUI::S_View {
     std::optional<std::pair<E_CampaignPreparationAction, std::uint64_t>> m_PressedControl;
 };
 
-C_CampaignPreparationNativeUI::C_CampaignPreparationNativeUI(C_CampaignPreparationLive &model)
-    : m_View(std::make_unique<S_View>(model)) {}
+C_CampaignPreparationNativeUI::C_CampaignPreparationNativeUI(
+    C_CampaignPreparationLive &model, int campaign, int mission, bool allowSpectators)
+    : m_View(std::make_unique<S_View>(model, campaign, mission, allowSpectators)) {}
 C_CampaignPreparationNativeUI::~C_CampaignPreparationNativeUI() = default;
 
 bool C_CampaignPreparationNativeUI::IsUsable() const { return m_View->m_Painter.IsUsable(); }

@@ -7,7 +7,7 @@
 - Canonical branch: `feature/coop-015-campaign-progression`
 - Base commit: `ca5ae2f897524cc1905e343b5b7ad3910e56f4c3`
 - Dependencies: [COOP-013](COOP-013.md) menu preparation/deployment, [COOP-014](COOP-014.md) authoritative mission outcome
-- Last checkpoint: claim and isolated worktree setup (this commit)
+- Last checkpoint: live progression implementation and first x86 build (this commit)
 - Checkpoint location: canonical branch, `.worktrees/COOP-015`; claim acknowledged by coordinator at `16963b69`
 - Review/integration: none
 - Pull request: none
@@ -60,26 +60,42 @@ expected results. Record any genuine end-to-end evidence separately under the
 
 ## Validation evidence
 
-Pending. Record the tested commit, toolchain and game version, exact checks, outcomes
-and evidence locations. Use the [build guide](../build_baseline.md) for isolated x86
-builds and the [campaign design](../base_game_coop.md#validation-requirements) for
-runtime evidence and legacy regression requirements.
+- MSVC 14.44.35207 x86 / SDK 10.0.26100.0 under Wine. The isolated
+  `_re/tools/build_isolated.py game --all` build compiled 292 translation units
+  with zero compiler diagnostics and linked a PE32 executable. Log
+  `build/evidence/build-msvc-r2.log`.
+- **Simulated:** `python3 _re/harness/campaign_protocol/run.py --compiler gcc`
+  passed 13 suites and 567,597 checks. The progression cases cover gated wire
+  direction and feature negotiation, report identity, spectators, and malformed
+  readiness or step payloads. Log `build/evidence/protocol-gcc.log`.
+- Installed Sabre Squadron 1.12 campaign data contains the original Arctic1 report,
+  `BriefArctic1b.bik`, Arctic2 field equipment (kind 4), and Arctic2 play in that order.
+  This is a data inspection. Paired gameplay evidence is pending.
 
 ## PR test instructions and delivery
 
 - Delivery: Integrated gameplay; specify runnable artifact or Source-only at review.
 - Prerequisites and reproduction steps: record build, game setup, player count, actions
   and expected results before review.
-- Validation actually run: none for this planned work.
+- Validation actually run: isolated production x86 build and GCC protocol conformance.
 
 ## Handoff
 
-- Completed: refreshed origin, confirmed dependency merges, published the claim, and created the canonical worktree.
-- Remaining: implementation or verification and the acceptance evidence above.
-- Next action: Trace the original campaign nodes from Arctic1 mission exit to the next playable step and identify the host writeback boundary.
+- Completed: published the claim and implemented mission-scoped report readiness,
+  host writeback, synchronized original step dispatch and continued live preparation.
+  The production x86 build and the protocol harness pass.
+- Remaining: paired menu-to-Arctic2 checks, failure/retry, departure matrix, and solo/LAN regressions.
+- Next action: build an isolated checked host with
+  `_re/harness/campaign_arctic1/install_debug.py`. Pair it with the production
+  guest, reach the report from the game menus, and verify late readiness,
+  a single commit, the original briefing, and the new loading barrier.
 - Blockers: none. COOP-013 merged at `73d518a5` and COOP-014 merged at
   `619d6aec`. The host result is available through `GetCampaignMissionResult()`
   while the session is in Ending.
-- Decisions: Preserve the original step sequence and record any necessary eligibility or transition departure decision before exposing that policy.
-- Local state: task worktree created from the integrated base.
+- Decisions: Arctic2 uses the original one-soldier limit. Preserve the host's
+  surviving assignment if possible, otherwise choose the first surviving squad
+  soldier in roster order and retain that soldier's owner. Additional players
+  can ready up as spectators. A departure invalidates a frozen or loading
+  world cut. The remaining players return to preparation in the same session.
+- Local state: ignored runtime and evidence under `build/`, using private game copies and Wine prefixes.
 - Review notes: none.
