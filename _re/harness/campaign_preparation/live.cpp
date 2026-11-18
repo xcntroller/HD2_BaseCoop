@@ -190,5 +190,13 @@ int main()
     assert(frozen->m_FrozenPreparationRevision == reopened->m_PreparationRevision);
     assert(frozen->m_Soldiers[1].m_Ownership.m_Deployed);
     assert(!frozen->m_Soldiers[1].m_Ownership.m_Owner && !frozen->m_Loadouts[1].m_Items.empty());
-    std::cout << "Live preparation authority, replica, stock race, resync, and freeze passed\n";
+    assert(host.IsFrozenPublished());
+    assert(ownership.ReturnToSetup(setup.m_Mission) == R::None && ownership.StartPreparation() == R::None);
+    assert(host.ReopenHost() == R::None);
+    const auto retry = host.GetSnapshot().m_Snapshot;
+    assert(retry->m_Generation != frozen->m_PreparationGeneration && retry->m_PreparationRevision == PreparationRevision(1));
+    assert(!retry->m_Participants.front().m_ReadyAt && retry->m_Stock.front().m_State.m_Quantity == 0);
+    assert(retry->m_Loadouts[1].m_Items.front().m_State.m_Item == kWeapon && !host.GetFrozenManifest());
+    assert(frozen->m_FrozenPreparationRevision == reopened->m_PreparationRevision);
+    std::cout << "Live preparation authority, replica, stock race, resync, freeze, and reopen passed\n";
 }

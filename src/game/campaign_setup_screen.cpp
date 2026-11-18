@@ -211,12 +211,14 @@ void C_MainMenu::RefreshCampaignSetup()
     case State::Idle:
         break;
     }
+    if (!m_campaignSetupError.IsEmpty())
+        status = m_campaignSetupError.c_str();
     if (!(m_campaignSetupStatus == status)) {
         SetText(*this, kStatus, status);
         m_campaignSetupStatus = C_str(status);
     }
 #ifndef HD2_DEDICATED
-    if (state == State::Guest && session.GetPreparation() &&
+    if (session.GetPreparation() &&
         session.GetPreparation()->GetSnapshot().m_Status == E_CampaignSyncStatus::Current)
         OpenCampaignPreparation();
 #endif
@@ -257,7 +259,7 @@ void C_MainMenu::Update(int timeDelta)
     }
     m_campaignSetup->Update();
     if (m_campaignSetup->GetState() != State::Idle) {
-        m_campaignPreparation->Update();
+        m_campaignPreparation->Update(timeDelta);
         if (!m_keyboardOff && m_cursor)
             m_campaignPreparation->MouseInput(*m_cursor, timeDelta);
         if (!m_campaignPreparation->LeaveRequested()) {
@@ -278,6 +280,23 @@ bool C_MainMenu::OnRender()
     m_campaignPreparation->Render();
     return true;
 }
+
+std::unique_ptr<C_CampaignSetupSession> C_MainMenu::TakeCampaignDeployment()
+{
+    if (!m_campaignSetup || !m_campaignSetup->DeploymentPending())
+        return {};
+    m_campaignPreparation.reset();
+    return std::move(m_campaignSetup);
+}
+
+void C_MainMenu::RestoreCampaignPreparation(std::unique_ptr<C_CampaignSetupSession> session, Reason reason)
+{
+    m_campaignSetup = std::move(session);
+    if (reason != Reason::None)
+        m_campaignSetupError = C_str("The mission could not start. Check the session and try again.");
+    PostMenuAction(MENU_MSG_OPEN_SCREEN, MAIN_SCREEN_SINGLEPLAYER);
+    PostMenuAction(MENU_MSG_OPEN_SCREEN, MAIN_SCREEN_CAMPAIGN_SETUP);
+}
 #endif
 
 bool C_MainMenu::OnCampaignSetup(void *menu, void *, C_Control *, uint32_t notification, uint32_t)
@@ -291,9 +310,11 @@ bool C_MainMenu::OnCampaignSetup(void *menu, void *, C_Control *, uint32_t notif
         return true;
     }
     if (notification == CONTROL_NOTIFY_SHOWN) {
-        self.m_campaignSetup = std::make_unique<C_CampaignSetupSession>();
+        if (!self.m_campaignSetup) {
+            self.m_campaignSetup = std::make_unique<C_CampaignSetupSession>();
+            self.m_campaignSetupError = C_str();
+        }
         self.m_campaignSetupStatus = C_str();
-        self.m_campaignSetupError = C_str();
     }
     if (self.m_campaignSetup)
         self.RefreshCampaignSetup();
@@ -336,7 +357,7 @@ bool C_MainMenu::OnCampaignSetupButton(void *menu, void *, C_Control *control, u
         if (session.BeginPreparation() != Reason::None)
             error = "The original mission equipment could not be loaded.";
         else if (!self.OpenCampaignPreparation())
-            error = self.m_campaignSetupError.c_str();
+            error = "Campaign preparation could not load its font.";
 #endif
         break;
     case kBack:

@@ -242,7 +242,10 @@ R ImportFixture(const C_CampaignSession &session, int missionNumber, S_CampaignN
     bool includeAmmo = false)
 {
     C_MissionItems missionItems;
-    missionItems.Setup();
+    if (includeAmmo)
+        missionItems.Setup(0);
+    else
+        missionItems.Setup();
     C_LoadoutPresets presets;
     const auto *mission = missionItems.GetMissionRecord(missionNumber);
     if (!mission || !presets.LoadDefaults())
@@ -324,8 +327,10 @@ R ImportInitialCampaignPreparation(const C_CampaignSession &session, int mission
 
     std::vector<S_CampaignSupplyItem> supply;
     for (const auto &item : equipment.GetItems()) {
-        if (item.count < 0 || !ImportDefinition(item.itemId, native, catalog, true))
+        if (item.count < 0 || !ImportDefinition(item.itemId, native, catalog, true)) {
+            LogDevelopmentCampaign("invalid campaign stock row", static_cast<std::uint64_t>(item.itemId), item.count);
             return R::InvalidItem;
+        }
         supply.push_back({ItemKey(item.itemId), static_cast<std::uint32_t>(item.count), item.ammunition});
     }
     try {
@@ -346,9 +351,11 @@ R ImportInitialCampaignPreparation(const C_CampaignSession &session, int mission
                 stock.m_Destinations.push_back({loadout.m_Soldier, definition->m_AllowedPlacements, {true, R::None}});
             }
         }
-    } catch (const std::invalid_argument &) {
+    } catch (const std::invalid_argument &error) {
+        LogDevelopmentCampaign(error.what());
         return R::InvalidItem;
     }
+    LogDevelopmentCampaign("imported initial campaign stock", snapshot.m_Stock.size(), entry);
     return R::None;
 }
 

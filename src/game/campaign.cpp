@@ -1196,6 +1196,12 @@ int C_Campaign::GetOperationId(int campaign, int operation)   // 0x006b8f60
     return node ? node->GetId() : -1;
 }
 
+int C_Campaign::GetMissionOperationId(int campaign, int missionNumber)
+{
+    int operation = 0, mission = 0;
+    return FindMission(campaign, missionNumber, &operation, &mission) ? GetOperationId(campaign, operation) : -1;
+}
+
 const C_str &C_Campaign::GetOperationName(int campaign, int operation)   // 0x006b8fa0
 {
     static const C_str none;                            // 0x008aea50

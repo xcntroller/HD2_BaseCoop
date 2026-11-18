@@ -2,9 +2,12 @@
 
 #ifndef HD2_DEDICATED
 
+#include <windows.h>
+
 #include <algorithm>
 #include <charconv>
 #include <string_view>
+#include <tuple>
 
 #include "game/campaign.h"
 #include "game/campaign_preparation_live.h"
@@ -13,6 +16,7 @@
 #include "game/font.h"
 #include "game/game_texts.h"
 #include "game/item_defs.h"
+#include "game/menu_soldier.h"
 #include "game/profile.h"
 #include "ls3d/igraph.h"
 
@@ -22,7 +26,6 @@ using R = E_CampaignReason;
 using Rect = S_CampaignPreparationRect;
 
 constexpr int kOriginalCampaign = 0;
-constexpr int kFirstOperation = 0;
 constexpr int kArcticMission = 1;
 constexpr float kFontHeight = 16, kLinePitch = 18;
 
@@ -75,10 +78,10 @@ public:
     std::string Text(TextKey key) const override
     {
         if (key.Value() == "original-arctic1/operation")
-            return LocalText(g_campaign->GetOperationId(kOriginalCampaign, kFirstOperation));
+            return LocalText(g_campaign->GetMissionOperationId(kOriginalCampaign, kArcticMission));
         const int title = g_campaign->GetMissionText(kOriginalCampaign, kArcticMission, 1);
         if (key.Value() == "original-arctic1/mission")
-            return title >= 0 ? LocalText(title + 1) : "Arctic1";
+            return LocalText(g_campaign->GetMissionId(kOriginalCampaign, kArcticMission));
         if (key.Value() == "original-arctic1/briefing" && title >= 0) {
             std::string briefing;
             for (int id = title + 3; id <= title + 9; ++id) {
@@ -172,6 +175,7 @@ public:
     C_Painter() : m_Fonts(AcquireFontManager()), m_Font(m_Fonts->FindFont(FONT_SMALL)) {}
     ~C_Painter() override
     {
+        ReleasePreview();
         for (const auto &entry : m_Images)
             if (entry.second)
                 entry.second->Release();
@@ -179,6 +183,11 @@ public:
     }
 
     bool IsUsable() const { return m_Font != nullptr; }
+    void Tick(int timeDelta)
+    {
+        if (m_Preview)
+            m_Preview->Tick(timeDelta);
+    }
 
     void Resize()
     {
@@ -239,19 +248,51 @@ public:
 
     void Preview(const Rect &rect, AssetKey asset, const S_CampaignSoldierLoadout &loadout) override
     {
-        if (const auto *profile = GetSoldierProfile(CatalogIndex(asset.Value(), "original-portrait/"))) {
-            if (auto *portrait = Image(profile->faceTexture.c_str()))
-                Quad({rect.m_X, rect.m_Y, rect.m_Height, rect.m_Height}, 0xffffffff, portrait);
+        const auto *profile = GetSoldierProfile(CatalogIndex(asset.Value(), "original-portrait/"));
+        if (!profile) {
+            Text(rect, "Soldier preview unavailable", true);
+            return;
         }
+        static constexpr std::pair<std::string_view, E_MenuSoldierPlace> places[] = {
+            {"head", MENU_SOLDIER_HEAD}, {"uniform", MENU_SOLDIER_BODY}, {"hands", MENU_SOLDIER_HANDS},
+            {"backpack", MENU_SOLDIER_BACKPACK}, {"long-gun", MENU_SOLDIER_LONG_GUN}, {"belt", MENU_SOLDIER_HOLSTERS}
+        };
+        std::vector<T_PreviewItem> items;
         for (const auto &item : loadout.m_Items) {
-            if (item.m_Placement.m_Slot.Value() != "hands")
-                continue;
-            auto *definition = GetItemDef(CatalogIndex(item.m_State.m_Item.Value(), "original-item/"));
-            if (auto *image = definition ? definition->GetImage() : nullptr)
-                Quad({rect.m_X + rect.m_Height + 4, rect.m_Y + 4, rect.m_Width - rect.m_Height - 4, 60},
-                    0xffffffff, image);
-            break;
+            const auto place = std::find_if(std::begin(places), std::end(places), [&](const auto &entry) {
+                return entry.first == item.m_Placement.m_Slot.Value();
+            });
+            const int type = CatalogIndex(item.m_State.m_Item.Value(), "original-item/");
+            if (place != std::end(places) && GetItemDef(type))
+                items.emplace_back(place->second, type, item.m_State.m_Quantity);
         }
+        const float left = m_Left + rect.m_X * m_Scale, top = m_Top + rect.m_Y * m_Scale;
+        const std::array<float, 4> bounds{left, top, left + rect.m_Width * m_Scale, top + rect.m_Height * m_Scale};
+        auto *graph = GetIGraph();
+        graph->EndScene();
+        if (m_PreviewAsset != asset || m_PreviewBounds != bounds || m_PreviewItems != items) {
+            ReleasePreview();
+            m_PreviewAsset = asset;
+            m_PreviewBounds = bounds;
+            m_PreviewItems = std::move(items);
+            m_Preview = std::make_unique<C_MenuSoldier>();
+            m_Preview->Setup(bounds[0], bounds[1], bounds[2], bounds[3]);
+            if (m_Preview->GetModel()) {
+                m_Preview->SetFace(profile->faceTexture.c_str());
+                for (const auto &[place, type, count] : m_PreviewItems)
+                    for (std::uint32_t i = 0; i < count; ++i)
+                        m_Preview->AddItem(place, type);
+            }
+        }
+        const bool ready = m_Preview && m_Preview->GetModel();
+        if (ready)
+            m_Preview->Render();
+        graph->BeginScene();
+        graph->SetViewport({0, 0, graph->ScrnX(), graph->ScrnY(), 0, 1});
+        I3DGetDriver()->SetState(3, 0);
+        I3DGetDriver()->SetState(9, 0);
+        if (!ready)
+            Text(rect, "Soldier preview unavailable", true);
     }
 
     void Focus(const Rect &rect) override
@@ -269,6 +310,17 @@ public:
     }
 
 private:
+    using T_PreviewItem = std::tuple<E_MenuSoldierPlace, int, std::uint32_t>;
+
+    void ReleasePreview()
+    {
+        if (m_Preview) {
+            m_Preview->Release();
+            m_Preview->ReleaseDivingGear();
+            m_Preview.reset();
+        }
+    }
+
     IImage *Image(const char *name)
     {
         if (!name || !*name)
@@ -358,6 +410,10 @@ private:
     C_FontManager *m_Fonts;
     C_Font *m_Font;
     std::map<std::string, IImage *> m_Images;
+    std::unique_ptr<C_MenuSoldier> m_Preview;
+    AssetKey m_PreviewAsset;
+    std::array<float, 4> m_PreviewBounds{};
+    std::vector<T_PreviewItem> m_PreviewItems;
     float m_Scale = 1, m_Left = 0, m_Top = 0;
 };
 
@@ -368,6 +424,8 @@ struct C_CampaignPreparationNativeUI::S_View {
     C_Presentation m_Presentation;
     C_Painter m_Painter;
     C_CampaignPreparationScreen m_Screen;
+    bool m_MouseDown = (GetAsyncKeyState(VK_LBUTTON) & 0x8000) != 0;
+    std::optional<std::pair<E_CampaignPreparationAction, std::uint64_t>> m_PressedControl;
 };
 
 C_CampaignPreparationNativeUI::C_CampaignPreparationNativeUI(C_CampaignPreparationLive &model)
@@ -375,7 +433,11 @@ C_CampaignPreparationNativeUI::C_CampaignPreparationNativeUI(C_CampaignPreparati
 C_CampaignPreparationNativeUI::~C_CampaignPreparationNativeUI() = default;
 
 bool C_CampaignPreparationNativeUI::IsUsable() const { return m_View->m_Painter.IsUsable(); }
-void C_CampaignPreparationNativeUI::Update() { m_View->m_Screen.Tick(); }
+void C_CampaignPreparationNativeUI::Update(int timeDelta)
+{
+    m_View->m_Screen.Tick();
+    m_View->m_Painter.Tick(timeDelta);
+}
 bool C_CampaignPreparationNativeUI::LeaveRequested() const { return m_View->m_Screen.LeaveRequested(); }
 
 void C_CampaignPreparationNativeUI::KeyInput(float *pressed)
@@ -399,24 +461,52 @@ void C_CampaignPreparationNativeUI::KeyInput(float *pressed)
 
 void C_CampaignPreparationNativeUI::MouseInput(C_Cursor &cursor, int timeDelta)
 {
-    if (!cursor.Update(timeDelta) || !cursor.IsClicked())
+    cursor.Update(timeDelta);
+    if (GetForegroundWindow() != GetIGraph()->GetHWND()) {
+        m_View->m_MouseDown = false;
+        m_View->m_PressedControl.reset();
         return;
+    }
+    const bool down = (GetAsyncKeyState(VK_LBUTTON) & 0x8000) != 0;
+    if (down == m_View->m_MouseDown)
+        return;
+    m_View->m_MouseDown = down;
     float x = 0, y = 0;
     cursor.GetScreenPosition(&x, &y, nullptr);
     m_View->m_Painter.Resize();
     const auto point = m_View->m_Painter.Logical(x, y);
-    m_View->m_Screen.Click(point.first, point.second);
+    const auto &controls = m_View->m_Screen.GetControls();
+    const auto control = std::find_if(controls.begin(), controls.end(), [&](const auto &candidate) {
+        return candidate.m_Rect.Contains(point.first, point.second);
+    });
+    if (down) {
+        if (control != controls.end() && control->m_Enabled)
+            m_View->m_PressedControl = std::make_pair(control->m_Action, control->m_Key);
+    } else {
+        if (control != controls.end() && m_View->m_PressedControl == std::make_pair(control->m_Action, control->m_Key))
+            m_View->m_Screen.Click(point.first, point.second);
+        m_View->m_PressedControl.reset();
+    }
 }
 
 void C_CampaignPreparationNativeUI::Render()
 {
     auto *graph = GetIGraph();
-    if (!graph->BeginScene())
-        return;
+    auto *driver = I3DGetDriver();
+    const auto oldAlpha = graph->GetRenderState(0);
+    const auto oldDepth = driver->GetState(3);
+    const auto oldFog = driver->GetState(9);
+    graph->Clear(0xff292f28, 1.0f, 3);
+    graph->BeginScene();
+    driver->SetState(3, 0);
+    driver->SetState(9, 0);
     graph->SetViewport({0, 0, graph->ScrnX(), graph->ScrnY(), 0, 1});
     m_View->m_Painter.Resize();
     m_View->m_Screen.Render(m_View->m_Painter);
     graph->EndScene();
+    driver->SetState(3, oldDepth);
+    driver->SetState(9, oldFog);
+    graph->SetRenderState(0, oldAlpha);
 }
 
 #endif

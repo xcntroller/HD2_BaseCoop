@@ -10,7 +10,7 @@ public:
     explicit C_CampaignPreparationNativeUI(C_CampaignPreparationLive &model);
     ~C_CampaignPreparationNativeUI();
     bool IsUsable() const;
-    void Update();
+    void Update(int timeDelta);
     bool LeaveRequested() const;
     void KeyInput(float *pressed);
     void MouseInput(C_Cursor &cursor, int timeDelta);

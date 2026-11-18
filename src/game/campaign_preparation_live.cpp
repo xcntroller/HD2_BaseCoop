@@ -15,6 +15,25 @@ namespace Wire = CampaignProtocol;
 constexpr auto kRequestTimeout = std::chrono::milliseconds(Wire::kTimeoutMs);
 constexpr auto kResyncInterval = std::chrono::seconds(1);
 
+S_CampaignPreparationJournal BindJournal(C_CampaignRequestJournal &journal)
+{
+    return {
+        [&journal](const auto &context, auto family, const auto &content, const auto &state) {
+            return journal.Begin(context, family, content, state);
+        },
+        [&journal](const auto &context, auto family, const auto &content, const auto &state) {
+            journal.Finish(context, family, content, state);
+        }
+    };
+}
+
+S_CampaignPreparationLimits PreparationLimits()
+{
+    S_CampaignPreparationLimits limits;
+    limits.m_MaxEntries = Wire::kMaxCollection;
+    return limits;
+}
+
 } // namespace
 
 C_CampaignPreparationLive::C_CampaignPreparationLive(SessionId session, PlayerId local, T_Send send)
@@ -51,25 +70,41 @@ R C_CampaignPreparationLive::OpenHost(C_CampaignOwnership &ownership, C_Campaign
         initial.m_Context.m_Session != m_Session || initial.m_Context.m_HostPlayer != m_Local)
         return R::InvalidPhase;
 
-    S_CampaignPreparationJournal bridge;
-    bridge.m_Begin = [&journal](const auto &context, auto family, const auto &content, const auto &state) {
-        return journal.Begin(context, family, content, state);
-    };
-    bridge.m_Finish = [&journal](const auto &context, auto family, const auto &content, const auto &state) {
-        journal.Finish(context, family, content, state);
-    };
-    S_CampaignPreparationLimits limits;
-    limits.m_MaxEntries = Wire::kMaxCollection;
     try {
         auto rules = std::make_unique<C_CampaignEquipmentRules>(std::move(catalog));
         auto authority = std::make_unique<C_CampaignPreparation>(std::move(initial), ownership, *rules,
-            m_DeploymentPolicy, std::move(bridge), limits, [&ownership] { return ownership.Freeze(); });
+            m_DeploymentPolicy, BindJournal(journal), PreparationLimits(), [&ownership] { return ownership.Freeze(); });
         Wire::T_Bytes encoded;
         if (Wire::Encode(*authority->GetSnapshot(m_Local), encoded) != R::None)
             return R::SnapshotUnavailable;
         m_Ownership = &ownership;
+        m_Journal = &journal;
         m_Rules = std::move(rules);
         m_Authority = std::move(authority);
+    } catch (const std::invalid_argument &) {
+        return R::InvalidItem;
+    }
+    return R::None;
+}
+
+R C_CampaignPreparationLive::ReopenHost()
+{
+    if (!m_Authority || !m_Journal || m_Ownership->GetSession().GetContext().m_Phase != Phase::Preparation)
+        return R::InvalidPhase;
+    auto initial = *m_Authority->GetSnapshot(m_Local);
+    const auto &session = m_Ownership->GetSession();
+    initial.m_Context = session.GetContext();
+    initial.m_Generation = session.GetPreparationGeneration();
+    initial.m_PreparationRevision = PreparationRevision(1);
+    initial.m_ViewRevision = ViewRevision(1);
+    m_LocalRequest.reset();
+    m_Pending.reset();
+    m_FreezeDeadline.reset();
+    m_Events.clear();
+    m_Published.clear();
+    try {
+        m_Authority = std::make_unique<C_CampaignPreparation>(std::move(initial), *m_Ownership, *m_Rules,
+            m_DeploymentPolicy, BindJournal(*m_Journal), PreparationLimits(), [this] { return m_Ownership->Freeze(); });
     } catch (const std::invalid_argument &) {
         return R::InvalidItem;
     }
@@ -128,6 +163,13 @@ R C_CampaignPreparationLive::Tick()
                 if (m_Send(peer.m_Player, *snapshot))
                     last = current;
             }
+        }
+        if (GetFrozenManifest() && !IsFrozenPublished()) {
+            const auto now = Clock::now();
+            if (!m_FreezeDeadline)
+                m_FreezeDeadline = now + kRequestTimeout;
+            else if (now >= *m_FreezeDeadline)
+                return R::Timeout;
         }
     } else if (m_Resync && Clock::now() >= m_NextResync) {
         m_NextResync = Clock::now() + kResyncInterval;
@@ -236,6 +278,21 @@ RequestId C_CampaignPreparationLive::NextRequestId()
 std::shared_ptr<const S_CampaignMissionManifest> C_CampaignPreparationLive::GetFrozenManifest() const
 {
     return m_Authority ? m_Authority->GetFrozenManifest() : nullptr;
+}
+
+bool C_CampaignPreparationLive::IsFrozenPublished() const
+{
+    const auto manifest = GetFrozenManifest();
+    if (!manifest)
+        return false;
+    return std::all_of(manifest->m_RequiredParticipants.begin(), manifest->m_RequiredParticipants.end(),
+        [&](PlayerId peer) {
+            if (peer == m_Local)
+                return true;
+            const auto sent = m_Published.find(peer);
+            return sent != m_Published.end() &&
+                sent->second == std::make_pair(manifest->m_PreparationGeneration, manifest->m_ViewRevision);
+        });
 }
 
 S_CampaignPreparationView C_CampaignPreparationLive::GetSnapshot() const

@@ -23,6 +23,8 @@ public:
     void Disconnect(E_CampaignReason reason);
     RequestId NextRequestId();
     std::shared_ptr<const S_CampaignMissionManifest> GetFrozenManifest() const;
+    bool IsFrozenPublished() const;
+    E_CampaignReason ReopenHost();
 
     S_CampaignPreparationView GetSnapshot() const override;
     T_CampaignSubmission SubmitEdit(const S_CampaignEditRequest &request) override;
@@ -51,6 +53,7 @@ private:
     CampaignProtocol::C_PreparationReplica m_Replica;
     C_DeploymentPolicy m_DeploymentPolicy;
     C_CampaignOwnership *m_Ownership = nullptr;
+    C_CampaignRequestJournal *m_Journal = nullptr;
     std::unique_ptr<C_CampaignEquipmentRules> m_Rules;
     std::unique_ptr<C_CampaignPreparation> m_Authority;
     std::map<PlayerId, std::pair<PreparationGeneration, ViewRevision>> m_Published;
@@ -63,6 +66,7 @@ private:
         std::chrono::steady_clock::time_point m_Deadline;
     };
     std::optional<S_Pending> m_Pending;
+    std::optional<std::chrono::steady_clock::time_point> m_FreezeDeadline;
     std::deque<T_CampaignPreparationEvent> m_Events;
     bool m_HasSnapshot = false;
     bool m_Resync = false;

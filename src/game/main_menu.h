@@ -96,6 +96,8 @@ public:
     bool HandleInput(float *held, float *pressed) override;
     void Update(int timeDelta) override;
     bool OnRender() override;
+    std::unique_ptr<C_CampaignSetupSession> TakeCampaignDeployment();
+    void RestoreCampaignPreparation(std::unique_ptr<C_CampaignSetupSession> session, E_CampaignReason reason);
 #endif
 
     // The movie MAIN_MSG_PLAY_MOVIE plays (empty: the credits).

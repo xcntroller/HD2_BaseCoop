@@ -7,11 +7,13 @@
 #include "net/campaign_net.h"
 
 struct S_CampaignNativeCatalog;
+class C_CampaignMissionAdapter;
 
 enum class E_CampaignSetupState { Idle, Joining, Hosting, Guest };
 
 bool CampaignSetupMenuEnabled();
 std::optional<std::uint32_t> ParseCampaignLanAddress(const char *text);
+std::vector<int> GetInitialCampaignRoster();
 
 // The setup screen owns this game-thread object through cancellation or exit.
 // Future preparation may move its owning pointer while retaining the same
@@ -36,6 +38,12 @@ public:
     const std::optional<CampaignProtocol::S_Accept> &GetGuestAgreement() const { return m_Agreement; }
     C_CampaignPreparationLive *GetPreparation() const { return m_Preparation.get(); }
     const S_CampaignNativeCatalog *GetPreparationCatalog() const { return m_Catalog.get(); }
+    bool DeploymentPending() const;
+    std::optional<int> GetPeerSlot(PlayerId player) const;
+    void SetMissionCallbacks(std::function<void(PlayerId, CampaignProtocol::T_Message)> receive,
+        std::function<void(PlayerId, E_CampaignReason)> departure);
+    C_CampaignMissionAdapter &GetMissionAdapter();
+    E_CampaignReason ReopenPreparation();
 
 private:
     class C_SetupPolicy final : public I_CampaignPolicyView {
@@ -53,4 +61,11 @@ private:
     std::optional<CampaignProtocol::S_Accept> m_Agreement;
     std::unique_ptr<C_CampaignPreparationLive> m_Preparation;
     std::unique_ptr<S_CampaignNativeCatalog> m_Catalog;
+    std::map<PlayerId, int> m_PeerSlots;
+    std::deque<std::pair<PlayerId, CampaignProtocol::T_Message>> m_MissionQueue;
+    std::function<void(PlayerId, CampaignProtocol::T_Message)> m_MissionReceive;
+    std::function<void(PlayerId, E_CampaignReason)> m_MissionDeparture;
+    std::unique_ptr<C_CampaignMissionAdapter> m_MissionAdapter;
+
+    void Receive(PlayerId peer, CampaignProtocol::T_Message message);
 };
