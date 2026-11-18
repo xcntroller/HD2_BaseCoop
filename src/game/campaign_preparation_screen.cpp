@@ -136,6 +136,9 @@ void C_CampaignPreparationScreen::Refresh() {
     if (m_LastSession.IsValid() && (next->m_Context.m_Session != m_LastSession ||
         next->m_Generation != m_LastGeneration)) {
         m_Pending.reset(); m_Selected.reset(); m_Stock.reset(); m_Inventory.reset(); m_Destination.reset();
+        m_StockPage = 0;
+        m_InventoryPage = 0;
+        m_Quantity = 1;
         m_Notice = E_CampaignReason::None;
     }
     const auto *previous = Soldier();

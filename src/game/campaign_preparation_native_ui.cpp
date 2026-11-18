@@ -340,7 +340,7 @@ public:
             m_Preview->Setup(bounds[0], bounds[1], bounds[2], bounds[3]);
             if (m_Preview->GetModel()) {
                 auto *camera = m_Preview->GetScene()->GetActiveCamera();
-                camera->SetFOV(.58f);
+                camera->SetFOV(.30f);
                 camera->Update();
                 m_Preview->SetFace(profile->faceTexture.c_str());
                 for (const auto &[place, type, count] : m_PreviewItems)
