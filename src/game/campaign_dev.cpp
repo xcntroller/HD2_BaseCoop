@@ -256,7 +256,8 @@ C_DevPolicy g_policy;
 std::unique_ptr<C_CampaignRequestJournal> g_journal;
 std::unique_ptr<C_CampaignOwnership> g_ownership;
 std::unique_ptr<C_CampaignMissionAdapter> g_mission;
-C_CampaignNativeControlSink g_sink({});
+void StoreDevelopmentControls(const Wire::S_Input &input);
+C_CampaignNativeControlSink g_sink(StoreDevelopmentControls);
 std::unique_ptr<C_CampaignControlAdapter> g_control;
 S_CampaignNativeCatalog g_catalog;
 C_CampaignNode *g_step = nullptr;
@@ -283,6 +284,10 @@ struct S_GuestSession {
     bool m_Aborted = false;
     std::uint64_t m_LastUpdate = 0;
     std::uint32_t m_HostMissionTime = 0;
+    std::uint64_t m_InputSequence = 0;
+    std::uint16_t m_PendingButtons = 0;
+    ControlRevision m_InputRevision;
+    Clock::time_point m_NextInput{};
     std::optional<Wire::S_MissionCamera> m_CutsceneCamera;
     I3D_camera *m_Camera = nullptr;
     std::unique_ptr<C_CampaignReplicaControlAdapter> m_Control;
@@ -293,6 +298,32 @@ std::unique_ptr<S_GuestSession> g_guest;
 std::optional<Clock::time_point> g_nextMissionUpdate;
 std::uint64_t g_missionUpdateSequence = 0;
 OwnershipRevision g_publishedOwnership;
+
+struct S_ReceivedControls {
+    S_CampaignControlToken m_Token;
+    Wire::S_PlayerControls m_Controls;
+    Clock::time_point m_Received;
+};
+std::optional<S_ReceivedControls> g_receivedControls;
+bool g_loggedInput = false;
+
+void StoreDevelopmentControls(const Wire::S_Input &input)
+{
+    Wire::S_PlayerControls controls;
+    if (Wire::DecodePlayerControls(input.m_Payload, controls) != R::None)
+        return;
+    if (g_receivedControls && g_receivedControls->m_Token.m_Actor == input.m_Control.m_Actor &&
+        g_receivedControls->m_Token.m_ControlRevision == input.m_Control.m_ControlRevision &&
+        g_receivedControls->m_Token.m_Player == input.m_Control.m_Player)
+        controls.m_Pressed |= g_receivedControls->m_Controls.m_Pressed;
+    g_receivedControls = S_ReceivedControls{input.m_Control, controls, Clock::now()};
+    if (!g_loggedInput && (controls.m_Held || controls.m_Pressed)) {
+        LogDevelopmentCampaign("host accepted tagged guest controls", input.m_Control.m_Player.Value(),
+                               input.m_Control.m_Actor.m_Actor.Value());
+        g_loggedInput = true;
+    }
+}
+
 
 std::uint64_t WorldTimeMs()
 {
@@ -585,6 +616,17 @@ R SendHostInitialWorld(PlayerId guest)
 
 void ReceiveHostWorld(PlayerId player, Wire::T_Message message)
 {
+    if (const auto *input = std::get_if<Wire::S_Input>(&message)) {
+        Wire::S_PlayerControls controls;
+        if (!g_control || input->m_Kind != Wire::E_InputKind::ControlBits ||
+            Wire::DecodePlayerControls(input->m_Payload, controls) != R::None)
+            return;
+        const auto result = g_control->Enqueue(player, *input);
+        if (result != R::None && result != R::PendingTransaction)
+            LogDevelopmentCampaign("host rejected tagged guest controls", player.Value(), static_cast<std::uint64_t>(result));
+        return;
+    }
+
     const auto *ack = std::get_if<S_CampaignSnapshotAck>(&message);
     if (!ack || !g_mission || player != g_transferPlayer || !g_worldSender.IsComplete())
         return;
@@ -692,6 +734,8 @@ bool Host(const C_MissionDef &mission, S_CampaignNetConfig config)
         }
         if (g_transferPlayer == player)
             g_transferPlayer = {};
+        if (g_receivedControls && g_receivedControls->m_Token.m_Player == player)
+            g_receivedControls.reset();
         LogDevelopmentCampaign("host observed guest departure", player.Value(), static_cast<std::uint64_t>(reason));
     };
     S_NetSessionDesc desc{};
@@ -820,6 +864,11 @@ void TickDevelopmentCampaign(C_GameApp &app)
         return;
     }
     if (g_mission && g_mission->GetContext().m_Phase == Phase::Running) {
+        for (unsigned count = 0; count < 32 && g_control->GetQueuedCount() && g_control->IsSynchronized(); ++count) {
+            const auto reason = g_control->ApplyNext();
+            if (reason != R::None)
+                LogDevelopmentCampaign("host discarded retired guest controls", static_cast<std::uint64_t>(reason));
+        }
         if (!PublishMissionUpdate(Clock::now())) {
             LogDevelopmentCampaign("host failed to publish mission state", g_missionUpdateSequence);
             g_netGame.Close(true);
@@ -860,6 +909,8 @@ void ReleaseDevelopmentCampaign()
     g_nextMissionUpdate.reset();
     g_missionUpdateSequence = 0;
     g_publishedOwnership = {};
+    g_receivedControls.reset();
+    g_loggedInput = false;
     g_guest.reset();
     g_pendingGuest.reset();
     g_control.reset();
@@ -907,4 +958,57 @@ bool RenderDevelopmentCampaignCutscene(I3D_scene &scene)
     scene.SetActiveCamera(savedCamera);
     savedCamera->Release();
     return true;
+}
+
+void SendDevelopmentCampaignControls(int actor, const Wire::S_PlayerControls &controls)
+{
+    if (!g_guest || g_guest->m_Aborted || !g_guest->m_LastUpdate || !CanCampaignSimulate())
+        return;
+    const auto state = GetCampaignControlSnapshot();
+    const auto record = FindCampaignActorControl(actor);
+    if (!state || !record || !record->m_Actor || !IsCampaignLocalActor(actor))
+        return;
+
+    auto &guest = *g_guest;
+    if (guest.m_InputRevision != record->m_ControlRevision) {
+        guest.m_InputRevision = record->m_ControlRevision;
+        guest.m_PendingButtons = 0;
+    }
+    guest.m_PendingButtons |= controls.m_Pressed;
+    const auto now = Clock::now();
+    if (now < guest.m_NextInput)
+        return;
+
+    auto packet = controls;
+    packet.m_Pressed = guest.m_PendingButtons;
+    Wire::S_Input input;
+    input.m_Control = {state->m_Context.m_Session, state->m_Context.m_MissionGeneration,
+                       guest.m_Agreement.m_Player, record->m_Soldier, *record->m_Actor, record->m_ControlRevision};
+    input.m_Sequence = ++guest.m_InputSequence;
+    if (Wire::EncodePlayerControls(packet, input.m_Payload) != R::None)
+        return;
+    if (!SendCampaignMessage(g_netGame, guest.m_Agreement.m_Player, input))
+        return;
+    guest.m_PendingButtons = 0;
+    guest.m_NextInput = now + std::chrono::milliseconds(40);
+}
+
+void ApplyDevelopmentCampaignControls(int actor,
+    const std::function<void(const Wire::S_PlayerControls *)> &apply)
+{
+    if (!g_receivedControls || !g_ownership || !CanCampaignSimulate() ||
+        !GetGame() || !GetGame()->IsPlayerInputEnabled()) {
+        apply(nullptr);
+        return;
+    }
+    auto &input = *g_receivedControls;
+    if (input.m_Token.m_Actor.m_Actor.Value() != static_cast<unsigned>(actor) ||
+        Clock::now() - input.m_Received > std::chrono::milliseconds(350) ||
+        g_ownership->ValidateInput(input.m_Token.m_Player, input.m_Token) != R::None ||
+        !g_control->IsSynchronized()) {
+        apply(nullptr);
+        return;
+    }
+    DispatchCampaignInput(input.m_Token, [&] { apply(&input.m_Controls); });
+    input.m_Controls.m_Pressed = 0;
 }

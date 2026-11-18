@@ -583,6 +583,8 @@ private:
     void UpdateRemote(int frameTime);                   // 0x0053f520
     // The local human: the controls applied, the state replicated.
     void TickLocal(int timeDelta);                      // 0x0053f9b0
+    void TickCampaignRemote(int timeDelta);
+    void UpdatePace(const float *pressed);
     // The net object's messages: the actions (the server carries them out and passes them
     // on), the dive, the binoculars.
     void ProcessNetMessages();                          // 0x005404f0

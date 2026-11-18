@@ -581,6 +581,11 @@ bool IsDirection(const std::array<float, 3> &v) {
     const float length = Dot(v, v);
     return length >= 0.98f && length <= 1.02f;
 }
+bool ValidControls(const S_PlayerControls &input) {
+    constexpr std::uint16_t held = kMoveForward | kMoveBack | kMoveLeft | kMoveRight | kLeanLeft | kLeanRight | kFire;
+    constexpr std::uint16_t pressed = kFire | kCrouch | kProne | kReload | kPaceUp | kPaceDown;
+    return !(input.m_Held & ~held) && !(input.m_Pressed & ~pressed) && IsDirection(input.m_ViewDirection);
+}
 bool Valid(const S_MissionUpdate &x) {
     if (!Id(x.m_Session) || !Id(x.m_Generation) || !Id(x.m_Snapshot) || !Id(x.m_OwnershipRevision) ||
         !x.m_Sequence || x.m_Squad.empty() || x.m_Squad.size() > kMaxSoldiers ||
@@ -804,6 +809,29 @@ E_CampaignReason ExtractCommandFrame(const void *data, std::size_t size, T_Bytes
 
     out = std::move(frame);
     return R::None;
+}
+
+E_CampaignReason EncodePlayerControls(const S_PlayerControls &controls, T_Bytes &out) {
+    if (!ValidControls(controls)) return E_CampaignReason::Malformed;
+    auto input = controls;
+    std::uint8_t version = 1;
+    T_Bytes bytes;
+    C_Archive archive(bytes);
+    if (!archive(version, input.m_Held, input.m_Pressed, input.m_ViewDirection))
+        return E_CampaignReason::Malformed;
+    out = std::move(bytes);
+    return E_CampaignReason::None;
+}
+
+E_CampaignReason DecodePlayerControls(const T_Bytes &bytes, S_PlayerControls &out) {
+    std::uint8_t version = 0;
+    S_PlayerControls input;
+    C_Archive archive(bytes.data(), bytes.size());
+    if (!archive(version, input.m_Held, input.m_Pressed, input.m_ViewDirection) ||
+        !archive.Done() || version != 1 || !ValidControls(input))
+        return E_CampaignReason::Malformed;
+    out = input;
+    return E_CampaignReason::None;
 }
 
 std::uint32_t Crc32(const T_Bytes &bytes) {

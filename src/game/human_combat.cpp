@@ -726,10 +726,8 @@ bool C_Human::IsLocalPlayer() const
 
 bool C_Human::IsServerSimulated() const
 {
-    if (CampaignControlsActive()) {
-        const auto record = FindCampaignActorControl(m_netId);
-        return IsServer() && (!record || !record->m_Owner || record->m_Scripted);
-    }
+    if (CampaignControlsActive())
+        return IsServer();
     return IsServer() && m_role != HUMAN_ROLE_PLAYER;
 }
 

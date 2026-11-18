@@ -354,6 +354,30 @@ void MissionUpdates() {
     CHECK(Encode(state, encoded) == R::Malformed);
 }
 void Inputs() {
+    const S_PlayerControls controls{kMoveForward | kLeanRight, kFire | kReload, {1, 0, 0}};
+    T_Bytes payload;
+    CHECK(EncodePlayerControls(controls, payload) == R::None);
+    CHECK(payload == T_Bytes({1, 0x21, 0, 0x40, 2, 0, 0, 0x80, 0x3f, 0, 0, 0, 0, 0, 0, 0, 0}));
+    S_PlayerControls native;
+    CHECK(DecodePlayerControls(payload, native) == R::None);
+    CHECK(native.m_Held == controls.m_Held && native.m_Pressed == controls.m_Pressed &&
+          native.m_ViewDirection == controls.m_ViewDirection);
+    for (std::size_t i = 0; i < payload.size(); ++i) {
+        CHECK(DecodePlayerControls(T_Bytes(payload.begin(), payload.begin() + i), native) == R::Malformed);
+        CHECK(native.m_Held == controls.m_Held && native.m_Pressed == controls.m_Pressed);
+    }
+    auto bad = payload;
+    bad.push_back(0);
+    CHECK(DecodePlayerControls(bad, native) == R::Malformed);
+    bad = payload;
+    bad[0] = 2;
+    CHECK(DecodePlayerControls(bad, native) == R::Malformed);
+    bad = payload;
+    bad[1] = 0x80;
+    CHECK(DecodePlayerControls(bad, native) == R::Malformed);
+    bad = payload;
+    bad[3] = 1;
+    CHECK(DecodePlayerControls(bad, native) == R::Malformed);
     C_InputGate gate; auto context = Context(); context.m_Phase = E_CampaignPhase::Running;
     auto soldier = Soldier(); auto input = Input();
     CHECK(gate.Validate(input, PlayerId(5), context, soldier, false, true) == R::NotAdmitted);

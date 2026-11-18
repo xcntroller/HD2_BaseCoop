@@ -58,6 +58,29 @@ struct S_Input {
     E_InputKind m_Kind = E_InputKind::ControlBits;
     T_Bytes m_Payload; // negotiated legacy adapter bytes, never directly dispatched
 };
+// Versioned ControlBits body for on-foot development campaign input.
+enum E_PlayerControl : std::uint16_t {
+    kMoveForward = 1u << 0,
+    kMoveBack = 1u << 1,
+    kMoveLeft = 1u << 2,
+    kMoveRight = 1u << 3,
+    kLeanLeft = 1u << 4,
+    kLeanRight = 1u << 5,
+    kFire = 1u << 6,
+    kCrouch = 1u << 7,
+    kProne = 1u << 8,
+    kReload = 1u << 9,
+    kPaceUp = 1u << 10,
+    kPaceDown = 1u << 11
+};
+struct S_PlayerControls {
+    std::uint16_t m_Held = 0;
+    std::uint16_t m_Pressed = 0;
+    std::array<float, 3> m_ViewDirection{0.0f, 0.0f, 1.0f};
+};
+E_CampaignReason EncodePlayerControls(const S_PlayerControls &controls, T_Bytes &out);
+E_CampaignReason DecodePlayerControls(const T_Bytes &bytes, S_PlayerControls &out);
+
 // The world body is supplied/validated by the lifecycle adapter, not this codec.
 // CRC32 detects incomplete/corrupt transfer; it is NOT authentication.
 struct S_WorldChunk {

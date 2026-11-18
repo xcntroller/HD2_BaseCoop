@@ -199,6 +199,8 @@ void C_PlayerController::UpdateRemote(int frameTime)
 {
     // The server's copy of a client's human.
     FlushMessages(true);
+    if (CampaignControlsActive())
+        return; // the host applies remotely owned movement from tagged controls in Tick
     if (IsLocalGame() || IsCampaignOrLegacyLocalActor(m_human->GetNetId(), g_localPlayerSlot))
         return;
     m_axes = m_controlAxes;
@@ -238,6 +240,9 @@ void C_PlayerController::UpdateRemote(int frameTime)
 
 void C_PlayerController::TickLocal(int timeDelta)
 {
+    // Campaign replicas take their movement and weapon state from the host.
+    if (CampaignControlsActive() && !IsServer())
+        return;
     // The human of this machine's player (or of single player).
     if (!IsLocalGame() && !IsCampaignOrLegacyLocalActor(m_human->GetNetId(), g_localPlayerSlot)) {
         FlushMessages(false);
