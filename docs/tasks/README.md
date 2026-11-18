@@ -61,11 +61,11 @@ for the full milestone sequence.
 | [COOP-019](COOP-019.md) | First-time join during a running mission | COOP-018 | `feature/coop-019-running-join` |
 | [COOP-020](COOP-020.md) | Base campaign verification | COOP-017, COOP-019 | `docs/coop-020-campaign-verification` |
 
-COOP-012 and COOP-014 are ready for claims once these records are integrated. Their
-menu/setup and in-mission work can proceed independently after the coordinator
-agrees on any shared dispatch and launch-file edits. COOP-013 delivers the first
-menu-to-mission flow. COOP-015 joins that flow with the original mission outcome
-and campaign sequence.
+COOP-012 is integrated, so COOP-013 can use its admitted-session boundary for
+the first menu-to-mission flow. COOP-014 advances the original mission independently
+with its in-mission acceptance criteria. Coordinate shared dispatch and launch-file
+edits with the relevant worker. COOP-015 joins the menu flow with the original
+mission outcome and campaign sequence.
 
 COOP-016 establishes a shared current-world boundary for saves and reconnect.
 COOP-017 and COOP-018 can proceed after that boundary merges, with coordination

@@ -2,7 +2,7 @@
 
 ## Coordination
 
-- Status: planned
+- Status: ready
 - Owner/session: unassigned
 - Canonical branch: `feature/coop-013-live-preparation`
 - Base commit: not started
@@ -71,7 +71,7 @@ runtime evidence and legacy regression requirements.
 - Completed: task definition.
 - Remaining: implementation or verification and the acceptance evidence above.
 - Next action: Use the admitted-session interface to trace a real equipment step from briefing through freeze. Resolve any open policy that blocks the player flow before implementing it.
-- Blockers: Required results listed above must merge before implementation.
+- Dependency status: COOP-005, COOP-007 and COOP-012 are integrated. COOP-012 merged at `4ef8b814` and documents the admitted-session contract.
 - Decisions: Roster allocation, readiness quorum, scarce stock UX and deployment cancellation remain subject to the open design decisions. Preserve per-player edit permissions and the original equipment rules.
 - Local state: no task worktree or artifacts.
 - Review notes: none.
