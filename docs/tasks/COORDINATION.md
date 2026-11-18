@@ -10,7 +10,7 @@ creating or updating the operational branch. Do not merge its WIP ledger into `m
 - Contact/shared channel: this published ledger and the COOP-012 task branch/PR.
 - Integrator: Codex COOP-012 for this session, subject to the review and runtime acceptance gates.
 - Latest checkpoint: `HEAD` on `origin/coord/coop-work-queue`.
-- Next action: Create and checkpoint the acknowledged COOP-012 task branch.
+- Next action: COOP-014 retains its active claim. COOP-013 is ready for a claim. The next coordinator can accept the stopped-writer handoff below.
 
 ## Accepted task claims
 
@@ -28,7 +28,7 @@ creating or updating the operational branch. Do not merge its WIP ledger into `m
 | COOP-001 | Codex / 2026-11-18 user assignment | `feature/coop-001-build-baseline` | done | PR #2 merge `15b572ff`; completion metadata PR #11 merge `1b9b307f` | Build/solo/native host-guest baseline and isolation accepted; guide/evidence integrated. Firing/reload/completion remain unverified downstream gates. |
 
 | COOP-010 | Codex COOP-010 (2026-11-18), user assignment | `feature/coop-010-two-player-mission` | done | PR #22 merged `738b124d`, completion PR #23 merged `dc41c6b7`, `.worktrees/COOP-010` | Arctic1 playable gate and original mode regressions recorded. |
-| COOP-012 | Codex COOP-012 (2026-11-18), user assignment | `feature/coop-012-session-setup` | active | PR #26 draft, source `6bcb163b` | Final x86 build and preliminary five-instance run passed. Final-source acceptance and original-mode repeats in progress. |
+| COOP-012 | Codex COOP-012 (2026-11-18), user assignment | `feature/coop-012-session-setup` | done | PR #26 merged `4ef8b814`; completion PR #27 merged `fd5ad4c3` | Five-instance setup matrix, concurrent admission, route isolation, original-mode regressions and COOP-013 contract recorded. |
 | COOP-014 | Codex COOP-014, user assignment, thread `01a1ed7a-ddd9-7000-bbec-e292bd129d25` | `feature/coop-014-arctic1-completion` | active | PR #25 draft, base `9ec7fe48` | Arctic1 solo/dev reference, interactions, objectives and Running replication. |
 
 
@@ -229,3 +229,9 @@ missing fields. COOP-006 was notified explicitly before this stopped-writer hand
 - Reserved scope: singleplayer mode picker and setup resources, admitted session lifetime and campaign transport setup/teardown, and scoped application entry/return as needed. COOP-013 will consume the admitted setup session. COOP-014 is unclaimed and retains Running replication, mission interaction and completion. Keep development-world dispatch changes confined to separating the setup entry from the existing dev launch and record the seam before review.
 
 - Accepted parallel user assignment COOP-014 after confirming its worktree, matching base and no competing PR. COOP-012 owns setup UI, admission/lifetime and DirectPlay setup changes. COOP-014 owns Running behavior, interaction/presentation, scripts/objectives and mission outcome. Coordinate any common dispatch/launch edits before writing, with focused commits in each scope. Both workers will use private build output, prefixes and displays; serialize paired runs if shared fixed LAN binding requires it.
+
+## COOP-012 final integration and stopped-writer handoff
+
+- PR #26 merged exact reviewed head `3e47dfdaeb1541ba215d72d6ad7442644e4323bc` as `4ef8b814ee8673168f62a87c95b2286569f35094`. The merged tree matched the rehearsal. Source `994d034e` passed the final runnable x86 route repeats. The five-instance cap/refusal/retry/teardown matrix and controlled overlapping acknowledgments passed at its admission parent. Both native Sicily2 and the original Arctic1 development launch passed on the final executable.
+- Completion PR #27 merged as `fd5ad4c3e997be8a6d4a7211e04dd3319677e9a2`; it records actual done and makes COOP-013 ready after its three merged dependencies. Main and the canonical COOP-012 branch point to this completion checkpoint. Durable local evidence and private test scripts are under ignored `build/coop-012-evidence/`.
+- COOP-014 retains its active independent claim and draft PR #25. No other task owner is changed. COOP-013 is ready and unclaimed. Its task record points to the admitted setup session and preparation contract. COOP-012 stops task and coordination writes after this ordinary push. A successor can accept this recorded handoff before writing the ledger.
