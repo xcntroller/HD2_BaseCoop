@@ -245,8 +245,13 @@ S_MissionItems *C_MissionItems::GetMissionRecord(int mission) const
 
 void C_MissionItems::Setup()
 {
+    Setup(g_gameProfile.m_campaign->GetCurrentIndex());
+}
+
+void C_MissionItems::Setup(int campaignIndex)
+{
     C_Campaign *campaign = g_gameProfile.m_campaign;
-    m_campaign = campaign->GetCurrentIndex();
+    m_campaign = campaignIndex;
     const int operations = campaign->CountOperations(m_campaign);
     int index = m_campaign * CAMPAIGN_STRIDE;
     int operation = 0;

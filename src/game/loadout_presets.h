@@ -123,6 +123,7 @@ public:
     // A record per mission of the current campaign's operations (their first records' indices),
     // then miss_itm.def.
     void Setup();                                       // 0x0067e500
+    void Setup(int campaignIndex);
     bool Load();                                        // 0x0067e650
 
     S_MissionItems *GetRecord(int index) const { return m_records[index]; }

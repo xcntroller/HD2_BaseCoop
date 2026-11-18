@@ -23,6 +23,9 @@ obtained before requesting review.
 Let a previously admitted player reconnect to a Running session. The soldier
 goes to AI on disconnect. The returning connection rebuilds the current world
 and may reclaim an eligible soldier under the agreed policy once synchronized.
+Use the existing AI-on path for this gate. The
+[drop-in rule](../base_game_coop.md#joining-during-a-mission) applies to first-time
+joins. Reconnect remains available independently of that rule.
 
 ## Files and shared contracts
 

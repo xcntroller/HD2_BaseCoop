@@ -11,8 +11,9 @@ and what still needs inspection in the installed game. Design base: `7e033add`.
 The [campaign design](../base_game_coop.md) confirms a host-led original campaign, up to
 four humans, AI in unclaimed soldiers, each human equipping their own soldier, and the host
 equipping their own and AI soldiers. Preserve campaign equipment, progression, and mission
-restrictions. Use campaign presentation. Host authority validates a player's choice; it
-does not give the host editing access to that player's soldier.
+restrictions. Host authority validates each player's own equipment choices. Follow the
+[co-op interface guidance](../base_game_coop.md#co-op-interface-design) when adapting the
+campaign's visual presentation to the shared preparation flow.
 
 The layout and policies below are proposals for review. Host squad selection followed by
 guest claims, readiness from every deployed human, and first accepted scarce-item requests
@@ -21,11 +22,10 @@ and semantics; this document is a consumer specification, not an alternative wir
 
 ## Layout
 
-Use the campaign's restrained document/table presentation: muted olive surrounding panels,
-warm paper, dark text, portrait selection border, campaign item images and soldier preview.
-No scores, ranks, class unlocks, rounds, respawn controls, or native multiplayer loadout flow.
-The preview's typography, colours, initials, and item rows communicate the arrangement;
-exact game materials/fonts require in-engine verification.
+The mockup takes its visual cues from the campaign's muted olive panels, warm paper,
+and dark text. Agents can revise the layout, type, and controls to make the selected
+soldier, shared stock, readiness, and next action easier to find. Check the resulting
+layout in-engine with a host and guest, including long player names and unavailable actions.
 
 Reference composition: a 1024 × 768, 4:3 safe area. Reserve 40 px outer margins, a 64 px
 heading, a 156 px four-slot squad strip, a 380 px content region, a 52 px readiness/action
@@ -71,8 +71,9 @@ soldier portrait cancels the gesture and changes the local editor target, never 
 Recommended selection/replenishment operates on the **selected editable soldier**. A future
 bulk control must enumerate only currently permitted targets and revalidate all targets at
 commit. Do not call the old squad-wide auto-equip or distribute-required handlers. If a
-needed item is carried by another human, show its carrier and ask players to coordinate
-outside this initial design; no transfer/reservation UI is promised.
+needed item is carried by another human, show its carrier. The
+[campaign design](../base_game_coop.md#loadout-transactions-and-transfer-requests)
+defines the follow-up for player-to-player transfer requests.
 
 Keyboard route: squad slots → briefing/page controls → inventory places → stock filters and
 rows → quantity/destination → Equip/Return → Ready → Deploy/Leave. Tab/Shift+Tab, visible
@@ -231,20 +232,9 @@ to later model/network/integration tasks; a browser fixture does not satisfy tho
 
 ## Blocking questions and remaining resource checks
 
-No product question blocks this independent layout/resource deliverable. These decisions
-block final live policy and should be confirmed before shipping the affected interaction:
-
-- Who chooses the deployed roster and assigns/claims soldiers, and when may ownership change
-  during preparation? Proposed: host chooses legal squad, humans claim available soldiers.
-- Must every deployed human be ready; do spectators participate; may host override readiness;
-  how does host cancel deploy and resume after a departure? Proposed: no override, spectators
-  excluded, departure invalidates readiness, authority-controlled cancellation before loading.
-- Does scarce stock use first accepted request or reservations/transfers? Proposed: first
-  accepted edit, explicit rejection, no automatic transfer.
-- Are loadout changes allowed only at existing campaign equipment steps? Proposed: yes;
-  this screen never creates a new resupply opportunity.
-
-These are already open in the campaign design, not requests to change confirmed direction.
+See the [campaign design](../base_game_coop.md#product-decisions-still-open) for the
+remaining live preparation policy choices. The mockup reflects the original AI-on
+preparation scope.
 Exact frame geometry/materials, preview resources, and localization glyph/fit behavior need
 an installed-data engine inspection in COOP-007. Their absence from this design's runtime
 evidence is recorded in the resource audit; it is not evidence that the native UI is infeasible.

@@ -13,6 +13,7 @@ constexpr std::uint16_t kMajor = 1, kMinor = 0;
 constexpr std::uint64_t kFeatures = 7; // identities, atomic preparation, guarded input
 // Bit 3 identified the earlier mission update layout.
 constexpr std::uint64_t kMissionUpdates = 64, kWeaponEvents = 16, kInventoryMoves = 32;
+constexpr std::uint64_t kLivePreparation = 128;
 constexpr std::size_t kHeaderBytes = 16, kMaxFrameBytes = 24576;
 constexpr std::size_t kMaxStringBytes = 256, kMaxCollection = 256;
 constexpr std::size_t kMaxSoldiers = 64, kMaxParticipants = 4;
@@ -51,6 +52,10 @@ struct S_Reject { E_CampaignReason m_Reason = E_CampaignReason::Malformed; };
 struct S_PreparationDelta {
     ViewRevision m_Base;
     S_CampaignPreparationSnapshot m_Replacement;
+};
+struct S_PreparationResync {
+    SessionId m_Session;
+    PlayerId m_PlayerEcho;
 };
 enum class E_InputKind { ControlBits, ActorAction, VehicleAction, DoorAction, WireCut };
 struct S_Input {
@@ -185,13 +190,15 @@ using T_Message = std::variant<S_Hello, S_Accept, S_NegotiationAck, S_Reject,
     S_CampaignOwnershipRequest, S_CampaignEditRequest, S_CampaignReadyRequest,
     S_CampaignDeployRequest, S_CampaignRequestResult, S_CampaignOwnershipSnapshot,
     S_CampaignPreparationSnapshot, S_PreparationDelta, S_CampaignMissionManifest,
-    S_CampaignSnapshotAck, S_CampaignStartSimulation, S_Input, S_WorldChunk, S_MissionUpdate, S_WeaponEvent, S_InventoryEvent>;
-// Stable explicit tags 1..20 in the above order; variant object layout is never wire.
+    S_CampaignSnapshotAck, S_CampaignStartSimulation, S_Input, S_WorldChunk, S_MissionUpdate, S_WeaponEvent,
+    S_InventoryEvent, S_PreparationResync>;
+// Stable tags in the above order; variant object layout is never wire.
 enum class E_Message : std::uint16_t {
     Hello = 1, Accept, NegotiationAck, Reject, OwnershipRequest, EditRequest,
     ReadyRequest, DeployRequest, RequestResult, OwnershipSnapshot,
     PreparationSnapshot, PreparationDelta, BeginMission, SnapshotAck,
-    StartSimulation, Input, WorldChunk, MissionUpdate, WeaponEvent, InventoryEvent
+    StartSimulation, Input, WorldChunk, MissionUpdate, WeaponEvent, InventoryEvent,
+    PreparationResync = 21
 };
 struct S_FrameInfo { E_Message m_Type = E_Message::Reject; std::uint32_t m_BodyBytes = 0; };
 E_CampaignReason Inspect(const std::uint8_t *data, std::size_t size, S_FrameInfo &out);

@@ -5,12 +5,14 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#include <numeric>
 
 #include "game/campaign.h"
 #include "game/campaign_content.h"
+#include "game/campaign_dev_fixture.h"
+#include "game/campaign_mission_adapter.h"
 #include "game/controls.h"
 #include "game/game_internal.h"
+#include "game/items_module.h"
 #include "game/pending.h"
 #include "game/profile.h"
 #include "net/dplay8.h"
@@ -23,6 +25,17 @@ using State = E_CampaignSetupState;
 constexpr int kOriginalCampaign = 0;
 constexpr int kFirstOperationMission = 1;
 constexpr std::uint32_t kRegularDifficulty = 2;
+
+class C_ScopedPreparationRoster {
+public:
+    explicit C_ScopedPreparationRoster(C_HumanStore &roster) : m_Previous(g_gameProfile.m_humanStore)
+    {
+        g_gameProfile.m_humanStore = &roster;
+    }
+    ~C_ScopedPreparationRoster() { g_gameProfile.m_humanStore = m_Previous; }
+private:
+    C_HumanStore *m_Previous;
+};
 
 void LogSetup(const char *event, std::uint64_t first = 0, std::uint64_t second = 0)
 {
@@ -43,8 +56,12 @@ bool MakeSetupConfig(bool host, S_CampaignNetConfig &config, MissionKey &mission
         return false;
     }
     config.m_Route = E_CampaignLanRoute::CampaignSession;
-    const bool valid = BuildCampaignNetConfig(map->GetName(), host, "campaign-setup/original-v1",
-                                              "original-campaign mission=1 difficulty=2 setup", config);
+    const bool valid = BuildCampaignNetConfig(map->GetName(), host, "campaign-setup/original-v2",
+                                              "original-campaign mission=1 difficulty=2 preparation", config);
+    constexpr auto features = CampaignProtocol::kLivePreparation | CampaignProtocol::kMissionUpdates |
+        CampaignProtocol::kWeaponEvents | CampaignProtocol::kInventoryMoves;
+    config.m_Hello.m_Required |= features;
+    config.m_Hello.m_Offered |= features;
     if (!valid)
         LogSetup("campaign content fingerprint failed");
     return valid;
@@ -54,8 +71,12 @@ bool MakeSetupConfig(bool host, S_CampaignNetConfig &config, MissionKey &mission
 
 bool CampaignSetupMenuEnabled()
 {
+#ifdef HD2_DEDICATED
+    return false;
+#else
     const char *value = std::getenv("HD2_CAMPAIGN_COOP_MENU");
-    return value && std::strcmp(value, "1") == 0;
+    return !value || std::strcmp(value, "0") != 0;
+#endif
 }
 
 std::optional<std::uint32_t> ParseCampaignLanAddress(const char *text)
@@ -79,9 +100,24 @@ std::optional<std::uint32_t> ParseCampaignLanAddress(const char *text)
     return address;
 }
 
+C_CampaignSetupSession::C_CampaignSetupSession() = default;
+
 C_CampaignSetupSession::~C_CampaignSetupSession()
 {
     Close();
+}
+
+std::vector<int> GetInitialCampaignRoster()
+{
+    C_HumanStore roster;
+    if (!roster.Load(C_str("tables\\HumanStore.def")) || roster.GetCount() == 0 ||
+        static_cast<std::size_t>(roster.GetCount()) > C_CampaignSession::kMaxRoster)
+        return {};
+    std::vector<int> profiles;
+    for (int i = 0; i < roster.GetCount() && profiles.size() < CampaignProtocol::kMaxParticipants; ++i)
+        if (roster.Get(i))
+            profiles.push_back(i);
+    return profiles;
 }
 
 R C_CampaignSetupSession::Host()
@@ -95,14 +131,9 @@ R C_CampaignSetupSession::Host()
         return R::ContentMismatch;
 
     // Use the original catalog for a fresh session without altering solo roster progress.
-    C_HumanStore roster;
-    if (!roster.Load(C_str("tables\\HumanStore.def")) || roster.GetCount() == 0 ||
-        static_cast<std::size_t>(roster.GetCount()) > C_CampaignSession::kMaxRoster) {
-        LogSetup("original campaign roster unavailable", roster.GetCount());
+    const auto profileIndexes = GetInitialCampaignRoster();
+    if (profileIndexes.size() != CampaignProtocol::kMaxParticipants)
         return R::ContentMismatch;
-    }
-    std::vector<int> profileIndexes(roster.GetCount());
-    std::iota(profileIndexes.begin(), profileIndexes.end(), 0);
     const S_CampaignSessionSetup setup{
         config.m_Session, CampaignId(config.m_Session.Value()), std::move(mission),
         {config.m_Hello.m_Content, kRegularDifficulty}, true
@@ -110,18 +141,27 @@ R C_CampaignSetupSession::Host()
     m_Journal = std::make_unique<C_CampaignRequestJournal>(config.m_Session);
     m_Ownership = std::make_unique<C_CampaignOwnership>(C_CampaignSession(setup, profileIndexes), m_Policy, *m_Journal);
     m_State = State::Hosting;
-    config.m_Admitted = [this](const auto &agreement, int) {
+    config.m_Admitted = [this](const auto &agreement, int slot) {
         const auto player = agreement.m_Player;
         const auto reason = m_Ownership->AdmitTransportPlayer(player, "Guest " + std::to_string(player.Value()));
-        if (reason == R::None)
+        if (reason == R::None) {
+            m_PeerSlots.emplace(player, slot);
             LogSetup("host admitted", agreement.m_Session.Value(), player.Value());
+        }
         return reason;
     };
     config.m_Departed = [this](PlayerId player, R reason) {
         if (m_State == State::Hosting) {
-            m_Ownership->OnDisconnected(player);
+            m_PeerSlots.erase(player);
+            if (m_MissionDeparture)
+                m_MissionDeparture(player, reason);
+            else
+                m_Ownership->OnDisconnected(player);
             LogSetup("host observed guest departure", player.Value(), static_cast<std::uint64_t>(reason));
         }
+    };
+    config.m_Received = [this](PlayerId player, auto message) {
+        Receive(player, std::move(message));
     };
 
     S_NetSessionDesc desc{};
@@ -145,15 +185,25 @@ R C_CampaignSetupSession::Join(std::uint32_t address)
     if (!MakeSetupConfig(false, config, mission))
         return R::ContentMismatch;
 
-    config.m_Admitted = [this](const auto &agreement, int) {
+    config.m_Admitted = [this](const auto &agreement, int slot) {
         m_Agreement = agreement;
+        m_PeerSlots.emplace(agreement.m_Player, slot);
+        m_Preparation = std::make_unique<C_CampaignPreparationLive>(agreement.m_Session, agreement.m_Player,
+            [](PlayerId player, const auto &message) { return SendCampaignMessage(g_netGame, player, message); });
         m_State = State::Guest;
         LogSetup("guest admitted", agreement.m_Session.Value(), agreement.m_Player.Value());
         return R::None;
     };
+    config.m_Received = [this](PlayerId player, auto message) {
+        Receive(player, std::move(message));
+    };
     config.m_Departed = [this](PlayerId player, R reason) {
         if ((m_State == State::Joining || m_State == State::Guest) && m_JoinFailure == R::None) {
             m_JoinFailure = reason;
+            if (m_Preparation)
+                m_Preparation->Disconnect(reason);
+            if (m_MissionDeparture)
+                m_MissionDeparture(player, reason);
             LogSetup("guest connection ended", player.Value(), static_cast<std::uint64_t>(reason));
         }
     };
@@ -170,8 +220,146 @@ R C_CampaignSetupSession::Join(std::uint32_t address)
     return R::None;
 }
 
+R C_CampaignSetupSession::BeginPreparation()
+{
+    if (m_State != State::Hosting || m_Preparation)
+        return R::InvalidPhase;
+    const auto *equipment = g_campaign->GetInitialEquipmentScreen(kOriginalCampaign, kFirstOperationMission);
+    const auto *mission = g_campaign->GetMissionDefinition(kOriginalCampaign, kFirstOperationMission);
+    if (!equipment || !mission)
+        return R::SnapshotUnavailable;
+    g_itemsModule.EnsureItemsLoaded();
+    const auto &session = m_Ownership->GetSession();
+    auto native = std::make_unique<S_CampaignNativeCatalog>();
+    S_CampaignEquipmentRuleCatalog rules;
+    S_CampaignPreparationSnapshot initial;
+    C_HumanStore roster;
+    if (!roster.Load(C_str("tables\\HumanStore.def")))
+        return R::ContentMismatch;
+    R reason;
+    {
+        C_ScopedPreparationRoster profile(roster);
+        reason = ImportInitialCampaignPreparation(session, kFirstOperationMission, *equipment, *native, rules, initial);
+    }
+    if (reason != R::None) {
+        LogSetup("campaign equipment import failed", static_cast<std::uint64_t>(reason));
+        return reason;
+    }
+
+    for (const auto &soldier : initial.m_Soldiers) {
+        reason = m_Ownership->SetAvailability(soldier.m_Soldier, true, true);
+        if (reason != R::None)
+            return reason;
+    }
+    reason = m_Ownership->StartPreparation();
+    if (reason != R::None)
+        return reason;
+    const auto ownership = m_Ownership->GetSnapshot();
+    initial.m_Context = ownership->m_Context;
+    initial.m_Generation = session.GetPreparationGeneration();
+    initial.m_PreparationRevision = PreparationRevision(1);
+    initial.m_ViewRevision = ViewRevision(1);
+    initial.m_OwnershipRevision = ownership->m_Revision;
+    initial.m_Briefing = {TextKey("original-arctic1/operation"), TextKey("original-arctic1/mission"),
+        TextKey("original-arctic1/briefing"), AssetKey(mission->GetImage().c_str())};
+    const auto host = *ownership->m_Context.m_HostPlayer;
+    auto preparation = std::make_unique<C_CampaignPreparationLive>(initial.m_Context.m_Session, host,
+        [](PlayerId player, const auto &message) { return SendCampaignMessage(g_netGame, player, message); });
+    reason = preparation->OpenHost(*m_Ownership, *m_Journal, std::move(initial), std::move(rules));
+    if (reason != R::None) {
+        LogSetup("campaign preparation authority unavailable", static_cast<std::uint64_t>(reason));
+        Close();
+        return reason;
+    }
+    m_Preparation = std::move(preparation);
+    m_Catalog = std::move(native);
+    LogSetup("host opened campaign preparation", ownership->m_Context.m_Session.Value(),
+             session.GetPreparationGeneration().Value());
+    return R::None;
+}
+
+void C_CampaignSetupSession::Receive(PlayerId peer, CampaignProtocol::T_Message message)
+{
+    // Requests belong to the preparation generation until the runtime takes
+    // over. The guest still accepts a new preparation generation after abort.
+    if (m_Preparation && (!m_MissionReceive || m_State == State::Guest) && m_Preparation->Receive(peer, message)) {
+        if (!m_MissionQueue.empty()) {
+            const auto state = m_Preparation->GetSnapshot().m_Snapshot;
+            if (state && state->m_Context.m_Phase == E_CampaignPhase::Preparation)
+                m_MissionQueue.clear();
+        }
+        return;
+    }
+    if (m_MissionReceive) {
+        m_MissionReceive(peer, std::move(message));
+        return;
+    }
+    if (m_State != State::Guest || !m_Preparation)
+        return;
+    const auto state = m_Preparation->GetSnapshot().m_Snapshot;
+    if (!state || state->m_Context.m_Phase != E_CampaignPhase::Frozen)
+        return;
+    if ((m_MissionQueue.empty() && std::holds_alternative<S_CampaignMissionManifest>(message)) ||
+        (!m_MissionQueue.empty() && std::holds_alternative<CampaignProtocol::S_WorldChunk>(message) &&
+         m_MissionQueue.size() <= CampaignProtocol::kMaxChunks))
+        m_MissionQueue.emplace_back(peer, std::move(message));
+}
+
+bool C_CampaignSetupSession::DeploymentPending() const
+{
+    return m_Preparation && (m_State == State::Hosting ? m_Preparation->IsFrozenPublished() : !m_MissionQueue.empty());
+}
+
+std::optional<int> C_CampaignSetupSession::GetPeerSlot(PlayerId player) const
+{
+    const auto slot = m_PeerSlots.find(player);
+    return slot != m_PeerSlots.end() ? std::make_optional(slot->second) : std::nullopt;
+}
+
+void C_CampaignSetupSession::SetMissionCallbacks(std::function<void(PlayerId, CampaignProtocol::T_Message)> receive,
+    std::function<void(PlayerId, R)> departure)
+{
+    m_MissionReceive = std::move(receive);
+    m_MissionDeparture = std::move(departure);
+    auto queued = std::move(m_MissionQueue);
+    m_MissionQueue.clear();
+    if (m_MissionReceive)
+        for (auto &entry : queued)
+            m_MissionReceive(entry.first, std::move(entry.second));
+}
+
+C_CampaignMissionAdapter &C_CampaignSetupSession::GetMissionAdapter()
+{
+    if (!m_MissionAdapter)
+        m_MissionAdapter = std::make_unique<C_CampaignMissionAdapter>(*m_Ownership);
+    return *m_MissionAdapter;
+}
+
+R C_CampaignSetupSession::ReopenPreparation()
+{
+    if (m_State != State::Hosting || !m_Preparation)
+        return R::InvalidPhase;
+    const auto mission = m_Ownership->GetSession().GetContext().m_Mission;
+    auto reason = m_Ownership->ReturnToSetup(mission);
+    if (reason == R::None)
+        reason = m_Ownership->StartPreparation();
+    if (reason == R::None)
+        reason = m_Preparation->ReopenHost();
+    if (reason == R::None)
+        LogSetup("host reopened campaign preparation",
+            m_Ownership->GetSession().GetPreparationGeneration().Value(),
+            m_Ownership->GetSession().GetContext().m_MissionGeneration.Value());
+    return reason;
+}
+
 void C_CampaignSetupSession::Update()
 {
+    if (m_Preparation && m_JoinFailure == R::None && (!m_MissionReceive || m_State == State::Guest)) {
+        m_JoinFailure = m_Preparation->Tick();
+        if (m_JoinFailure != R::None && m_State == State::Hosting &&
+            m_Ownership->GetSession().GetContext().m_Phase == E_CampaignPhase::Frozen)
+            m_JoinFailure = ReopenPreparation();
+    }
     if (m_JoinFailure != R::None && m_State != State::Idle) {
         const auto reason = m_JoinFailure;
         Close();
@@ -189,6 +377,11 @@ void C_CampaignSetupSession::Close()
         LogSetup("local setup closed", static_cast<unsigned>(state));
     }
     m_Agreement.reset();
+    SetMissionCallbacks({}, {});
+    m_PeerSlots.clear();
+    m_MissionAdapter.reset();
+    m_Preparation.reset();
+    m_Catalog.reset();
     if (m_Ownership) {
         m_Ownership->Close();
         m_Ownership.reset();

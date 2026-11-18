@@ -4,6 +4,7 @@
 #include <stdexcept>
 
 #include "game/campaign_dev.h"
+#include "game/campaign.h"
 #include "game/campaign_preparation.h"
 #include "game/item_defs.h"
 #include "game/loadout_presets.h"
@@ -63,7 +64,8 @@ ItemCatalogKey ItemKey(int type)
     return ItemCatalogKey("original-item/" + std::to_string(type));
 }
 
-bool ImportDefinition(int type, S_CampaignNativeCatalog &native, S_CampaignEquipmentRuleCatalog &catalog)
+bool ImportDefinition(int type, S_CampaignNativeCatalog &native, S_CampaignEquipmentRuleCatalog &catalog,
+                      bool includeAmmo = false)
 {
     const auto key = ItemKey(type);
     if (native.m_Items.count(key))
@@ -97,11 +99,22 @@ bool ImportDefinition(int type, S_CampaignNativeCatalog &native, S_CampaignEquip
     // and instance UIDs belong to the initial-world snapshot.
     native.m_Items.emplace(key, type);
     catalog.m_Items.push_back(std::move(rule));
+    if (includeAmmo) {
+        const int ammo = definition->GetAmmoItemId();
+        auto *ammoDefinition = ammo >= 0 ? GetItemDef(ammo) : nullptr;
+        if (ammoDefinition && ammoDefinition->GetRecordType() == ITEM_AMMO) {
+            catalog.m_Items.back().m_AmmoItem = ItemKey(ammo);
+            catalog.m_Items.back().m_MaxRounds = static_cast<std::uint32_t>(ammoDefinition->GetAmmoAmount());
+            if (!ImportDefinition(ammo, native, catalog, true))
+                return false;
+        }
+    }
     return true;
 }
 
 bool ImportKit(const S_MissionItems::S_Slot &slot, const S_LoadoutPreset &kit, S_CampaignSoldierLoadout &loadout,
-    S_CampaignNativeCatalog &native, S_CampaignEquipmentRuleCatalog &catalog, std::uint64_t &entry)
+    S_CampaignNativeCatalog &native, S_CampaignEquipmentRuleCatalog &catalog, std::uint64_t &entry,
+    bool includeAmmo)
 {
     if (kit.beltCount < 0 || kit.beltCount > S_LoadoutPreset::BELT_ITEMS ||
         kit.backpackCount < 0 || kit.backpackCount > S_LoadoutPreset::BACKPACK_ITEMS)
@@ -110,7 +123,7 @@ bool ImportKit(const S_MissionItems::S_Slot &slot, const S_LoadoutPreset &kit, S
     const auto add = [&](const char *placement, int type, int quantity, std::uint32_t position = 0) {
         if (type == -1)
             return true;
-        if (quantity < 1 || quantity > 32767 || !ImportDefinition(type, native, catalog)) {
+        if (quantity < 1 || quantity > 32767 || !ImportDefinition(type, native, catalog, includeAmmo)) {
             LogDevelopmentCampaign("invalid original item or quantity", static_cast<std::uint64_t>(type),
                                    static_cast<std::uint64_t>(quantity));
             return false;
@@ -225,10 +238,14 @@ R IssueRequiredEquipment(const C_CampaignEquipmentRules &rules, const S_Campaign
 }
 
 R ImportFixture(const C_CampaignSession &session, int missionNumber, S_CampaignNativeCatalog &native,
-    S_CampaignEquipmentRuleCatalog &catalog, S_CampaignPreparationSnapshot &snapshot, std::uint64_t &entry)
+    S_CampaignEquipmentRuleCatalog &catalog, S_CampaignPreparationSnapshot &snapshot, std::uint64_t &entry,
+    bool includeAmmo = false)
 {
     C_MissionItems missionItems;
-    missionItems.Setup();
+    if (includeAmmo)
+        missionItems.Setup(0);
+    else
+        missionItems.Setup();
     C_LoadoutPresets presets;
     const auto *mission = missionItems.GetMissionRecord(missionNumber);
     if (!mission || !presets.LoadDefaults())
@@ -265,7 +282,7 @@ R ImportFixture(const C_CampaignSession &session, int missionNumber, S_CampaignN
         loadout.m_Soldier = record.m_Soldier;
         for (const auto &stat : native.m_Skills)
             loadout.m_Skills.push_back({stat.first, profile->stats[stat.second]});
-        if (!ImportKit(slot, *presets.GetPresets()[slot.a], loadout, native, catalog, entry)) {
+        if (!ImportKit(slot, *presets.GetPresets()[slot.a], loadout, native, catalog, entry, includeAmmo)) {
             LogDevelopmentCampaign("invalid original kit", i, static_cast<std::uint64_t>(slot.a));
             return R::InvalidItem;
         }
@@ -276,13 +293,15 @@ R ImportFixture(const C_CampaignSession &session, int missionNumber, S_CampaignN
         presentation.m_Soldier = record.m_Soldier;
         presentation.m_Profile = SoldierProfileKey("original-roster/" + std::to_string(record.m_ProfileIndex));
         presentation.m_DisplayName = profile->fullName.c_str();
+        if (includeAmmo)
+            presentation.m_Preview = AssetKey("original-portrait/" + std::to_string(record.m_ProfileIndex));
         snapshot.m_Soldiers.push_back(std::move(presentation));
         snapshot.m_Slots[i].m_Soldier = record.m_Soldier;
         catalog.m_Soldiers.push_back({record.m_Soldier, profile->stats[STAT_STRENGTH], {}});
         native.m_Soldiers.emplace(record.m_Soldier, std::move(seed));
     }
     for (const auto &[item, quantity] : mission->required) {
-        if (quantity < 1 || !ImportDefinition(item, native, catalog))
+        if (quantity < 1 || !ImportDefinition(item, native, catalog, includeAmmo))
             return R::InvalidItem;
         catalog.m_Required.push_back({ItemKey(item), static_cast<std::uint32_t>(quantity)});
     }
@@ -291,10 +310,58 @@ R ImportFixture(const C_CampaignSession &session, int missionNumber, S_CampaignN
 
 } // namespace
 
+R ImportInitialCampaignPreparation(const C_CampaignSession &session, int missionNumber,
+    const C_CampaignScreen &equipment, S_CampaignNativeCatalog &native,
+    S_CampaignEquipmentRuleCatalog &catalog, S_CampaignPreparationSnapshot &snapshot)
+{
+    std::uint64_t entry = 0;
+    auto reason = ImportFixture(session, missionNumber, native, catalog, snapshot, entry, true);
+    if (reason != R::None)
+        return reason;
+    for (auto &soldier : snapshot.m_Soldiers) {
+        soldier.m_Ownership.m_Soldier = soldier.m_Soldier;
+        soldier.m_Ownership.m_Deployed = true;
+    }
+
+    std::vector<S_CampaignSupplyItem> supply;
+    for (const auto &item : equipment.GetItems()) {
+        if (item.count < 0 || !ImportDefinition(item.itemId, native, catalog, true)) {
+            LogDevelopmentCampaign("invalid campaign stock row", static_cast<std::uint64_t>(item.itemId), item.count);
+            return R::InvalidItem;
+        }
+        supply.push_back({ItemKey(item.itemId), static_cast<std::uint32_t>(item.count), item.ammunition});
+    }
+    try {
+        C_CampaignEquipmentRules rules(catalog);
+        reason = IssueRequiredEquipment(rules, native, snapshot, entry);
+        if (reason != R::None)
+            return reason;
+        snapshot.m_Stock = rules.NormalizeSupply(supply);
+        for (auto &stock : snapshot.m_Stock) {
+            const auto definition = std::find_if(catalog.m_Items.begin(), catalog.m_Items.end(),
+                [&](const auto &rule) { return rule.m_Item == stock.m_State.m_Item; });
+            // The original first issue draws from available stock and fills any
+            // shortfall for a fresh soldier. All later edits conserve supply.
+            for (const auto &loadout : snapshot.m_Loadouts) {
+                for (const auto &item : loadout.m_Items)
+                    if (item.m_State.m_Item == stock.m_State.m_Item)
+                        stock.m_State.m_Quantity -= (std::min)(stock.m_State.m_Quantity, item.m_State.m_Quantity);
+                stock.m_Destinations.push_back({loadout.m_Soldier, definition->m_AllowedPlacements, {true, R::None}});
+            }
+        }
+    } catch (const std::invalid_argument &error) {
+        LogDevelopmentCampaign(error.what());
+        return R::InvalidItem;
+    }
+    LogDevelopmentCampaign("imported initial campaign stock", snapshot.m_Stock.size(), entry);
+    return R::None;
+}
+
 R FreezeDevelopmentCampaign(C_CampaignOwnership &ownership, C_CampaignRequestJournal &journal,
     int missionNumber, PlayerId guest, S_CampaignNativeCatalog &native, S_CampaignMissionManifest &manifest)
 {
-    for (const auto &record : ownership.GetSession().GetRoster()) {
+    const auto roster = ownership.GetSession().GetRoster();
+    for (const auto &record : roster) {
         const auto reason = ownership.SetAvailability(record.m_Soldier, true, true);
         if (reason != R::None)
             return reason;

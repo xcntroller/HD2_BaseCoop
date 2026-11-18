@@ -38,6 +38,10 @@ COOP-013. Keep disk save/resume and mid-mission admission outside this scope.
   original debrief result and reach the original next campaign step in the same
   session. Enter the following playable mission through the original intervening
   steps, including live preparation where required.
+- The [after-action report](../base_game_coop.md#player-flow) shows all connected
+  humans' readiness, including spectators. The host can advance only when all are
+  ready for that report. Verify a late Ready, a departure while waiting, and
+  repeated advancement requests against the same report.
 - Compare squad stats, deaths, inventory and progression against original campaign
   rules. The host commits the result once and guests do not write solo progress.
   A failure follows the original failure path without committing victory.
@@ -65,7 +69,7 @@ runtime evidence and legacy regression requirements.
 - Completed: task definition.
 - Remaining: implementation or verification and the acceptance evidence above.
 - Next action: Trace the original campaign nodes from Arctic1 mission exit to the next playable step and identify the host writeback boundary.
-- Blockers: Required results listed above must merge before implementation.
+- Blockers: COOP-013 merged at `73d518a5`. COOP-014 must merge before implementation.
 - Decisions: Preserve the original step sequence and record any necessary eligibility or transition departure decision before exposing that policy.
 - Local state: no task worktree or artifacts.
 - Review notes: none.

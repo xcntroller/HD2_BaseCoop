@@ -6,4 +6,4 @@ static_assert(sizeof(void *) == 4, "required MSVC x86 target");
 #endif
 #endif
 static_assert(CampaignProtocol::kCommand == 0x434f4f50);
-static_assert(std::variant_size<CampaignProtocol::T_Message>::value == 20);
+static_assert(std::variant_size<CampaignProtocol::T_Message>::value == 21);

@@ -41,15 +41,16 @@ User instructions and later confirmed design decisions take precedence over thes
 
 ## Product boundaries
 
-- Preserve the base singleplayer campaign experience: its soldiers, missions, scripts,
-  objectives, equipment rules, and progression. Up to four players control the squad;
-  AI controls unclaimed soldiers.
+- Preserve the base singleplayer campaign experience, including its soldiers, missions,
+  scripts, objectives, equipment rules, and progression. Up to four players control
+  the squad. AI controls unclaimed deployed soldiers when enabled.
 - Each human chooses their own loadout. The host edits their own soldier and unclaimed
   AI soldiers, not another connected player's soldier. Network authority validates
   choices; it does not transfer the choice to the host.
-- Build a campaign-style preparation UI. Reuse networking/infrastructure and suitable
-  singleplayer components; do not default to multiplayer loadout screens, scoreboards,
-  ranks, rounds, or respawns. Discuss a concrete UI fallback before adopting it.
+- Use the original campaign's visual character as a reference and follow the
+  [co-op interface guidance](docs/base_game_coop.md#co-op-interface-design) for
+  clearer menus and new HUD elements. Reuse networking infrastructure and suitable
+  singleplayer components where they fit the co-op flow.
 - Keep confirmed product decisions separate from proposed defaults. Record new user
   decisions in the design and adjust affected open tasks. Ask only when a decision
   actually blocks dependent work; continue independent work in the meantime.

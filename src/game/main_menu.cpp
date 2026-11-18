@@ -78,6 +78,9 @@ bool C_MainMenu::OnStart(void *)
 
 void C_MainMenu::OnStop()
 {
+#ifndef HD2_DEDICATED
+    m_campaignPreparation.reset();
+#endif
     m_campaignSetup.reset();
     DrainFoundServers();
     delete m_mpSettings;
@@ -401,7 +404,8 @@ bool C_MainMenu::OnMainShown(void *menu, void *, C_Control *, uint32_t, uint32_t
 {
     auto *self = static_cast<C_MainMenu *>(menu);
     self->m_saveName = C_str("");
-    g_netGame.Close(true);
+    if (!self->m_campaignSetup)
+        g_netGame.Close(true);
     C_PlayerProfile *player = g_gameProfile.GetPlayerProfile();
     self->m_profileName = player->GetProfileName();
     if (self->m_profileName.IsEmpty()) {
