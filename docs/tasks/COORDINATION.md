@@ -193,3 +193,5 @@ missing fields. COOP-006 was notified explicitly before this stopped-writer hand
 - Transport scope: COOP-010 owns the new campaign network attachment and the narrow DirectPlay session and callback changes in `net_session.cpp`, `net_messages.cpp`, `net_game.cpp`, `net_game.h` and `dplay8.h`. Campaign traffic uses the provider's reliable ordered channel and its connection identity. Live campaign paths will bypass native UDP, GameSpy and voice; ordinary sessions retain their routes.
 
 - Integration scope: COOP-010 owns the narrow ownership admission change needed to commit the transport-assigned PlayerId after negotiation, with a focused ownership regression. It also owns the original campaign development launcher and any original mission lifecycle integration fixes required by its test fixture.
+
+- Arctic1 fixture scope: COOP-010 owns read-only default preset import in `loadout_presets.{h,cpp}` and the narrow original script-list selection in `script_module.cpp`. The development fixture will negotiate exact local mission content, use the original Arctic1 equipment presets, and keep world simulation behind the existing loading barrier.
