@@ -2,15 +2,15 @@
 
 ## Coordination
 
-- Status: ready
-- Owner/session: unassigned
+- Status: done
+- Owner/session: Codex COOP-005 / thread `01a1ebf9-90e7-7ca2-8a1d-987711a3d8fe`, user assignment 2026-11-18
 - Canonical branch: `feature/coop-005-preparation-model`
-- Base commit: not started
+- Base commit: `4d6f8cc1bb96c50aee09d5c3ac0992ce716a3d39` (integrated `origin/main`)
 - Dependencies: COOP-002, COOP-011 (merged shared declarations)
-- Last checkpoint: none
-- Checkpoint location: none
-- Review/integration: none
-- Pull request: none
+- Last checkpoint: validated implementation `eda10d0a`; final review `1a61b3df`; merged feature head `4798c022`
+- Checkpoint location: `.worktrees/COOP-005`; `origin/feature/coop-005-preparation-model`
+- Review/integration: independently reviewed PR #8 merged as `06d999d75e5d62a96f38abf05f7c671c1b96b659`
+- Pull request: merged [#8](https://github.com/xcntroller/HD2_BaseCoop/pull/8)
 
 ## Branch authority and completion PR
 
@@ -61,13 +61,96 @@ and COOP-007 notification before editing shared equipment files.
 - Expose a UI/transport-independent API and tests. No claim of a connected preparation
   screen is made until its later live synchronization gate passes.
 
+## Validator audit (2026-11-18)
+
+- `profile_squad.cpp::PutItem`/`UpdateLoad` own soldier weight, belt volume
+  (12), backpack weight/volume and replacement checks. A replacement backpack must
+  accommodate existing contents; single slots displace equipment and container
+  additions may fit only partially. The transaction must commit only a fully
+  validated candidate, including all displacement/returns.
+- `equipment_panel.cpp::PutItemChecked` checks item/container compatibility and
+  occupied single slots; `DropItem` adds partial-count/forced placement behavior.
+  These methods mutate live squad/preview state and cannot be called on proposals.
+- `equipment_screen.cpp::HasRequiredItems`/`CountCarried` are Continue checks:
+  deployed carriers only, Axis items on one selected carrier, and required uniform/
+  diving-gear counts capped by squad size. `IsSquadWithinWeight` blocks Continue;
+  `IsSquadArmed` asks for confirmation rather than unconditionally rejecting edits.
+- Campaign supply normalizes ammunition through `GetAmmoItemId` in `OnStart`.
+  `SetupStore`/`TakeSquadItems`, preset remapping, `DistributeRequired` and
+  `Replenish` mutate global stock/soldiers. Screen binding must never call these
+  as model initialization or repeat normalization. Fractional stats remain floats.
+- Implementation: concrete detached campaign rules and original-source differential
+  checks now cover this boundary. The source component calls no mutable native panel
+  adapter; production catalog import and UI/transport/lifecycle composition remain
+  downstream. Fake rules are used only for isolated authority-boundary tests.
+
 ## Handoff
 
-- Completed: design/contract foundation; COOP-002 merged `9f59ff47`, COOP-011 merged `0f367ed6`.
-- Remaining: transaction model/validators and behavioral tests against the merged declarations.
-- Next action: obtain coordinator claim acknowledgment, create the canonical worktree,
-  then inventory reusable validators and implement against the merged contract/header.
-- Blockers: none for isolated implementation/tests with explicit policy fixtures;
-  unresolved deploy/stock UX policies remain production gates, not silently chosen defaults.
-- Decisions: editing permissions are confirmed; shared-state implementation follows the contract.
-- Validation: none for this task.
+- Claim: coordinator acknowledgment `f960e0c3`; canonical branch/worktree retained.
+- Completed: atomic candidate transactions, permissions/control fences, explicit bulk
+  targets, shared Begin/Finish journal injection agreed with COOP-004, immutable
+  viewer snapshots, ownership/presence/rule readiness invalidation, separate revision
+  domains, explicit deploy policy, freeze manifest and fail-closed membership changes.
+  Concrete detached campaign rule catalog/evaluator/planner handles native capacity,
+  placement, ammo/state variants, original essentials/carrier rules and supply mapping.
+- Files: only `src/game/campaign_preparation.{h,cpp}`, own harness and this record.
+  No shared header, legacy source, UI, index or generated-tier changes.
+- Behavioral evidence: GCC C++17 / warnings-as-errors passed, latest output
+  `build/campaign_preparation/gcc-wheke2z_`. Harness checks permissions/bulk rejection,
+  last-item/stale/replay/conflict/expiry, invalid equipment/capacity, variant preservation,
+  per-variant conservation, rollback, ownership races/disconnect, ready/freeze and overflow.
+- Original-rule evidence: `legacy_source.py` extracts current original bodies into
+  ignored invocation-local output. 810 capacity/backpack and 240 mission-essential/
+  Axis-carrier cases compare concrete rules against those compiled source algorithms.
+  Concrete transaction checks cover displaced-backpack rollback, backpack+contents
+  return, ammunition supply conversion and bulk target permissions. See harness README.
+- Target evidence: current implementation MSVC 19.44.35230 x86 /W4 /WX with SDK
+  10.0.26100.0 under Wine 11.21 passed standalone header, behavior and original-rule
+  parity: `build/campaign_preparation/msvc-t3_i3i0o`. Exact argv/environment/version
+  and execute logs retained there. COOP-007 replacement tooling was borrowed read-only;
+  all outputs and Wine prefix stayed private to COOP-005. Earlier historical runs
+  `msvc-47sttfxj`, `msvc-kbhg9u46` and `msvc-z6ac4646` also passed.
+- Commands: `python3 _re/harness/campaign_preparation/run.py --compiler gcc`;
+  Windows `python _re\harness\campaign_preparation\run.py --compiler msvc`.
+  Exact portable-Wine command, flags, prerequisites, expected output and queue/journal
+  composition are in `_re/harness/campaign_preparation/README.md`.
+- Environment change resolved: original borrowed COOP-001 tooling disappeared
+  externally; COOP-007 reprovisioned pinned private tools. Current README points to
+  `.worktrees/COOP-007/build/tooling/run-python.bat`; preserve those borrowed resources.
+- Freeze integration: independent review found COOP-004 phase-only transitions
+  advanced ownership/control revisions after manifest capture. COOP-004 corrected its
+  Freeze/StartSimulation baseline separately. This model's optional trusted freeze
+  callback verifies the exact unchanged ownership/control/participant cut before
+  publishing an immutable owning manifest. Callback mismatches fail closed/resync;
+  no stale manifest is exposed. Regression checks prior mission generation fields,
+  full-roster input, host without soldier, scripted/dead AI and both freeze models.
+- Independent review: COOP-004 worker thread
+  `01a1ebf9-60c7-74d0-9d39-cd09295875b0` reviewed full implementation/header/harness
+  and final `eda10d0a` callback/manifest delta: **PASS**, no blocking findings. They
+  independently reran GCC (`build/campaign_preparation/gcc-udbjthdm`) with header,
+  behavior, 810 capacity + 240 essentials parity and concrete transactions all passed.
+  They inspected refreshed target logs `msvc-t3_i3i0o` (both executables passed);
+  no independent target recompile was claimed. Source-only scope and downstream
+  native integration limits accepted.
+- Integration: PR #8 merged as `06d999d75e5d62a96f38abf05f7c671c1b96b659`
+  after independent review and final complete diff/whitespace checks. Final feature
+  head `4798c022` included only integration with already merged main; the preparation
+  source/harness were unchanged from reviewed/tested `eda10d0a`.
+- Additional composition experiment: actual COOP-004 session/ownership/shared journal
+  plus this preparation model on one queue passed edit -> ready -> freeze -> duplicate
+  replay with an identical ownership/manifest baseline and unchanged stock on replay.
+  Source/log artifact is ignored under
+  `.worktrees/COOP-005/build/campaign_preparation/composition/`; this supplementary
+  experiment does not replace the committed standalone suites or claim a live adapter.
+- Remaining: no COOP-005 component work. Production catalog/transport/UI composition
+  is downstream; this is a source-only component, not a connected preparation screen.
+  No full game build/runtime claim is made.
+- Decisions: selected records must be eligible/alive/deployed (selected for preparation,
+  not actor-spawned); COOP-004 confirmed setup semantics. Production readiness/departure
+  policies remain unresolved and return PolicyRequired. The fixture's all-ready quorum
+  and explicit recipe auto-equip policy are labeled development inputs. Both optional
+  result generation fields describe the complete current session epoch across families.
+- Next action: downstream COOP-009 and later live preparation adapters consume the
+  merged component through its documented authority queue/journal/catalog boundaries.
+  COOP-009 still waits for COOP-006; this task's component gate is complete.
+- Uncommitted work: none after this checkpoint; build outputs/logs remain ignored.
