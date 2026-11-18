@@ -13,6 +13,7 @@ public:
     C_CampaignOwnership(const C_CampaignOwnership &) = delete;
     C_CampaignOwnership &operator=(const C_CampaignOwnership &) = delete;
     T_CampaignOwnershipSnapshot GetSnapshot() const override;
+    std::size_t GetParticipantCount() const { return m_State.m_Participants.size(); }
     const C_CampaignSession &GetSession() const { return m_Session; }
     std::optional<PlayerId> FindOwner(SoldierId soldier) const;
     std::optional<SoldierId> FindSoldier(PlayerId player) const;

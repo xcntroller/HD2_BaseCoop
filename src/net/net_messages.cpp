@@ -439,7 +439,7 @@ long __stdcall C_NetGame::HandleServerMessage(C_NetGame *net, void *, uint32_t t
             return -1;
         }
         net->m_playersLock.Enter();
-        if (settings.password.Size() != 0 && std::strcmp(settings.password.c_str(), request->password) != 0) {
+        if (!campaign && settings.password.Size() != 0 && std::strcmp(settings.password.c_str(), request->password) != 0) {
             net->m_playersLock.Leave();
             *reply = NET_JOIN_BAD_PASSWORD;
             return -1;
