@@ -148,4 +148,11 @@ model behavior only, and do not imply the later adapters or campaign mode are pl
 - Updated main `1b9b307f` merged on this branch as `e86cc8c4`. Only overlap was the
   planning status/handoff for this task; resolved to the active reviewed implementation.
   No implementation source or shared declaration changed during synchronization.
-- Further full read-only peer review requested from COOP-006; pending at this record.
+- Full read-only peer review requested from COOP-006; COOP-005 subsequently offered
+  full implementation review/integration after its own checkpoint. No review result
+  or integration approval is inferred from an offer.
+- Environment update after validation: previous coordinator reports COOP-001 worktree
+  and borrowed toolchain removed externally. Our native/MSVC logs and fixture remain
+  intact in COOP-004 build outputs. The historical target run is valid evidence; a fresh
+  target compile needs reprovisioning via the merged build guide or an MSVC x86 developer
+  environment. No source changed after target validation except comments/docs.
