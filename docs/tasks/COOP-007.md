@@ -2,15 +2,15 @@
 
 ## Coordination
 
-- Status: ready
-- Owner/session: unassigned
+- Status: review
+- Owner/session: Codex COOP-007 / thread `01a1ec02-1d0b-7791-8a57-e16ee680b905`, user assignment 2026-11-18
 - Canonical branch: `feature/coop-007-preparation-screen`
-- Base commit: not started
+- Base commit: `dbc9a85a7161d8844f2907dbaf6586c7f3b67d19`
 - Dependencies: COOP-002, COOP-003, COOP-011 (merged shared declarations)
-- Last checkpoint: none
-- Checkpoint location: none
-- Review/integration: none
-- Pull request: none
+- Last checkpoint: source `d3269c4a`; latest handoff/metadata is `HEAD`
+- Checkpoint location: `.worktrees/COOP-007`; `origin/feature/coop-007-preparation-screen`
+- Review/integration: independent COOP-003 full and targeted final review PASS; final integration pending
+- Pull request: https://github.com/xcntroller/HD2_BaseCoop/pull/12 (native component evidence complete; ready for review)
 
 ## Branch authority and completion PR
 
@@ -60,12 +60,103 @@ fake; no COOP-005 model implementation dependency is needed. Coordinate any `equ
 
 ## Handoff
 
-- Completed: dependencies; COOP-002 merged `9f59ff47`, COOP-003 merged `dd2aa98e`,
-  COOP-011 merged `0f367ed6`.
-- Remaining: native component implementation and UI verification against the merged contract/layout/header.
-- Next action: obtain coordinator claim acknowledgment, create the canonical worktree,
-  then review the merged layout/interface and build the fake model/native component.
-- Blockers: none for the fake-backed component; native visuals/input still require
-  this task's runtime component evidence and campaign-style review.
-- Decisions: new campaign-style UI, with existing singleplayer components reused when suitable.
-- Validation: none for this task.
+- Completed: immutable snapshot-driven campaign preparation component, typed queued
+  equipment/ownership/readiness/deployment proposals, local selection, explicit rights
+  and synchronization states, input/focus navigation, measured document paging, all
+  campaign skills, item-variant inspection, fake model and native LS3D preview.
+- Delivery: **Source-only component**. It is not wired into the shipping mode picker,
+  campaign flow, or network transport. No connected loadout selection is claimed. The
+  fake/native component meets this task's bounded acceptance; live catalog/face/uniform/
+  attachment and full localization bindings remain later integration work, not a final
+  shipping-look claim. The native fixture explicitly uses original procedural panels/
+  portrait markers and an unposed original campaign model with synthetic prop mappings.
+- Scope: `campaign_preparation_screen.{h,cpp}`, `_re/harness/campaign_preparation_ui/`,
+  and this record only relative to integrated main. No shared header, legacy equipment
+  panel, profile/global stock, engine ABI, native network, or menu-routing changes.
+- Source checkpoint: `d3269c4a`; merged-main synchronization `b7e6bb16` contains integrated
+  main `0fcea78f`, with no stacked unfinished branches. This metadata checkpoint is `HEAD`.
+- Independent review: COOP-003 owner/thread `01a1ebd2-c9c0-73a1-9495-337780d904f6`
+  reviewed the complete source/API/fake/native harness/runner/docs and native captures.
+  It independently compiled/executed strict GCC behavior checks twice. Initial findings
+  (unreachable multiline text and skills beyond five) were fixed at `d3269c4a` with measured
+  native pagination, skill paging, 30-line UTF-8/finding and 7+11-skill regressions.
+  Targeted final rereview **PASS**, no blocking findings. It inspected native briefing
+  page 3/3 containing line 30, skill page 2 containing skill 7 and the final details page.
+- Native visual/input evidence: final strict target build plus real Win32 SendInput suites
+  **PASS** at 1024x768, 800x600 and letterboxed 1280x720. Captures inspected at all three
+  sizes; ownership/read-only/pending/rejection/status and page controls are readable,
+  footer reachable, final briefing/restriction lines and all skills accessible.
+- Product policies: fixture-only all-connected-human readiness, release-before-claim and
+  first-committed scarce stock are labeled synthetic proposals. No open production policy
+  was silently resolved. Authority still validates every operation.
+- Remaining: final PR/integration gate and actual merge metadata. PR #12 is ready for review
+  after this handoff publication; task becomes `done` only after the actual merge.
+- Next action: review the final PR against current main, verify source/evidence unchanged,
+  merge through the authorized mechanism, then record actual merge in a reviewed completion
+  follow-up. Preserve this worktree/tooling/captures and other workers' checkpoints.
+
+## Acceptance evidence
+
+| Criterion | Result / evidence |
+| --- | --- |
+| Campaign-style layout/navigation through model API | Native LS3D scene/quads, original campaign font renderer and model, four dossier slots, briefing/equipment/details/skills pages, essentials and readiness/footer; same component behind fake/live boundary. |
+| Host/guest/AI rights and unambiguous read-only | Snapshot capabilities plus ownership guards; native host/guest/unassigned-host/scripted/restricted captures and input assertions. Selection never submits ownership. |
+| Loading/rejection/ownership/scarcity/readiness/input/restrictions | Native nine-state fixture plus ownership-loss pending rejection, guest disconnect-to-AI, scarce stock, ready invalidation, freeze, keyboard/mouse and leave confirmation; behavioral wrong-token/session/player/request/family/generation and close/reopen checks. |
+| Validated proposals without global mutations | Only seven model-interface methods used; typed requests bind preparation/control/ownership revisions; committed display remains unchanged pending results. No legacy globals referenced. |
+| Runnable preview, visual/input evidence and live contract | Strict MSVC x86 native executable runs with installed resources; repeatable native input/capture driver and detailed README/live binding contract. This is a fake-backed component, not connected selection. |
+
+## Validation actually performed
+
+Environment: Fedora 44, GCC 16.2.1, Python 3.14; Wine 11.21 private prefix;
+MSVC 19.44.35230 x86 (toolset 14.44.35207), SDK 10.0.26100.0, Windows Python 3.13.9;
+Xvfb :99 at 1280x960. Installed Steam game data is the COOP-001 baseline installation
+(app 703320, build 2147249). The component uses a private runtime directory; it never
+loads a player profile, campaign save or connected game session.
+
+From this task worktree root:
+
+```sh
+python _re/harness/campaign_preparation_ui/run.py --compiler gcc
+env -u WAYLAND_DISPLAY DISPLAY=:99 WINEPREFIX="$PWD/build/wine-prefix" WINEDEBUG=-all \
+  wine64 cmd /c 'build\tooling\run-python.bat' '_re\harness\campaign_preparation_ui\run.py' --compiler msvc
+env -u WAYLAND_DISPLAY DISPLAY=:99 WINEPREFIX="$PWD/build/wine-prefix" WINEDEBUG=-all \
+  wine64 cmd /c 'build\tooling\run-python.bat' '_re\harness\campaign_preparation_ui\run.py' --compiler msvc --native \
+  --engine-lib 'ls3df\build\msvc\LS3DF.lib' --data-lib 'rw_data\build\msvc\rw_data.lib'
+python -m py_compile _re/harness/campaign_preparation_ui/run.py _re/harness/campaign_preparation_ui/native_smoke.py
+git diff --check
+git diff origin/main...HEAD --check
+```
+
+- GCC and intended MSVC x86 `/W4 /WX`: **PASS**, including complete multiline/UTF-8
+  text reachability, seven plus additional skills, item variant metadata, revision-bound
+  readiness, stale/generation fences retained across loading, wrong correlations, pending
+  stock, accepted/rejected edits, permissions, local selection, paging and closed-screen lifetime.
+- Final target outputs: `build/campaign_preparation_ui/msvc-6j44h_k1` (behavior),
+  `msvc-iqgq6v8g` (native preview); native C++ source matches `d3269c4a`.
+- Engine/DTA prerequisite builds: isolated LS3DF 78 TUs/link **PASS** (existing C4127),
+  rw_data **PASS**. They use process-local TEMP/TMP and ignored worktree-specific outputs.
+- Native resource audit: `items selection`, `selection screen`, `description`, `mp_en01`,
+  `w_enfield`, `l_medkit` **all load successfully**. Expected legacy anchors are logged.
+- Native input suite commands (Windows Python from private `build/native-runtime`,
+  full script path): `native_smoke.py --width 1024 --height 768`, then `--width 800
+  --height 600`, then `--width 1280 --height 720`, serially. All **PASS**. Complete setup,
+  Wine invocation and expected results are in the harness README; state traces and captures
+  are generated by the executable, not an HTML mock or screenshot recreation.
+- Local evidence: `build/native-runtime/final-smoke-{1024,800,1280}.log`,
+  `native-<width>x<height>.log`, `input-evidence-<width>x<height>.txt`,
+  `captures-<width>x<height>/*.tga` (derived PNGs for inspection). Not committed: game imagery,
+  data, toolchain, native artifacts or local build outputs. Reviewer can regenerate them.
+- Final local preview SHA-256: `8c96efbfa3a713bbf8d3562700381c575cd393fefcda70b28548f3377f733c76`.
+- Not claimed/tested: live host/guest loadout synchronization, shipping menu integration,
+  full production face/pose/attachment/material binding, all-language glyph/fit coverage,
+  mission completion, save/load or controller/actor behavior. Those belong to later tasks.
+
+## Local resource preservation
+
+COOP-001's ignored worktree/tooling outputs disappeared externally during this task.
+The owner confirmed they had not removed/moved them. COOP-007 reconstructed the pinned
+compiler/SDK/Windows Python under ignored `build/tooling/`; source setup remains the
+integrated build guide/configurator. Its `run-python.bat`/`vcvars-x86.bat` and native DLLs
+are preserved and may be borrowed **read-only**, with separate prefixes/outputs. COOP-004,
+005 and 006 completed target checks using that route; 008/009 have current authorization.
+Do not remove these resources while other active workers depend on them.
