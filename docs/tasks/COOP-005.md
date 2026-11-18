@@ -2,11 +2,11 @@
 
 ## Coordination
 
-- Status: planned
+- Status: ready
 - Owner/session: unassigned
 - Canonical branch: `feature/coop-005-preparation-model`
 - Base commit: not started
-- Dependencies: COOP-002
+- Dependencies: COOP-002, COOP-011 (merged shared declarations)
 - Last checkpoint: none
 - Checkpoint location: none
 - Review/integration: none
@@ -37,6 +37,18 @@ stock contracts. Audit existing item/soldier/equipment validation for reuse; coo
 changes to `equipment_screen.*` or `equipment_panel.*` with COOP-007. Prefer adapters over
 an unrelated rewrite of the original singleplayer screen.
 
+### COOP-002 scope refinement
+
+Contract implementation scope from COOP-002: own `src/game/campaign_preparation.{h,cpp}`
+and `_re/harness/campaign_preparation/`. Implement [the preparation boundary](../coop_contracts.md#preparation-model-and-ui-boundary)
+with one aggregate preparation commit revision, a separate view revision for readiness,
+atomic stock/loadout candidate commits, explicit bulk targets, and commit-time ownership
+checks. Use the common RequestId deduplication rules. Consume the merged COOP-011
+identity/DTO/interface declarations and inject an ownership catalog view; no dependency on the COOP-004 model implementation is required.
+Reuse campaign edit/deploy validation semantics; direct panel/profile mutation is not the
+new model API. Any legacy validator extraction requires coordinator scope acknowledgment
+and COOP-007 notification before editing shared equipment files.
+
 ## Acceptance criteria
 
 - Each human edits their own soldier; host edits their own and unclaimed AI soldiers only.
@@ -51,9 +63,11 @@ an unrelated rewrite of the original singleplayer screen.
 
 ## Handoff
 
-- Completed: proposed transaction rules in the campaign design.
-- Remaining: reviewed transaction contract, implementation, and behavioral tests.
-- Next action: read the merged COOP-002 contract and inventory reusable equipment validators.
-- Blockers: COOP-002 has not merged; deploy/stock UX policies may need user input later.
+- Completed: design/contract foundation; COOP-002 merged `9f59ff47`, COOP-011 merged `0f367ed6`.
+- Remaining: transaction model/validators and behavioral tests against the merged declarations.
+- Next action: obtain coordinator claim acknowledgment, create the canonical worktree,
+  then inventory reusable validators and implement against the merged contract/header.
+- Blockers: none for isolated implementation/tests with explicit policy fixtures;
+  unresolved deploy/stock UX policies remain production gates, not silently chosen defaults.
 - Decisions: editing permissions are confirmed; shared-state implementation follows the contract.
 - Validation: none for this task.

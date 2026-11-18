@@ -2,11 +2,11 @@
 
 ## Coordination
 
-- Status: planned
+- Status: ready
 - Owner/session: unassigned
 - Canonical branch: `feature/coop-004-ownership`
 - Base commit: not started
-- Dependencies: COOP-002
+- Dependencies: COOP-002, COOP-011 (merged shared declarations)
 - Last checkpoint: none
 - Checkpoint location: none
 - Review/integration: none
@@ -36,6 +36,16 @@ Own new ownership/session implementation files and focused tests at paths agreed
 Consume shared identity and transition contracts. Legacy controller and mission adapters
 belong to COOP-008/009; avoid concurrent edits to those files.
 
+### COOP-002 scope refinement
+
+Contract implementation scope from COOP-002: own `src/game/campaign_session.{h,cpp}`,
+`src/game/campaign_ownership.{h,cpp}`, and `_re/harness/campaign_ownership/`. Follow [the identity, lifecycle and ownership
+contracts](../coop_contracts.md#identity-and-session-context), including connection
+incarnations, per-soldier control revisions, script suspension and actor-binding invalidation.
+Consume COOP-011 shared declarations; coordinate changes with all consumers before
+editing that common header. Do not create independent incompatible copies.
+No legacy controller/profile layout edits.
+
 ## Acceptance criteria
 
 - Enforce one human owner per soldier, at most one soldier per player, and campaign squad limits.
@@ -49,9 +59,10 @@ belong to COOP-008/009; avoid concurrent edits to those files.
 
 ## Handoff
 
-- Completed: task scope only.
-- Remaining: implementation and tests after contract merge.
-- Next action: inspect the merged COOP-002 contract and agree on the exact implementation files.
-- Blockers: COOP-002 has not merged.
+- Completed: task scope and dependencies; COOP-002 merged `9f59ff47`, COOP-011 merged `0f367ed6`.
+- Remaining: session/ownership implementation and behavioral tests against the merged shared header.
+- Next action: obtain coordinator claim acknowledgment, create the canonical worktree,
+  and implement the reserved session/ownership files against COOP-011 declarations.
+- Blockers: none for this isolated component; production integration remains downstream.
 - Decisions: model follows confirmed campaign behavior and the reviewed contracts.
 - Validation: none for this task.
