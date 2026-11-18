@@ -255,6 +255,10 @@ for progression.
   Running at generation 1 and snapshot 1. The guest received four squad
   actors and 30 ambient humans and started the shared aircraft scene.
   See `build/evidence/menu-production-*-campaign-dev.log`.
+- **Production handoff.** On the integrated release, a living guest moved
+  and closed the window. Actor 1 stayed in the world under squad AI with
+  native transfer CRC32 `3327485350`. The host rejected the retired token as
+  `NotAdmitted`. See `build/evidence/integrated-handoff/result.log`.
 - **Debug-assisted wire and success.** A checked host moved the native
   cutters into its pouches and used panel 99 next to a seeded player position.
   The host accepted one request and completed one native cut. An ordinary
