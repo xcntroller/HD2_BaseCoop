@@ -10,7 +10,7 @@ creating or updating the operational branch. Do not merge its WIP ledger into `m
 - Contact/shared channel: this published ledger and the COOP-010 task branch/PR.
 - Integrator: Codex COOP-010 for this session, subject to the review and runtime acceptance gates.
 - Latest checkpoint: `HEAD` on `origin/coord/coop-work-queue`.
-- Next action: establish the original campaign test fixture and integrate live campaign admission, initial state, and controller/input dispatch.
+- Next action: complete guest initial-world reconstruction and ownership-tagged replication on COOP-010. The host fixture and transport are under Draft PR #22.
 
 ## Accepted task claims
 
@@ -27,7 +27,7 @@ creating or updating the operational branch. Do not merge its WIP ledger into `m
 | COOP-009 | Codex COOP-009 / thread `01a1ec1f-ea8d-77f3-b0e9-7c683f367ec3`, user assignment | `feature/coop-009-campaign-adapters` | done | PR #19 merge `ce306626`; completion PR #21 merge `6f1bdd96`; canonical branch pushed to `6f1bdd96` | Dormant lifecycle/world-barrier/native rules complete; COOP-010 owns live attachment and actual two-instance evidence. |
 | COOP-001 | Codex / 2026-11-18 user assignment | `feature/coop-001-build-baseline` | done | PR #2 merge `15b572ff`; completion metadata PR #11 merge `1b9b307f` | Build/solo/native host-guest baseline and isolation accepted; guide/evidence integrated. Firing/reload/completion remain unverified downstream gates. |
 
-| COOP-010 | Codex COOP-010 (2026-11-18), user assignment | `feature/coop-010-two-player-mission` | active; claim acknowledged | Base `6f1bdd96`; worktree `.worktrees/COOP-010` | Development launch, campaign session/net dispatch and initial-world reconstruction, and focused lifecycle/controller/replication changes needed by the two-instance acceptance route. |
+| COOP-010 | Codex COOP-010 (2026-11-18), user assignment | `feature/coop-010-two-player-mission` | active | Draft PR #22, source `33ad68fe`, handoff `b55b9fc6`, `.worktrees/COOP-010` | Implement and verify guest reconstruction of the host's original Arctic1 world, then guarded live replication/input and the two-client gameplay gate. |
 
 
 Only the coordinator adds or reassigns claims. A missing row is not sufficient evidence
@@ -195,3 +195,5 @@ missing fields. COOP-006 was notified explicitly before this stopped-writer hand
 - Integration scope: COOP-010 owns the narrow ownership admission change needed to commit the transport-assigned PlayerId after negotiation, with a focused ownership regression. It also owns the original campaign development launcher and any original mission lifecycle integration fixes required by its test fixture.
 
 - Arctic1 fixture scope: COOP-010 owns read-only default preset import in `loadout_presets.{h,cpp}` and the narrow original script-list selection in `script_module.cpp`. The development fixture will negotiate exact local mission content, use the original Arctic1 equipment presets, and keep world simulation behind the existing loading barrier.
+
+- Arctic1 checkpoint: the actual host loaded the original campaign PLAY step with four bound soldiers, original kits and essentials after two-instance admission. An altered guest copy received ContentMismatch. After restoring it, the same host admitted a new PlayerId on the same provider slot. The world-ack deadline aborted at mission time zero as expected. The full x86 build and the nine protocol suites passed. Solo main menu and native LAN two-peer player setup were observed. Guest world reconstruction, in-play ownership transfer and the acceptance gameplay route remain pending. Runtime logs and build evidence are under root ignored `build/coop-010-evidence/`.
