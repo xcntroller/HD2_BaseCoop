@@ -166,7 +166,8 @@ Do not remove these resources while other active workers depend on them.
 Actual feature merge: `8067b4710a5d68f46e37a8cfc5d4a83d4bd33219` via PR #12,
 exact reviewed head `4645f814` and source `d3269c4a`. COOP-003 independently reviewed
 the complete implementation and final fixes, reproduced strict GCC behavior checks twice,
-and inspected native captures including final briefing/restriction lines and all skills.
+and inspected native captures including the final briefing/restriction lines and skills
+page 2 (skill 7); the automated regression checks cover all seven and eleven skills.
 It then passed the final read-only metadata check, confirmed all three native input-suite
 PASS logs and verified the preview hash. The integrator separately checked the exact PR
 head, final diff/history/scope, links and evidence, then merged normally with a head match.
