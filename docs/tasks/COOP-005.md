@@ -2,15 +2,15 @@
 
 ## Coordination
 
-- Status: review (independent final review passed; integration pending)
+- Status: done
 - Owner/session: Codex COOP-005 / thread `01a1ebf9-90e7-7ca2-8a1d-987711a3d8fe`, user assignment 2026-11-18
 - Canonical branch: `feature/coop-005-preparation-model`
 - Base commit: `4d6f8cc1bb96c50aee09d5c3ac0992ce716a3d39` (integrated `origin/main`)
 - Dependencies: COOP-002, COOP-011 (merged shared declarations)
-- Last checkpoint: validated implementation `eda10d0a`; this follow-up records final independent review
+- Last checkpoint: validated implementation `eda10d0a`; final review `1a61b3df`; merged feature head `4798c022`
 - Checkpoint location: `.worktrees/COOP-005`; `origin/feature/coop-005-preparation-model`
-- Review/integration: COOP-004 independent full review and reproduction of `eda10d0a` passed; approved for component integration
-- Pull request: draft [#8](https://github.com/xcntroller/HD2_BaseCoop/pull/8)
+- Review/integration: independently reviewed PR #8 merged as `06d999d75e5d62a96f38abf05f7c671c1b96b659`
+- Pull request: merged [#8](https://github.com/xcntroller/HD2_BaseCoop/pull/8)
 
 ## Branch authority and completion PR
 
@@ -132,14 +132,25 @@ and COOP-007 notification before editing shared equipment files.
   They inspected refreshed target logs `msvc-t3_i3i0o` (both executables passed);
   no independent target recompile was claimed. Source-only scope and downstream
   native integration limits accepted.
-- Remaining: reviewed PR integration and actual merge/done metadata. Native
-  catalog/transport/UI composition is downstream; this is a source-only component,
-  not a connected preparation screen. No full game build/runtime claim is made.
+- Integration: PR #8 merged as `06d999d75e5d62a96f38abf05f7c671c1b96b659`
+  after independent review and final complete diff/whitespace checks. Final feature
+  head `4798c022` included only integration with already merged main; the preparation
+  source/harness were unchanged from reviewed/tested `eda10d0a`.
+- Additional composition experiment: actual COOP-004 session/ownership/shared journal
+  plus this preparation model on one queue passed edit -> ready -> freeze -> duplicate
+  replay with an identical ownership/manifest baseline and unchanged stock on replay.
+  Source/log artifact is ignored under
+  `.worktrees/COOP-005/build/campaign_preparation/composition/`; this supplementary
+  experiment does not replace the committed standalone suites or claim a live adapter.
+- Remaining: no COOP-005 component work. Production catalog/transport/UI composition
+  is downstream; this is a source-only component, not a connected preparation screen.
+  No full game build/runtime claim is made.
 - Decisions: selected records must be eligible/alive/deployed (selected for preparation,
   not actor-spawned); COOP-004 confirmed setup semantics. Production readiness/departure
   policies remain unresolved and return PolicyRequired. The fixture's all-ready quorum
   and explicit recipe auto-equip policy are labeled development inputs. Both optional
   result generation fields describe the complete current session epoch across families.
-- Next action: mark PR ready and integrate after coordinator final diff check; record
-  the actual merge commit and done metadata afterward.
+- Next action: downstream COOP-009 and later live preparation adapters consume the
+  merged component through its documented authority queue/journal/catalog boundaries.
+  COOP-009 still waits for COOP-006; this task's component gate is complete.
 - Uncommitted work: none after this checkpoint; build outputs/logs remain ignored.
