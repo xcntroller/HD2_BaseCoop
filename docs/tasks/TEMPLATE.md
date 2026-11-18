@@ -40,12 +40,17 @@ section before expanding scope.
 - Define observable outcomes that make this deliverable complete.
 - Include relevant regressions and failure cases, not only the happy path.
 - State whether runtime host/guest evidence is required for this scope.
+- For campaign tasks, separate the technical checks from any full-route gate for
+  the project owner. Follow the
+  [campaign testing strategy](../agent_workflow.md#campaign-testing-strategy).
 
 ## Validation evidence
 
 Record exact commands, environment/toolchain, tested commit, outcome, and concise evidence
-or artifact location. Distinguish passed, failed, and unavailable checks. Keep game assets
-and secrets out of committed logs. Documentation changes do not require a game build.
+or artifact location. Distinguish simulated, debug-assisted, and genuine unmodified gameplay
+evidence. List pending owner playtests with exact reproduction steps and expected results.
+Distinguish passed, failed, and unavailable checks. Keep game assets and secrets out of
+committed logs. Documentation changes do not require a game build.
 
 ## PR test instructions and delivery
 

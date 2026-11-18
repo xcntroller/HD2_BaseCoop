@@ -32,12 +32,14 @@ and debrief routing, and the transition hooks in the mission lifecycle and owner
 adapters. Use the terminal result from COOP-014 and the preparation lifecycle from
 COOP-013. Keep disk save/resume and mid-mission admission outside this scope.
 
-## Acceptance criteria
+## Technical acceptance criteria
 
-- Start from the game menu and complete Arctic1 as host and guest. Both see the
-  original debrief result and reach the original next campaign step in the same
+- Launch a host/guest session through the game menu and establish an Arctic1 terminal
+  result using a reproducible checkpoint or controlled test state. Both peers see
+  the original debrief result and reach the original next campaign step in the same
   session. Enter the following playable mission through the original intervening
-  steps, including live preparation where required.
+  steps, including live preparation where required. Label the terminal setup and
+  the production transition it exercises.
 - The [after-action report](../base_game_coop.md#player-flow) shows all connected
   humans' readiness, including spectators. The host can advance only when all are
   ready for that report. Verify a late Ready, a departure while waiting, and
@@ -49,6 +51,12 @@ COOP-013. Keep disk save/resume and mid-mission admission outside this scope.
   require a new loading barrier before either player can act. Test a departure
   during the transition and a player with no eligible soldier under the agreed
   policy. Verify the corresponding solo flow and native LAN map change.
+
+## Owner playtest
+
+Hand off the normal menu-to-Arctic1-to-next-mission route with exact launch steps and
+expected results. Record any genuine end-to-end evidence separately under the
+[campaign testing strategy](../agent_workflow.md#campaign-testing-strategy).
 
 ## Validation evidence
 

@@ -253,8 +253,9 @@ Every completion PR description must include:
 - Reproducible **How to test** steps: required toolchain, game data/version, setup/build
   and launch commands, relevant mission/settings, player count and host/guest actions
   where applicable, and the expected result after each meaningful step.
-- Checks actually run, their environment and outcomes, and any checks not run. Separate
-  suggested reviewer steps from validation already performed. For source-only components,
+- Checks actually run, their environment and outcomes, and any checks not run. Label
+  campaign evidence and list outstanding owner playtests under the
+  [campaign testing strategy](#campaign-testing-strategy). For source-only components,
   explain how to build/run the relevant harness or tests; for documentation-only tasks,
   give document review and link/diff checks instead of invented gameplay steps.
 
@@ -279,11 +280,10 @@ git log --oneline main..HEAD
 ```
 
 Run the checks appropriate to the task. For legacy game changes this generally includes
-the relevant compile/build checks and subsystem harnesses; controller, replication, and
-mission acceptance also require host/guest runtime evidence. A syntax check is not a
-playable build, and loading a mission is not evidence that it completes. Record unavailable
-toolchains, game data, or test machines explicitly. Scope an independently mergeable
-foundation task honestly rather than waiving an unmet playable-feature acceptance gate.
+relevant compile/build checks and subsystem harnesses. Controller, replication, and
+mission boundaries also need focused host/guest runtime evidence under the
+[campaign testing strategy](#campaign-testing-strategy). State what each check establishes
+and record unavailable toolchains, game data, or test machines.
 
 The integrator reviews one candidate at a time against current `main`, including its
 dependencies, task record, code, resource changes, and test evidence. A different agent
@@ -308,6 +308,43 @@ local merge rehearsal, or published branch does not make a task `done`.
 Keep branches and worktrees until their useful checkpoints are preserved and all writers
 have stopped. Cleanup is separate from accepting a feature; never automatically delete
 another agent's branch or worktree.
+
+## Campaign testing strategy
+
+For COOP-014 and future campaign tasks, agents implement and technically verify the
+systems needed for campaign play. The project owner performs full campaign playtesting.
+Use the shortest reproducible path to the behavior under test.
+
+1. Prefer deterministic integration tests, controlled mission states, scripted test
+   actions, and debug-only harnesses. Set up the conditions for an objective,
+   interaction, or transition directly where feasible. Reuse captured native saves
+   and reproducible checkpoints for expensive setup.
+2. Use actual host and guest instances where the check depends on replication,
+   authority, presentation, or a network lifecycle boundary. Focus the run on that
+   behavior and observe the relevant result on both peers.
+3. Isolate test actions and shortcuts in harnesses or non-shipping debug builds.
+   Preserve the original mission objectives and scripts. When testing an original
+   trigger, exercise it through the game's normal handler. An injected outcome can
+   verify downstream handling, with the original trigger tracked as a separate check.
+4. When a remaining acceptance check needs substantial manual play, record it as
+   **pending owner playtest**. Give the exact build and game version, launch steps,
+   mission and player count, starting save or state, actions, and expected result.
+   Continue independent engineering work and hand off a runnable build or reproducible
+   build instructions for the owner to test.
+
+Label evidence in task records, handoffs, and PRs:
+
+| Evidence | What it establishes |
+| --- | --- |
+| **Simulated** | Fixture, model, or mocked event behavior. Record which inputs and components were simulated. |
+| **Debug-assisted** | Native game code exercised in a controlled state or through a debug action. Record the setup and the production path that ran. A host/guest run still belongs here when state or actions were injected. |
+| **Genuine unmodified gameplay** | Behavior reached through original game rules and inputs. If starting from a native save, identify the checkpoint and the portion of the route observed. |
+
+Track engineering acceptance and owner playtest acceptance separately. A reviewed
+technical deliverable can advance after its scoped checks pass, with the owner's
+remaining gameplay gates listed in the handoff. Claim successful completion of an
+original mission only after the claimed outcome was verified in genuine gameplay.
+Record a controlled terminal result as evidence for the specific boundary exercised.
 
 ## Changes to the project vision
 

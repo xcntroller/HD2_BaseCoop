@@ -20,10 +20,11 @@ obtained before requesting review.
 
 ## Result and scope
 
-Finish Arctic1 in two actual instances through its original objectives and mission
-outcome. Start with the guide rendezvous beyond the proven forest-patrol route. Fix
-host-authoritative interaction and guest presentation gaps needed for this mission.
-Pass a trustworthy mission result to the lifecycle boundary for COOP-015.
+Implement and technically verify Arctic1's original interaction, objective, and terminal
+result paths. Fix host-authoritative interaction and guest presentation gaps. Pass a
+trustworthy mission result to the lifecycle boundary for COOP-015. Follow the
+[campaign testing strategy](../agent_workflow.md#campaign-testing-strategy) and prepare
+any full-route checks for the project owner's playtest.
 
 ## Files and shared contracts
 
@@ -35,23 +36,25 @@ campaign development dispatch, protocol, or launch edits with COOP-012/013;
 leave debrief and next-step glue to COOP-015. Record uncovered interaction families
 for the later campaign-wide verification task.
 
-## Acceptance criteria
+## Technical acceptance criteria
 
-- A solo reference run and a paired campaign run establish the original objective
-  sequence and success outcome. Host and guest reach the same terminal outcome and
-  objective states without skipping or rewriting objectives.
-- Exercise the route's interactions and script/presentation requirements on both
-  peers, including the guide and patrols. Verify that AI, damage and script effects
-  run once on the host. Document and address guest cutscene, audio, HUD and ambient
+- Set up the relevant original objective conditions and verify the native triggers in
+  focused host/guest runs. Verify that both peers agree at the objective and terminal
+  boundaries. Use captured native saves, reproducible checkpoints, or a debug-only
+  harness. Record which native triggers ran and which outcomes were supplied as fixtures.
+- Use focused runs to exercise interactions and scripted presentation on both peers,
+  including the guide and patrols. Verify that AI, damage and script effects run
+  once on the host. Document and address guest cutscene, audio, HUD and ambient
   actor gaps that affect following or playing the route.
 - Exercise a reproducible failure outcome and verify that it cannot be committed
   as success. Record the terminal squad state, including casualties and loadout changes,
   and repeat the COOP-010 handoff and original Tutorial/Sicily2 smoke checks if affected.
 
-The user owns the full co-op playthrough. Engineering uses focused two-instance
-checks and isolated debug fixtures. The full original paired success remains a
-playtest gate. The original mission scripts and objective definitions are used
-unchanged in the playtest build.
+## Owner playtest
+
+The project owner will run the full original paired mission. The playtest
+instructions below cover that route. The original mission scripts and objective
+definitions are used unchanged in the playtest build.
 
 ## Validation evidence
 
@@ -320,11 +323,12 @@ separate from that build.
 
 ## Handoff
 
-- Completed: refreshed origin, verified COOP-010 merge `738b124d` is an ancestor of
-  the base, checked for duplicate work, and established the canonical worktree.
-- Remaining: original paired success in the user's full playthrough.
-- Next action: use the normal build and the user playtest steps above.
-- Blockers: none. Serialize live LAN tests with COOP-013 when the fixed provider port is occupied.
+- Completed: published the integrated x86 build and focused host/guest checks.
+- Remaining: independently exercise the original entrance, garrison and squad gathering
+  triggers. The full original paired route is pending owner playtest.
+- Next action: set up the objective conditions in the checked harness and use the
+  normal build for the owner playtest.
+- Blockers: none.
 - Decisions: Use the existing development launch and game data. Base the interaction scope on what the original Arctic1 route exercises.
 - Local state: private build outputs and runtime copies under ignored worktree `build/`.
   Shared pinned MSVC x86 and matching engine builds are available read-only in the
