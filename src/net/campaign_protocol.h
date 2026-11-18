@@ -85,6 +85,12 @@ inline E_CampaignReason Decode(const T_Bytes &data, T_Message &out) { return Dec
 E_CampaignReason ExtractFrameBits(const std::uint8_t *packet, std::size_t packetBytes,
     std::size_t validBits, std::size_t &position, T_Bytes &out);
 E_CampaignReason AppendFrameBits(const T_Bytes &frame, T_Bytes &packet, std::size_t &position);
+// A DirectPlay message carries exactly one reserved game command, terminated by
+// the native END marker with zero padding to the next byte.
+constexpr std::uint8_t kGameMessageType = 0x14, kEndMessageType = 0x13;
+constexpr std::size_t kCommandPacketOverhead = 6; // five type + 32 command + five end bits
+E_CampaignReason EncodeCommandPacket(const T_Message &message, T_Bytes &out);
+E_CampaignReason ExtractCommandFrame(const void *data, std::size_t size, T_Bytes &out);
 std::uint32_t Crc32(const T_Bytes &bytes);
 
 enum class E_Route { Legacy, Campaign, Drop };

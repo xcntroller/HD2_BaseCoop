@@ -22,6 +22,7 @@
 #include "game/profile.h"
 #include "ls3d/i3d.h"
 #include "ls3d/igraph.h"
+#include "net/campaign_net.h"
 #include "net/dplay8.h"
 #include "net/net_autorestart.h"
 #include "net/net_channel.h"
@@ -34,6 +35,8 @@ namespace {
 
 // The message types' width: floor(log2(20) / log2(2)) + 1 (the original works it out each time).
 constexpr int kTypeBits = 5;
+static_assert(NET_MESSAGE_END == CampaignProtocol::kEndMessageType);
+static_assert(NET_MESSAGE_GAME == CampaignProtocol::kGameMessageType);
 
 // The players a stream goes to: the server's connected players but itself; a client's server (slot 0).
 bool SendsTo(const C_NetGame &net, size_t slot)
@@ -273,6 +276,7 @@ void C_NetGame::Close(bool now)
             m_client = nullptr;
         }
     }
+    EndCampaignNet();
     m_reporting = false;
     m_joinStatus = 0;
     g_gameRole = GAME_ROLE_LOCAL;
@@ -340,6 +344,10 @@ void C_NetGame::SendNetMessage(C_BitStream *stream)
     msg->m_pending = 0;
     if (msg->m_target == 0)
         return;
+    if (IsCampaignNet()) {
+        msg->ResetPosition();
+        return;
+    }
     msg->WriteBits(NET_MESSAGE_END, kTypeBits);
     const int slot = FindPlayer(msg->m_target);
     if (slot == g_localPlayerSlot)
@@ -351,6 +359,8 @@ void C_NetGame::SendNetMessage(C_BitStream *stream)
 
 void C_NetGame::QueueReceived(const void *data, int size, uint32_t flags)
 {
+    if (IsCampaignNet())
+        return;
     void *copy = g_netPool.AllocBuffer(static_cast<size_t>(size));
     const int time = static_cast<int>(clock());
     std::memcpy(copy, data, static_cast<size_t>(size));
@@ -361,6 +371,8 @@ void C_NetGame::QueueReceived(const void *data, int size, uint32_t flags)
 
 void C_NetGame::QueueOutgoing(const void *data, int size, uint32_t flags)
 {
+    if (IsCampaignNet())
+        return;
     void *copy = g_netPool.AllocBuffer(static_cast<size_t>(size));
     const int time = static_cast<int>(clock());
     std::memcpy(copy, data, static_cast<size_t>(size));
@@ -397,11 +409,15 @@ void C_NetGame::SendToPlayers(int slot, const void *data, int size, uint32_t fla
 
 bool C_NetGame::DispatchNetMessage(C_BitStream *stream, bool toClient)
 {
+    if (IsCampaignNet())
+        return false;
     const uint32_t type = stream->ReadBits(kTypeBits);
     if (type == NET_MESSAGE_END)
         return false;
     if (type == NET_MESSAGE_GAME) {
         const int id = static_cast<int>(stream->ReadBits(32));
+        if (static_cast<uint32_t>(id) == CampaignProtocol::kCommand)
+            return false;
         if (toClient)
             GetGameApp()->HandleClientCommand(id, stream);
         else
@@ -417,6 +433,14 @@ bool C_NetGame::DispatchNetMessage(C_BitStream *stream, bool toClient)
 
 void C_NetGame::ReceiveMessages(int, bool beforeUpdate)
 {
+    if (IsCampaignNet()) {
+        if (beforeUpdate == ((g_gameRole & GAME_ROLE_SERVER) != 0)) {
+            ProcessCampaignNet(*this);
+            if (m_closePending)
+                Close(true);
+        }
+        return;
+    }
     std::list<S_NetQueued> *queue;
     if (!beforeUpdate) {
         queue = &m_outgoing;
@@ -457,6 +481,13 @@ void C_NetGame::ReceiveMessages(int, bool beforeUpdate)
 
 void C_NetGame::Process(int timeDelta, bool replicate)
 {
+    if (IsCampaignNet()) {
+        for (auto &message : m_messages)
+            message.ResetPosition();
+        m_unreliable.ResetPosition();
+        m_direct.ResetPosition();
+        return;
+    }
     const int period = m_sendPeriod;
     m_sendTime += timeDelta;
     if (m_sendTime < period)
@@ -596,6 +627,10 @@ void C_NetGame::SendMessages(int timeDelta)
 {
     static int bandwidthTime;                        // 0x0097ca10
     static int bandwidthCount;                       // 0x0097ca0c
+    if (IsCampaignNet()) {
+        Process(timeDelta, false);
+        return;
+    }
     if (g_gameRole & GAME_ROLE_SERVER)
         SendJoinData();
     Process(timeDelta, true);

@@ -7,6 +7,7 @@
 #include <windows.h>
 #include <mmsystem.h>
 
+#include "net/campaign_net.h"
 #include "net/net_game.h"
 
 #include <cstdio>
@@ -105,6 +106,8 @@ float ReadFloat(C_BitStream *stream)
 
 void C_GameApp::HandleServerCommand(int id, C_BitStream *stream)
 {
+    if (IsCampaignNet())
+        return;
     int type;
     int to = 0;
     intptr_t a = 0;
@@ -288,6 +291,8 @@ void C_GameApp::HandleServerCommand(int id, C_BitStream *stream)
 
 void C_GameApp::HandleClientCommand(int id, C_BitStream *stream)
 {
+    if (IsCampaignNet())
+        return;
     const bool server = (g_gameRole & GAME_ROLE_SERVER) != 0;
     auto *msg = static_cast<C_NetMessage *>(stream);
     switch (id) {

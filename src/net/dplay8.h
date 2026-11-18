@@ -10,6 +10,12 @@
 
 using DPNID = uint32_t;
 using DPNHANDLE = uint32_t;
+struct DPN_BUFFER_DESC {
+    DWORD size;
+    uint8_t *data;
+};
+constexpr DWORD DPN_CAMPAIGN_SEND_NOCOMPLETE = 0x0002;
+constexpr DWORD DPN_CAMPAIGN_SEND_GUARANTEED = 0x0008;
 using PFNDPNMESSAGEHANDLER = HRESULT(WINAPI *)(void *context, DWORD messageType, void *message);
 
 // IDirectPlay8Server (the session's host).

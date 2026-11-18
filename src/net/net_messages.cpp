@@ -5,6 +5,7 @@
 #include <windows.h>
 #include <mmsystem.h>
 
+#include "net/campaign_net.h"
 #include "net/dplay8.h"
 #include "net/net_game.h"
 
@@ -289,6 +290,21 @@ long __stdcall C_NetGame::HandleServerMessage(C_NetGame *net, void *, uint32_t t
     case DPN_MSGID_CREATE_PLAYER: {
         // A player connected: its slot (INDICATE_CONNECT's) given its DirectPlay id and name (made unique), its link.
         const auto *create = static_cast<const S_CreatePlayer *>(message);
+        if (IsCampaignNet()) {
+            const auto slot = static_cast<std::size_t>(reinterpret_cast<std::uintptr_t>(create->context));
+            net->m_playersLock.Enter();
+            if (slot < net->m_players.size()) {
+                S_NetPlayerState &player = net->m_players[slot];
+                if (slot == 0 || (player.connection == -1 &&
+                    QueueCampaignPeer(create->player, static_cast<int>(slot)))) {
+                    player.connection = static_cast<int>(create->player);
+                } else if (player.connection == -1) {
+                    ClearSlot(player);
+                }
+            }
+            net->m_playersLock.Leave();
+            return 0;
+        }
         DWORD size = 0;
         long hr = net->m_server->GetClientInfo(create->player, nullptr, &size, 0);
         if (hr >= 0 || hr == DPNERR_BUFFERTOOSMALL_) {
@@ -349,6 +365,11 @@ long __stdcall C_NetGame::HandleServerMessage(C_NetGame *net, void *, uint32_t t
         }
         if (slot < net->m_players.size()) {
             S_NetPlayerState &player = net->m_players[slot];
+            if (IsCampaignNet()) {
+                QueueCampaignDeparture(id);
+                net->m_playersLock.Leave();
+                return 0;
+            }
             if (player.link) {
                 // (g_netGame's transport, as the original's absolute address.)
                 g_netGame.m_transport->Remove(player.link);
@@ -369,7 +390,7 @@ long __stdcall C_NetGame::HandleServerMessage(C_NetGame *net, void *, uint32_t t
         // A search's, ping's or status query's answer (a mission running): the request, the map, the version, the
         // rules; a status query's: the status.
         auto *query = static_cast<S_EnumQuery *>(message);
-        if (!GetGame() || GetGame()->GetMissionTime() <= 99)
+        if (IsCampaignNet() || !GetGame() || GetGame()->GetMissionTime() <= 99)
             return -1;
         void *buffer = operator new(1000);
         C_GrowingBitStream stream;
@@ -407,12 +428,13 @@ long __stdcall C_NetGame::HandleServerMessage(C_NetGame *net, void *, uint32_t t
         connect->reply = reply;
         connect->replySize = 1;
         const S_MultiplayerSettings &settings = *g_gameProfile.m_mpSettings;
+        const bool campaign = IsCampaignNet();
         if (!request || connect->requestSize != sizeof(S_JoinRequest) || request->versionMajor != g_versionMajor ||
             request->versionMinor != g_versionMinor || request->unknown1C == 1) {
             *reply = NET_JOIN_BAD_VERSION;
             return -1;
         }
-        if (settings.maxClients <= net->CountPlayers()) {
+        if (!campaign && settings.maxClients <= net->CountPlayers()) {
             *reply = NET_JOIN_FULL;
             return -1;
         }
@@ -424,7 +446,7 @@ long __stdcall C_NetGame::HandleServerMessage(C_NetGame *net, void *, uint32_t t
         }
         S_NetPlayerState fresh;
         fresh.connection = -1;
-        size_t slot = 0;
+        size_t slot = campaign ? 1 : 0;
         for (; slot < net->m_players.size(); ++slot) {
             if (net->m_players[slot].connection == 0 && !net->m_players[slot].left)
                 break;
@@ -432,7 +454,7 @@ long __stdcall C_NetGame::HandleServerMessage(C_NetGame *net, void *, uint32_t t
         if (slot < net->m_players.size()) {
             net->m_players[slot] = fresh;
         } else {
-            if (net->m_players.size() == 32) {
+            if (campaign || net->m_players.size() == 32) {
                 net->m_playersLock.Leave();
                 *reply = NET_JOIN_FULL;
                 return -1;
@@ -442,11 +464,11 @@ long __stdcall C_NetGame::HandleServerMessage(C_NetGame *net, void *, uint32_t t
         }
         S_NetPlayerState &player = net->m_players[slot];
         player.address = GetHostAddress(connect->player);
-        if (settings.unknown174 != 1) {
+        if (campaign || settings.unknown174 != 1) {
             player.keyQuery = -1;
             net->m_playersLock.Leave();
             connect->playerContext = reinterpret_cast<void *>(static_cast<intptr_t>(slot));
-            *reply = static_cast<uint8_t>((net->m_transport->m_session & 0xFF) << 7 | slot);
+            *reply = static_cast<uint8_t>(campaign ? slot : (net->m_transport->m_session & 0xFF) << 7 | slot);
             return 0;
         }
         // The CD key: a good check of that name from that address (taken: 7, the slot's), in use: 6, none: 5.
@@ -500,7 +522,10 @@ long __stdcall C_NetGame::HandleServerMessage(C_NetGame *net, void *, uint32_t t
     }
     case DPN_MSGID_RECEIVE: {
         const auto *receive = static_cast<const S_ServerReceive *>(message);
-        if (receive->dataSize != 0)
+        if (IsCampaignNet()) {
+            const auto slot = reinterpret_cast<std::intptr_t>(receive->playerContext);
+            QueueCampaignPacket(receive->sender, static_cast<int>(slot), receive->data, receive->dataSize);
+        } else if (receive->dataSize != 0)
             net->QueueReceived(receive->data, static_cast<int>(receive->dataSize),
                                static_cast<uint32_t>(reinterpret_cast<uintptr_t>(receive->playerContext)) | 0x80);
         break;

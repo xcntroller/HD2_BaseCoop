@@ -705,6 +705,63 @@ E_CampaignReason AppendFrameBits(const T_Bytes &frame, T_Bytes &packet, std::siz
     packet = std::move(candidate);
     return E_CampaignReason::None;
 }
+namespace {
+constexpr std::size_t kNativeTypeBits = 5;
+constexpr std::size_t kCommandBits = kNativeTypeBits + 32;
+constexpr std::uint64_t kCommandPrefix = kGameMessageType | (std::uint64_t{kCommand} << kNativeTypeBits);
+constexpr std::uint16_t kEndSuffix = kEndMessageType << (kCommandBits % 8);
+}
+
+E_CampaignReason EncodeCommandPacket(const T_Message &message, T_Bytes &out)
+{
+    T_Bytes frame;
+    if (const auto reason = Encode(message, frame); reason != E_CampaignReason::None)
+        return reason;
+
+    T_Bytes packet(kCommandPacketOverhead, 0);
+    for (std::size_t i = 0; i < (kCommandBits + 7) / 8; ++i)
+        packet[i] = static_cast<std::uint8_t>(kCommandPrefix >> (i * 8));
+
+    std::size_t position = kCommandBits;
+    if (const auto reason = AppendFrameBits(frame, packet, position); reason != E_CampaignReason::None)
+        return reason;
+
+    const auto end = position / 8;
+    packet.resize(frame.size() + kCommandPacketOverhead, 0);
+    packet[end] |= static_cast<std::uint8_t>(kEndSuffix);
+    packet[end + 1] = static_cast<std::uint8_t>(kEndSuffix >> 8);
+    out = std::move(packet);
+    return E_CampaignReason::None;
+}
+
+E_CampaignReason ExtractCommandFrame(const void *data, std::size_t size, T_Bytes &out)
+{
+    using R = E_CampaignReason;
+    if (!data || size < kHeaderBytes + kCommandPacketOverhead || size > kMaxFrameBytes + kCommandPacketOverhead)
+        return R::Malformed;
+
+    const auto *bytes = static_cast<const std::uint8_t *>(data);
+    std::uint64_t prefix = 0;
+    for (std::size_t i = 0; i < (kCommandBits + 7) / 8; ++i)
+        prefix |= std::uint64_t{bytes[i]} << (i * 8);
+    if ((prefix & ((std::uint64_t{1} << kCommandBits) - 1)) != kCommandPrefix)
+        return R::Malformed;
+
+    const auto end = static_cast<std::uint16_t>(bytes[size - 2] | (bytes[size - 1] << 8));
+    if ((end >> (kCommandBits % 8)) != kEndMessageType)
+        return R::Malformed;
+
+    T_Bytes frame;
+    std::size_t position = kCommandBits;
+    if (const auto reason = ExtractFrameBits(bytes, size, size * 8, position, frame); reason != R::None)
+        return reason;
+    if (frame.size() + kCommandPacketOverhead != size)
+        return R::Malformed;
+
+    out = std::move(frame);
+    return R::None;
+}
+
 std::uint32_t Crc32(const T_Bytes &bytes) {
     std::uint32_t crc = 0xffffffff;
     for (auto byte : bytes) {

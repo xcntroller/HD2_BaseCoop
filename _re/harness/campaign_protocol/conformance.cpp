@@ -397,6 +397,44 @@ void TransportBits() {
             CHECK(extracted == T_Bytes{0x42} && readPosition == offset);
         }
     }
+
+    for (const auto &message : Messages()) {
+        T_Bytes packet;
+        CHECK(EncodeCommandPacket(message, packet) == R::None);
+        const auto expected = Frame(message);
+        CHECK(packet.size() == expected.size() + kCommandPacketOverhead);
+        // The first 37 bits are native type 0x14 and command 0x434f4f50, LSB first.
+        CHECK(packet[0] == 0x14 && packet[1] == 0xea && packet[2] == 0xe9 &&
+              packet[3] == 0x69 && (packet[4] & 0x1f) == 0x08);
+
+        T_Bytes extracted;
+        CHECK(ExtractCommandFrame(packet.data(), packet.size(), extracted) == R::None);
+        CHECK(extracted == expected);
+        extracted = {0x42};
+        for (std::size_t length = 0; length < packet.size(); ++length) {
+            CHECK(ExtractCommandFrame(packet.data(), length, extracted) == R::Malformed);
+            CHECK(extracted == T_Bytes{0x42});
+        }
+        for (const auto index : {std::size_t{0}, std::size_t{1}, packet.size() - 2, packet.size() - 1}) {
+            auto invalid = packet;
+            invalid[index] ^= 0x80; // wrong type/command (one of their shared bytes), END or padding
+            CHECK(ExtractCommandFrame(invalid.data(), invalid.size(), extracted) == R::Malformed);
+            CHECK(extracted == T_Bytes{0x42});
+        }
+        packet.insert(packet.end() - 2, 0);
+        CHECK(ExtractCommandFrame(packet.data(), packet.size(), extracted) == R::Malformed);
+        CHECK(extracted == T_Bytes{0x42});
+    }
+    T_Bytes large;
+    const auto baseline = Baseline();
+    const S_WorldChunk chunk{baseline, static_cast<std::uint32_t>(kMaxChunkBytes),
+                             0, 1, 0, T_Bytes(kMaxChunkBytes, 0xa5)};
+    CHECK(EncodeCommandPacket(chunk, large) == R::None);
+    T_Bytes extracted;
+    CHECK(ExtractCommandFrame(large.data(), large.size(), extracted) == R::None);
+    CHECK(extracted == Frame(chunk));
+    CHECK(ExtractCommandFrame(nullptr, large.size(), extracted) == R::Malformed);
+
 }
 void Hostile() {
     std::uint32_t state = 0x6d2b79f5;

@@ -7,7 +7,7 @@
 - Canonical branch: `feature/coop-010-two-player-mission`
 - Base commit: `6f1bdd96075b074a6a7b958257af5f56f8374fb5`
 - Dependencies: COOP-008, COOP-009 and their transitive merged dependencies
-- Last checkpoint: branch kickoff and transport integration plan (this commit)
+- Last checkpoint: campaign command framing and DirectPlay attachment (this commit)
 - Checkpoint location: `.worktrees/COOP-010` and the canonical branch on origin
 - Review/integration: claim acknowledged by coordination ledger commit `69cb6361`
 - Pull request: none
@@ -69,14 +69,16 @@ roster/loadouts/policies as fixtures, not approved production menu behavior.
   coordinator handoff and published the claim. Created the canonical worktree
   from integrated main. Read the protocol, controller and lifecycle composition
   guides. Found the Steam installation and its Proton prefix, plus the shared
-  x86 toolchain and engine DLL/import libraries.
+  x86 toolchain and engine DLL/import libraries. Added isolated command framing
+  and the explicit campaign DirectPlay attachment. It carries exact connection
+  incarnations through the callback queue, negotiates before forwarding payloads
+  to the launch adapter, and gates legacy game commands, UDP and replication
+  when campaign mode is active.
 - Remaining: live attachment, startup synchronization, host/guest verification and fixes.
-- Next action: add bounded framing for the reserved campaign command and attach to
-  the DirectPlay session. Use reliable ordered DirectPlay messages to keep campaign
-  traffic on the provider-identified connection. Suppress the separate native UDP
-  game-data path in campaign mode. Audit the original H&D2 Tutorial spawn and
-  startup script as a campaign fixture candidate. Keep native Sicily2 as a
-  separate regression route.
+- Next action: bind admission to the authority ownership model and run two
+  actual instances through the DirectPlay attachment. Audit the original
+  Tutorial's spawn points and startup script as a fixture candidate. Keep
+  native Sicily2 as a separate regression route.
 - Blockers: no adapter dependency blocker. COOP-008 merged at `d34b6900` and
   COOP-009 at `ce306626`, with their transitive prerequisites integrated. This task
   still requires actual runnable host/guest instances, a complete initial-world
@@ -89,4 +91,13 @@ roster/loadouts/policies as fixtures, not approved production menu behavior.
   Confirm these local paths exist before borrowing read-only with separate prefixes
   and isolated build outputs. No game installation/data is supplied by Git.
 - Decisions: use the agreed four-soldier host-led model and preserve original campaign rules.
-- Validation: branch/dependency checks passed. No game build or runtime validation has run for this task.
+- Validation at this transport checkpoint:
+  - `python3 _re/harness/campaign_protocol/run.py --compiler gcc` and the same
+    runner using Windows Python and `--compiler msvc` passed eight suites with
+    562,702 checks each. Logs are under ignored `build/campaign_protocol/`.
+  - Pinned MSVC x86 isolated check compiled six changed network units with
+    zero diagnostics. Isolated `game --all` built 283 units with zero
+    diagnostics, linked successfully and set LAA. Build log is
+    `build/transport-game.log`; this executable is local.
+  - No campaign launcher is wired yet. Live handshake, the world/barrier,
+    gameplay acceptance and original-mode runtime regressions remain pending.
