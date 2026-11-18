@@ -2,13 +2,13 @@
 
 ## Coordination
 
-- Status: ready
-- Owner/session: unassigned
+- Status: active
+- Owner/session: Codex COOP-015, user assignment, thread `01a1eead-4d91-7b52-a8d5-cd1a32cce6d3`
 - Canonical branch: `feature/coop-015-campaign-progression`
-- Base commit: not started
+- Base commit: `ca5ae2f897524cc1905e343b5b7ad3910e56f4c3`
 - Dependencies: [COOP-013](COOP-013.md) menu preparation/deployment, [COOP-014](COOP-014.md) authoritative mission outcome
-- Last checkpoint: none
-- Checkpoint location: task queue only
+- Last checkpoint: claim and isolated worktree setup (this commit)
+- Checkpoint location: canonical branch, `.worktrees/COOP-015`; claim acknowledged by coordinator at `16963b69`
 - Review/integration: none
 - Pull request: none
 
@@ -74,12 +74,12 @@ runtime evidence and legacy regression requirements.
 
 ## Handoff
 
-- Completed: task definition.
+- Completed: refreshed origin, confirmed dependency merges, published the claim, and created the canonical worktree.
 - Remaining: implementation or verification and the acceptance evidence above.
 - Next action: Trace the original campaign nodes from Arctic1 mission exit to the next playable step and identify the host writeback boundary.
 - Blockers: none. COOP-013 merged at `73d518a5` and COOP-014 merged at
   `619d6aec`. The host result is available through `GetCampaignMissionResult()`
   while the session is in Ending.
 - Decisions: Preserve the original step sequence and record any necessary eligibility or transition departure decision before exposing that policy.
-- Local state: no task worktree or artifacts.
+- Local state: task worktree created from the integrated base.
 - Review notes: none.
