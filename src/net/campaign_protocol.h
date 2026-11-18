@@ -11,6 +11,7 @@ namespace CampaignProtocol {
 constexpr std::uint32_t kCommand = 0x434f4f50;
 constexpr std::uint16_t kMajor = 1, kMinor = 0;
 constexpr std::uint64_t kFeatures = 7; // identities, atomic preparation, guarded input
+constexpr std::uint64_t kMissionUpdates = 8;
 constexpr std::size_t kHeaderBytes = 16, kMaxFrameBytes = 24576;
 constexpr std::size_t kMaxStringBytes = 256, kMaxCollection = 256;
 constexpr std::size_t kMaxSoldiers = 64, kMaxParticipants = 4;
@@ -64,17 +65,40 @@ struct S_WorldChunk {
     std::uint32_t m_TotalBytes = 0, m_Index = 0, m_Count = 0, m_Crc32 = 0;
     T_Bytes m_Bytes;
 };
+// Running state is sent only by the host, with the committed startup identity.
+struct S_SquadActorState {
+    ActorRef m_Actor;
+    std::array<float, 3> m_Position{}, m_Facing{}, m_ViewDirection{}, m_Velocity{};
+    std::uint16_t m_Health = 0;
+    std::uint8_t m_Stance = 0;
+};
+struct S_MissionCamera {
+    std::array<float, 3> m_Position{}, m_Direction{}, m_Up{};
+    float m_Fov = 0;
+};
+struct S_MissionUpdate {
+    SessionId m_Session;
+    MissionGeneration m_Generation;
+    SnapshotId m_Snapshot;
+    OwnershipRevision m_OwnershipRevision;
+    std::uint64_t m_Sequence = 0;
+    std::uint32_t m_MissionTime = 0;
+    bool m_PlayerInputEnabled = false;
+    std::optional<S_MissionCamera> m_CutsceneCamera;
+    std::vector<S_SquadActorState> m_Squad;
+    std::vector<std::uint8_t> m_Objectives;
+};
 using T_Message = std::variant<S_Hello, S_Accept, S_NegotiationAck, S_Reject,
     S_CampaignOwnershipRequest, S_CampaignEditRequest, S_CampaignReadyRequest,
     S_CampaignDeployRequest, S_CampaignRequestResult, S_CampaignOwnershipSnapshot,
     S_CampaignPreparationSnapshot, S_PreparationDelta, S_CampaignMissionManifest,
-    S_CampaignSnapshotAck, S_CampaignStartSimulation, S_Input, S_WorldChunk>;
-// Stable explicit tags 1..17 in the above order; variant object layout is never wire.
+    S_CampaignSnapshotAck, S_CampaignStartSimulation, S_Input, S_WorldChunk, S_MissionUpdate>;
+// Stable explicit tags 1..18 in the above order; variant object layout is never wire.
 enum class E_Message : std::uint16_t {
     Hello = 1, Accept, NegotiationAck, Reject, OwnershipRequest, EditRequest,
     ReadyRequest, DeployRequest, RequestResult, OwnershipSnapshot,
     PreparationSnapshot, PreparationDelta, BeginMission, SnapshotAck,
-    StartSimulation, Input, WorldChunk
+    StartSimulation, Input, WorldChunk, MissionUpdate
 };
 struct S_FrameInfo { E_Message m_Type = E_Message::Reject; std::uint32_t m_BodyBytes = 0; };
 E_CampaignReason Inspect(const std::uint8_t *data, std::size_t size, S_FrameInfo &out);

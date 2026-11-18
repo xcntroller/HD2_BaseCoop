@@ -18,7 +18,7 @@ def check_fixtures():
         frame = bytes.fromhex(path.read_text())
         magic, major, minor, kind, flags, size = struct.unpack("<IHHHHI", frame[:16])
         assert (magic, major, minor, flags) == (0x50433248, 1, 0, 0), path
-        assert 1 <= kind <= 17 and size == len(frame) - 16, path
+        assert 1 <= kind <= 18 and size == len(frame) - 16, path
     # Independent scalar fixtures, calculated from the published wire schema.
     ack = struct.pack("<HHQQQ", 1, 0, 7, 0x1122334455667788, 5)
     header = struct.pack("<IHHHHI", 0x50433248, 1, 0, 3, 0, len(ack))
@@ -96,7 +96,7 @@ def main():
         run("header", [compiler, *flags, "-c", str(SOURCES / "header_only.cpp"), "-o", "header.o"])
         run("compile", [compiler, *flags, cpp, harness, "-o", "conformance"])
         run("execute", [str(output / "conformance"), str(SOURCES / "fixtures")])
-    print("PASS: independent scalar fixtures, standalone header and nine conformance suites")
+    print("PASS: independent scalar fixtures, standalone header and ten conformance suites")
 
 
 if __name__ == "__main__":

@@ -1,8 +1,12 @@
 #include "campaign_control_native.h"
 #include "campaign_control_runtime.h"
+
+#include <algorithm>
 #include "game/actors_module.h"
 #include "game/human.h"
+#include "game/human_body.h"
 #include "game/human_controller.h"
+#include "game/human_movement.h"
 #include "game/controller_net.h"
 #include "game/game.h"
 #include "game/team.h"
@@ -114,4 +118,73 @@ bool C_CampaignNativeControlSink::Present(const std::optional<ActorRef> &actor) 
 void C_CampaignNativeControlSink::Execute(const CampaignProtocol::S_Input &input) {
     if (m_Dispatch && Resolve(input.m_Control.m_Actor))
         DispatchCampaignInput(input.m_Control, [&] { m_Dispatch(input); });
+}
+
+namespace {
+std::array<float, 3> VectorFields(const S_vector &value) {
+    return {value.x, value.y, value.z};
+}
+S_vector4 NativeVector(const std::array<float, 3> &value, float w) {
+    return {value[0], value[1], value[2], w};
+}
+}
+
+bool C_CampaignNativeControlSink::CaptureSquadActor(CampaignProtocol::S_SquadActorState &state) const {
+    auto *human = Resolve(state.m_Actor);
+    if (!human || !human->GetFrame() || !human->GetController())
+        return false;
+    const auto *frame = human->GetFrame();
+    const auto facing = frame->GetMatrix()(2).Normalized();
+    auto view = human->GetViewDir().Normalized();
+    if (view.Square() < 0.5f)
+        view = facing;
+    state.m_Position = VectorFields(frame->GetWorldPos());
+    state.m_Facing = VectorFields(facing);
+    state.m_ViewDirection = VectorFields(view);
+    state.m_Velocity = VectorFields(human->GetVelocity());
+    state.m_Health = static_cast<std::uint16_t>(std::clamp(human->GetStat(STAT_HEALTH), 0, 65535));
+    state.m_Stance = static_cast<std::uint8_t>(human->GetWork()->GetStance());
+    return true;
+}
+
+bool C_CampaignNativeControlSink::ApplySquadActors(
+    const std::vector<CampaignProtocol::S_SquadActorState> &squad) const {
+    std::vector<C_Human *> humans;
+    humans.reserve(squad.size());
+    for (const auto &actor : squad) {
+        auto *human = Resolve(actor.m_Actor);
+        if (!human || !human->GetFrame() || !human->GetMovement() || !human->GetController())
+            return false;
+        humans.push_back(human);
+    }
+    for (std::size_t i = 0; i < squad.size(); ++i) {
+        auto &human = *humans[i];
+        const auto &actor = squad[i];
+        auto *frame = human.GetFrame();
+        const auto pos = NativeVector(actor.m_Position, 1.0f);
+        const auto facing = NativeVector(actor.m_Facing, 0.0f);
+        const auto view = NativeVector(actor.m_ViewDirection, 0.0f);
+        auto &visual = human.GetMovement()->m_visual;
+        human.m_stats[STAT_HEALTH] = actor.m_Health;
+        if (human.GetWork()->GetStance() != actor.m_Stance)
+            human.m_body.SetStance(actor.m_Stance);
+        // Only host-authored state can populate these native presentation tracks.
+        if (auto *object = g_netReplication->FindObject(human.GetNetId(), false)) {
+            if (auto *property = object->GetProperty(1)) {
+                property->GetTrack().SetValue(pos);
+                property->GetTrack().SetRate(NativeVector(actor.m_Velocity, 0.0f));
+                property->GetDirTrack().SetDirection(view, 0.0f);
+            }
+        }
+        if (IsCampaignLocalActor(human.GetNetId())) {
+            // The local camera look remains responsive between host state cuts.
+            frame->SetPos({pos.x, pos.y, pos.z});
+            frame->Update();
+            human.SetPosition4(pos);
+        } else {
+            visual.SetPosition(pos);
+            visual.SetDirection(facing, 0.0f);
+        }
+    }
+    return true;
 }

@@ -32,13 +32,13 @@ Alternatively pass `--vcvars C:\toolchain\vcvars32.bat` or set `HD2_VCVARS32`.
 Hostx64/x86 is supported; the fixture rejects an x64 MSVC target. The compiler
 uses `/std:c++17 /EHsc /W4 /WX /permissive- /Zc:__cplusplus /arch:IA32 /MT /O2`
 and `/MACHINE:X86`. The standalone-header probe and conformance executable must
-both compile; execution must print `campaign protocol: 9 suites, ... checks passed`.
+both compile; execution must print `campaign protocol: 10 suites, ... checks passed`.
 Outputs/logs/argv/environment go into a new private ignored
 `build/campaign_protocol/{gcc,msvc}-*` directory per invocation. No legacy fixed
 temporary output is used. Exact local validation is in
 [the task handoff](../../../docs/tasks/COOP-006.md).
 
-Nine suites cover paced world transmission and 27 deterministic fixtures across all 17 message families and
+Ten suites cover paced world transmission, live mission updates and 28 deterministic fixtures across all 18 message families and
 all operation/state variants, fractional skill bits, signed64/unsigned64 extrema,
 zero actor coordinates, every byte truncation (also with a rewritten frame length
 so nested decoding is exercised), malformed counts/flags/enums/variants/UTF-8,
@@ -66,15 +66,15 @@ current bit offset (usually 37); it is **not byte-aligned** in the native stream
 | 0 | u32 LE | 0x50433248, literal bytes `48 32 43 50` / `H2CP` |
 | 4 | u16 LE | major, 1 |
 | 6 | u16 LE | minor, 0 |
-| 8 | u16 LE | explicit message tag, 1..17 |
+| 8 | u16 LE | explicit message tag, 1..18 |
 | 10 | u16 LE | flags, exactly zero; unknown flags fail closed |
 | 12 | u32 LE | exact body byte count, excluding the 16-byte header |
 | 16 | bytes | message body; no trailing bytes or implicit padding |
 
-Tags 1..17 are Hello, Accept, NegotiationAck, Reject, OwnershipRequest,
+Tags 1..18 are Hello, Accept, NegotiationAck, Reject, OwnershipRequest,
 EditRequest, ReadyRequest, DeployRequest, RequestResult, OwnershipSnapshot,
 PreparationSnapshot, PreparationDelta, BeginMission, SnapshotAck,
-StartSimulation, Input, WorldChunk. Tags never depend on C++ struct layout.
+StartSimulation, Input, WorldChunk, MissionUpdate. Tags never depend on C++ struct layout.
 `T_Message` order is intentionally bound to these tags; a reorder is a wire change.
 Version 1.0 is the only implemented body schema. Unknown major/minor/tag/flags
 reject; no guessed decoding or fallback. Negotiation's bootstrap header remains
@@ -207,6 +207,15 @@ invented by these tests. `a`..`e` repeated hash fixtures are deliberately synthe
 negotiation values, not fingerprints of a game installation. Requests/session
 IDs and CRCs are freshness/integrity data, **not cryptographic authentication**.
 
+MissionUpdate names the committed session, mission generation, world snapshot
+and ownership revision. The body adds a sequence, the host mission clock, a
+player input flag, an optional cutscene camera, up to 64 uniquely bound squad
+actors and the original ordered objective statuses. Positions, direction axes,
+velocity and the camera FOV are finite IEEE binary32 values. The receiver checks
+the negotiated feature and host direction before handing the typed state to the
+mission adapter. The mission adapter must check its installed baseline and
+bound actors before applying it.
+
 ## State, replica and reconstruction boundaries
 
 Server: AwaitHello -> AwaitAck -> Admitted. Client: AwaitAccept -> Admitted after
@@ -217,7 +226,8 @@ The server issues SessionId/PlayerId, accepts only the exact ack and rejects nat
 unmodded peers by deadline before spawn. Unknown required features reject;
 unsupported optional features are disabled. Feature bits 0/1/2 mean distinct
 identities, atomic preparation, guarded input; all three are required by defaults.
-No other feature has a codec/handler in 1.0. Matching duplicate Hello while AwaitAck, retransmitted Accept on the admitted
+Bit 3 enables host-to-guest mission updates. The development launcher requires it.
+Matching duplicate Hello while AwaitAck, retransmitted Accept on the admitted
 client and Ack on the admitted server are harmless and deadline/rate-bounded; rejected/closed endpoints stay terminal.
 `Tick` must run even with no incoming traffic. On timeout, the caller sends one
 bounded Reject if appropriate and closes the transport.

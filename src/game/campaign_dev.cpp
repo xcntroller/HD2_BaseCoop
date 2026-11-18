@@ -29,11 +29,13 @@
 #include "game/profile.h"
 #include "game/soldier.h"
 #include "game/spawn_point.h"
+#include "ls3d/i3d.h"
 #include "ls3d/igraph.h"
 #include "ls3d/rw_data.h"
 #include "net/campaign_net.h"
 #include "net/dplay8.h"
 #include "net/net_game.h"
+#include "script/script_module.h"
 
 void LogDevelopmentCampaign(const char *event, std::uint64_t first, std::uint64_t second)
 {
@@ -269,8 +271,9 @@ struct C_InitialGuestView final : I_CampaignOwnershipView {
     T_CampaignOwnershipSnapshot m_Snapshot;
 };
 
-struct S_GuestLoading {
-    S_GuestLoading(const Wire::S_Accept &agreement, int slot) : m_Agreement(agreement), m_Slot(slot) {}
+struct S_GuestSession {
+    S_GuestSession(const Wire::S_Accept &agreement, int slot) : m_Agreement(agreement), m_Slot(slot) {}
+    ~S_GuestSession() { if (m_Camera) m_Camera->Release(); }
     Wire::S_Accept m_Agreement;
     int m_Slot;
     std::optional<S_CampaignMissionManifest> m_Manifest;
@@ -278,11 +281,18 @@ struct S_GuestLoading {
     std::optional<Wire::T_Bytes> m_World;
     C_InitialGuestView m_InitialView;
     bool m_Aborted = false;
+    std::uint64_t m_LastUpdate = 0;
+    std::uint32_t m_HostMissionTime = 0;
+    std::optional<Wire::S_MissionCamera> m_CutsceneCamera;
+    I3D_camera *m_Camera = nullptr;
     std::unique_ptr<C_CampaignReplicaControlAdapter> m_Control;
     std::unique_ptr<C_CampaignMissionReconstruction> m_Reconstruction;
 };
 
-std::unique_ptr<S_GuestLoading> g_guest;
+std::unique_ptr<S_GuestSession> g_guest;
+std::optional<Clock::time_point> g_nextMissionUpdate;
+std::uint64_t g_missionUpdateSequence = 0;
+OwnershipRevision g_publishedOwnership;
 
 std::uint64_t WorldTimeMs()
 {
@@ -305,7 +315,7 @@ bool MatchesContent(const S_CampaignContentDescriptor &a, const S_CampaignConten
         a.m_ItemContent == b.m_ItemContent && a.m_SoldierContent == b.m_SoldierContent && a.m_Rules == b.m_Rules;
 }
 
-R ValidateManifest(const S_GuestLoading &guest, const S_CampaignMissionManifest &manifest)
+R ValidateManifest(const S_GuestSession &guest, const S_CampaignMissionManifest &manifest)
 {
     const auto &context = manifest.m_Context;
     const auto *mission = g_campaign->GetCurrentMission();
@@ -332,12 +342,54 @@ R ValidateManifest(const S_GuestLoading &guest, const S_CampaignMissionManifest 
     return R::None;
 }
 
-S_CampaignSnapshotAck GuestBaseline(const S_GuestLoading &guest)
+S_CampaignSnapshotAck GuestBaseline(const S_GuestSession &guest)
 {
     const auto &m = *guest.m_Manifest;
     return {m.m_Context.m_Session, guest.m_Agreement.m_Player, m.m_Context.m_MissionGeneration,
             m.m_Snapshot, m.m_PreparationGeneration, m.m_FrozenPreparationRevision,
             m.m_ViewRevision, m.m_OwnershipRevision};
+}
+
+R ApplyMissionUpdate(S_GuestSession &guest, const Wire::S_MissionUpdate &update)
+{
+    const auto state = GetCampaignMissionSnapshot();
+    auto *game = GetGame();
+    if (!state || !CanCampaignSimulate() || !guest.m_Manifest || !game || !game->GetMission())
+        return R::InvalidPhase;
+    if (update.m_Session != state->m_Context.m_Session ||
+        update.m_Generation != state->m_Context.m_MissionGeneration ||
+        update.m_Snapshot != guest.m_Manifest->m_Snapshot)
+        return R::WrongGeneration;
+    if (update.m_Sequence <= guest.m_LastUpdate || update.m_MissionTime < guest.m_HostMissionTime)
+        return R::StaleRevision;
+    if (update.m_OwnershipRevision != state->m_Revision)
+        return R::SnapshotGap;
+    auto *mission = game->GetMission();
+    const auto bound = std::count_if(state->m_Soldiers.begin(), state->m_Soldiers.end(),
+        [](const auto &soldier) { return soldier.m_Actor.has_value(); });
+    if (update.m_Squad.size() != static_cast<std::size_t>(bound) ||
+        update.m_Objectives.size() != static_cast<std::size_t>(mission->GetObjectiveCount()))
+        return R::ContentMismatch;
+    if (!g_sink.ApplySquadActors(update.m_Squad))
+        return R::ActorUnavailable;
+
+    for (std::size_t index = 0; index < update.m_Objectives.size(); ++index) {
+        auto *objective = mission->GetObjective(static_cast<int>(index));
+        if (objective->status != update.m_Objectives[index]) {
+            objective->SetStatus(update.m_Objectives[index]);
+            LogDevelopmentCampaign("guest applied objective state", index + 1, objective->status);
+        }
+    }
+    if (guest.m_CutsceneCamera.has_value() != update.m_CutsceneCamera.has_value())
+        LogDevelopmentCampaign(update.m_CutsceneCamera ? "guest began host cutscene view" :
+                               "guest ended host cutscene view", update.m_MissionTime);
+    guest.m_CutsceneCamera = update.m_CutsceneCamera;
+    game->SetPlayerInputEnabled(update.m_PlayerInputEnabled);
+    if (!guest.m_LastUpdate)
+        LogDevelopmentCampaign("guest applied first live mission state", update.m_MissionTime, update.m_Squad.size());
+    guest.m_LastUpdate = update.m_Sequence;
+    guest.m_HostMissionTime = update.m_MissionTime;
+    return R::None;
 }
 
 void ReceiveGuestWorld(PlayerId, Wire::T_Message message)
@@ -369,11 +421,26 @@ void ReceiveGuestWorld(PlayerId, Wire::T_Message message)
         reason = guest.m_Control->InstallCommitted(running);
         if (reason != R::None)
             return FailGuest(reason);
+        GetGame()->SetPlayerInputEnabled(false);
         LogDevelopmentCampaign("guest started campaign simulation", start->m_Generation.Value(), start->m_Snapshot.Value());
+    } else if (const auto *ownership = std::get_if<S_CampaignOwnershipSnapshot>(&message)) {
+        const auto state = GetCampaignMissionSnapshot();
+        if (!state || !CanCampaignSimulate() || ownership->m_Context.m_Phase != Phase::Running ||
+            ownership->m_Context.m_MissionGeneration != state->m_Context.m_MissionGeneration ||
+            ownership->m_Context.m_HostPlayer != state->m_Context.m_HostPlayer ||
+            ownership->m_Context.m_Mission != state->m_Context.m_Mission)
+            return FailGuest(R::WrongGeneration);
+        const auto reason = guest.m_Control->InstallCommitted(std::make_shared<S_CampaignOwnershipSnapshot>(*ownership));
+        if (reason != R::None)
+            FailGuest(reason);
+    } else if (const auto *update = std::get_if<Wire::S_MissionUpdate>(&message)) {
+        const auto reason = ApplyMissionUpdate(guest, *update);
+        if (reason != R::None && reason != R::StaleRevision)
+            FailGuest(reason);
     }
 }
 
-R ReconstructGuestWorld(S_GuestLoading &guest, const std::function<bool()> &startMission)
+R ReconstructGuestWorld(S_GuestSession &guest, const std::function<bool()> &startMission)
 {
     const auto &manifest = *guest.m_Manifest;
     auto loading = std::make_shared<S_CampaignOwnershipSnapshot>();
@@ -509,6 +576,7 @@ R SendHostInitialWorld(PlayerId guest)
         return reason;
 
     g_transferPlayer = guest;
+    g_publishedOwnership = manifest->m_OwnershipRevision;
     g_loadingDeadline = Clock::now() + std::chrono::milliseconds(Wire::kTimeoutMs);
     LogDevelopmentCampaign("host waiting for initial-world reconstruction",
                            state->m_Context.m_MissionGeneration.Value(), GetGame()->GetMissionTime());
@@ -529,6 +597,64 @@ void ReceiveHostWorld(PlayerId player, Wire::T_Message message)
         return;
     }
     g_guestAcknowledged = true;
+}
+
+std::array<float, 3> VectorFields(const S_vector &value)
+{
+    return {value.x, value.y, value.z};
+}
+
+bool PublishMissionUpdate(Clock::time_point now)
+{
+    if (!g_transferPlayer.Value() || !CanCampaignSimulate() ||
+        !g_control->IsSynchronized() || (g_nextMissionUpdate && now < *g_nextMissionUpdate))
+        return true;
+    auto *game = GetGame();
+    const auto state = g_ownership->GetSnapshot();
+    const auto manifest = g_mission->GetManifest();
+    if (!game || !game->GetMission() || !manifest)
+        return false;
+    if (g_publishedOwnership != state->m_Revision) {
+        if (!SendCampaignMessage(g_netGame, g_transferPlayer, *state))
+            return false;
+        g_publishedOwnership = state->m_Revision;
+    }
+    Wire::S_MissionUpdate update;
+    update.m_Session = state->m_Context.m_Session;
+    update.m_Generation = state->m_Context.m_MissionGeneration;
+    update.m_Snapshot = manifest->m_Snapshot;
+    update.m_OwnershipRevision = state->m_Revision;
+    update.m_Sequence = ++g_missionUpdateSequence;
+    update.m_MissionTime = game->GetMissionTime();
+    update.m_PlayerInputEnabled = game->IsPlayerInputEnabled();
+    if (g_scriptModule.IsCutsceneRunning()) {
+        if (auto *camera = game->GetScene()->GetActiveCamera()) {
+            const auto &matrix = camera->GetMatrix();
+            const auto direction = matrix(2).Normalized();
+            const auto up = (matrix(1) - direction * matrix(1).Dot(direction)).Normalized();
+            update.m_CutsceneCamera = Wire::S_MissionCamera{
+                VectorFields(matrix(3)), VectorFields(direction), VectorFields(up), camera->GetFOV()};
+            update.m_PlayerInputEnabled = false;
+        }
+    }
+    for (const auto &soldier : state->m_Soldiers) {
+        if (!soldier.m_Actor)
+            continue;
+        Wire::S_SquadActorState actor;
+        actor.m_Actor = *soldier.m_Actor;
+        if (!g_sink.CaptureSquadActor(actor))
+            return false;
+        update.m_Squad.push_back(actor);
+    }
+    auto *mission = game->GetMission();
+    for (int index = 0; index < mission->GetObjectiveCount(); ++index)
+        update.m_Objectives.push_back(static_cast<std::uint8_t>(mission->GetObjective(index)->status));
+    g_nextMissionUpdate = now + std::chrono::milliseconds(66);
+    if (!SendCampaignMessage(g_netGame, g_transferPlayer, update))
+        return false;
+    if (update.m_Sequence == 1)
+        LogDevelopmentCampaign("host published first live mission state", update.m_MissionTime, update.m_Squad.size());
+    return true;
 }
 
 bool Host(const C_MissionDef &mission, S_CampaignNetConfig config)
@@ -555,7 +681,8 @@ bool Host(const C_MissionDef &mission, S_CampaignNetConfig config)
     };
     config.m_Received = ReceiveHostWorld;
     config.m_Departed = [](PlayerId player, R reason) {
-        g_pendingGuest.reset();
+        if (g_pendingGuest && g_pendingGuest->first == player)
+            g_pendingGuest.reset();
         if (g_control && GetGame() && GetGame()->IsMissionLoaded()) {
             const auto result = HandleCampaignDisconnect(player);
             if (result != R::None || g_mission->GetContext().m_Phase == E_CampaignPhase::Loading)
@@ -563,6 +690,8 @@ bool Host(const C_MissionDef &mission, S_CampaignNetConfig config)
         } else {
             g_ownership->OnDisconnected(player);
         }
+        if (g_transferPlayer == player)
+            g_transferPlayer = {};
         LogDevelopmentCampaign("host observed guest departure", player.Value(), static_cast<std::uint64_t>(reason));
     };
     S_NetSessionDesc desc{};
@@ -574,7 +703,7 @@ bool Host(const C_MissionDef &mission, S_CampaignNetConfig config)
 bool Join(std::uint32_t address, S_CampaignNetConfig config)
 {
     config.m_Admitted = [](const CampaignProtocol::S_Accept &agreement, int slot) {
-        g_guest = std::make_unique<S_GuestLoading>(agreement, slot);
+        g_guest = std::make_unique<S_GuestSession>(agreement, slot);
         LogDevelopmentCampaign("guest negotiated campaign session", agreement.m_Session.Value(), agreement.m_Player.Value());
         LogDevelopmentCampaign("provider slot", static_cast<std::uint64_t>(slot));
         return R::None;
@@ -631,6 +760,8 @@ bool StartDevelopmentCampaign(C_GameApp &app)
         return true;
     }
 
+    config.m_Hello.m_Required |= Wire::kMissionUpdates;
+    config.m_Hello.m_Offered |= Wire::kMissionUpdates;
     const bool started = host ? Host(*mission, std::move(config)) : Join(launch.m_Address, std::move(config));
     if (!started) {
         LogDevelopmentCampaign("campaign connection setup failed", static_cast<std::uint32_t>(g_netGame.m_lastError));
@@ -688,6 +819,14 @@ void TickDevelopmentCampaign(C_GameApp &app)
         }
         return;
     }
+    if (g_mission && g_mission->GetContext().m_Phase == Phase::Running) {
+        if (!PublishMissionUpdate(Clock::now())) {
+            LogDevelopmentCampaign("host failed to publish mission state", g_missionUpdateSequence);
+            g_netGame.Close(true);
+            app.m_state->SetState(GAME_STATE_QUIT);
+        }
+        return;
+    }
     if (!g_pendingGuest)
         return;
     const auto [guest, slot] = *g_pendingGuest;
@@ -718,6 +857,9 @@ void ReleaseDevelopmentCampaign()
     g_worldSender.Reset();
     g_transferPlayer = {};
     g_guestAcknowledged = false;
+    g_nextMissionUpdate.reset();
+    g_missionUpdateSequence = 0;
+    g_publishedOwnership = {};
     g_guest.reset();
     g_pendingGuest.reset();
     g_control.reset();
@@ -726,4 +868,43 @@ void ReleaseDevelopmentCampaign()
     g_journal.reset();
     g_catalog = {};
     g_step = nullptr;
+}
+
+bool RenderDevelopmentCampaignCutscene(I3D_scene &scene)
+{
+    if (!g_guest || !g_guest->m_CutsceneCamera || g_guest->m_Aborted)
+        return false;
+    auto *savedCamera = scene.GetActiveCamera();
+    if (!savedCamera)
+        return false;
+    auto &guest = *g_guest;
+    if (!guest.m_Camera)
+        guest.m_Camera = static_cast<I3D_camera *>(I3DGetDriver()->CreateFrame(FRAME_CAMERA));
+    if (!guest.m_Camera)
+        return false;
+
+    const auto &state = *guest.m_CutsceneCamera;
+    const auto vector = [](const auto &v) { return S_vector(v[0], v[1], v[2]); };
+    auto &camera = *guest.m_Camera;
+    camera.SetWorldPosDir3(vector(state.m_Position), vector(state.m_Direction), vector(state.m_Up));
+    camera.SetFOV(state.m_Fov);
+    camera.SetAspectRatio(16.0f / 9.0f);
+    float nearRange, farRange;
+    savedCamera->GetRange(nearRange, farRange);
+    camera.SetRange(nearRange, farRange);
+    camera.Update();
+    savedCamera->AddRef();
+    scene.SetActiveCamera(&camera);
+    const auto *rect = scene.GetViewportRect();
+    const std::array<int, 4> savedRect{rect[0], rect[1], rect[2], rect[3]};
+    const int width = GetIGraph()->ScrnX();
+    const int height = GetIGraph()->ScrnY();
+    const int band = static_cast<int>(width * (9.0f / 16.0f));
+    const int top = std::max(0, (height - band) / 2);
+    scene.SetViewport(0, top, width, height - top);
+    scene.Render(0);
+    scene.SetViewport(savedRect[0], savedRect[1], savedRect[2], savedRect[3]);
+    scene.SetActiveCamera(savedCamera);
+    savedCamera->Release();
+    return true;
 }

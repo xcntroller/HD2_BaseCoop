@@ -96,6 +96,13 @@ S_CampaignMissionManifest Manifest() {
         s.m_Soldiers, s.m_Loadouts, {{SoldierId(101), *Soldier().m_Actor, ControlRevision(7)}}, {PlayerId(5)}};
 }
 S_WorldChunk Chunk() { return {Baseline(), 3, 0, 1, Crc32({1,2,3}), {1,2,3}}; }
+S_MissionUpdate MissionUpdate() {
+    S_MissionUpdate state{Context().m_Session, MissionGeneration(3), SnapshotId(13), OwnershipRevision(6),
+        25, 7500, false, S_MissionCamera{{10, 20, -30}, {0, 0, 1}, {0, 1, 0}, 1.3f},
+        {{*Soldier().m_Actor, {1, 2, -3}, {0, 0, 1}, {1, 0, 0}, {2, 0, 0}, 740, 2}}, {0, 1, 4}};
+    return state;
+}
+
 T_Bytes Frame(const T_Message &m) { T_Bytes bytes; CHECK(Encode(m, bytes) == R::None); return bytes; }
 std::string Hex(const T_Bytes &bytes) {
     constexpr char digits[] = "0123456789abcdef";
@@ -132,6 +139,7 @@ std::vector<T_Message> Messages() {
     all.push_back(maxAck);
     auto noActor = Ownership(); noActor.m_Soldiers[0].m_Actor.reset(); noActor.m_Soldiers[0].m_Owner.reset();
     noActor.m_Participants[0].m_ReadyAt.reset(); all.push_back(noActor);
+    all.push_back(MissionUpdate());
     return all;
 }
 void RoundTrips(const std::string &dir, bool write) {
@@ -303,6 +311,47 @@ void Negotiation() {
         else { accept.m_Features = 0; expected = R::MissingFeature; }
         CHECK(client.Receive(Frame(accept), 0).m_Reason == expected);
     }
+}
+void MissionUpdates() {
+    auto local = Hello();
+    local.m_Offered |= kMissionUpdates;
+    local.m_Required |= kMissionUpdates;
+    auto server = C_Admission(E_CampaignSessionKind::CampaignCoop, true, local, Context().m_Session, PlayerId(5), 0);
+    auto client = C_Admission(E_CampaignSessionKind::CampaignCoop, false, local, {}, {}, 0);
+    auto unmapped = Client();
+    CHECK(server.Receive(Frame(Hello()), 1).m_Reason == R::MissingFeature);
+    server = C_Admission(E_CampaignSessionKind::CampaignCoop, true, local, Context().m_Session, PlayerId(5), 0);
+    Admit(server, client);
+    auto state = MissionUpdate();
+    auto got = client.Receive(Frame(state), 5);
+    CHECK(got.m_Payload && std::get_if<S_MissionUpdate>(&*got.m_Payload));
+    CHECK(server.Receive(Frame(state), 5).m_Reason == R::Malformed);
+    auto oldServer = Server();
+    Admit(oldServer, unmapped);
+    CHECK(unmapped.Receive(Frame(state), 5).m_Reason == R::Malformed);
+    state.m_Session = SessionId(55);
+    state.m_Squad[0].m_Actor.m_Session = state.m_Session;
+    CHECK(client.Receive(Frame(state), 5).m_Reason == R::Malformed);
+
+    T_Bytes encoded;
+    state = MissionUpdate();
+    state.m_Squad.push_back(state.m_Squad.front());
+    CHECK(Encode(state, encoded) == R::Malformed);
+    state = MissionUpdate();
+    state.m_Squad.front().m_Actor.m_Generation = MissionGeneration(4);
+    CHECK(Encode(state, encoded) == R::Malformed);
+    state = MissionUpdate();
+    state.m_Squad.front().m_ViewDirection = {};
+    CHECK(Encode(state, encoded) == R::Malformed);
+    state = MissionUpdate();
+    state.m_Squad.front().m_Position[0] = std::numeric_limits<float>::infinity();
+    CHECK(Encode(state, encoded) == R::Malformed);
+    state = MissionUpdate();
+    state.m_PlayerInputEnabled = true;
+    CHECK(Encode(state, encoded) == R::Malformed);
+    state = MissionUpdate();
+    state.m_Objectives[0] = 5;
+    CHECK(Encode(state, encoded) == R::Malformed);
 }
 void Inputs() {
     C_InputGate gate; auto context = Context(); context.m_Phase = E_CampaignPhase::Running;
@@ -497,6 +546,6 @@ void Hostile() {
 int main(int argc, char **argv) {
     CHECK(argc >= 2);
     RoundTrips(argv[1], argc == 3 && std::string(argv[2]) == "--write-fixtures");
-    Malformed(); Negotiation(); Inputs(); Replicas(); Chunks(); WorldSendSchedule(); TransportBits(); Hostile();
-    std::cout << "campaign protocol: 9 suites, " << g_Checks << " checks passed\n";
+    Malformed(); Negotiation(); MissionUpdates(); Inputs(); Replicas(); Chunks(); WorldSendSchedule(); TransportBits(); Hostile();
+    std::cout << "campaign protocol: 10 suites, " << g_Checks << " checks passed\n";
 }

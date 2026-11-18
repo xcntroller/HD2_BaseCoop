@@ -13,6 +13,8 @@ public:
     bool Apply(const S_CampaignControllerPlan &plan) override;
     bool Present(const std::optional<ActorRef> &actor) override;
     void Execute(const CampaignProtocol::S_Input &input) override;
+    bool CaptureSquadActor(CampaignProtocol::S_SquadActorState &state) const;
+    bool ApplySquadActors(const std::vector<CampaignProtocol::S_SquadActorState> &squad) const;
 private:
     T_Dispatch m_Dispatch;
     std::map<SoldierId, ActorRef> m_AppliedBindings;

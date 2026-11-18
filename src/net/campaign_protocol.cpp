@@ -68,6 +68,7 @@ bool Valid(const S_Reject &x);
 bool Valid(const S_PreparationDelta &x);
 bool Valid(const S_Input &x);
 bool Valid(const S_WorldChunk &x);
+bool Valid(const S_MissionUpdate &x);
 template<class T> struct S_EnumMax;
 template<> struct S_EnumMax<E_CampaignSessionKind> { static constexpr auto value = E_CampaignSessionKind::CampaignCoop; };
 template<> struct S_EnumMax<E_CampaignPhase> { static constexpr auto value = E_CampaignPhase::Closed; };
@@ -133,6 +134,9 @@ template<class A> bool Fields(A &a, S_Reject &x);
 template<class A> bool Fields(A &a, S_PreparationDelta &x);
 template<class A> bool Fields(A &a, S_Input &x);
 template<class A> bool Fields(A &a, S_WorldChunk &x);
+template<class A> bool Fields(A &a, S_SquadActorState &x);
+template<class A> bool Fields(A &a, S_MissionCamera &x);
+template<class A> bool Fields(A &a, S_MissionUpdate &x);
 
 class C_Archive {
 public:
@@ -350,6 +354,16 @@ template<class A> bool Fields(A &a, S_Reject &x) { return a(x.m_Reason) && Valid
 template<class A> bool Fields(A &a, S_PreparationDelta &x) { return a(x.m_Base, x.m_Replacement) && Valid(x); }
 template<class A> bool Fields(A &a, S_Input &x) { return a(x.m_Control, x.m_Sequence, x.m_Kind, x.m_Payload) && Valid(x); }
 template<class A> bool Fields(A &a, S_WorldChunk &x) { return a(x.m_Baseline, x.m_TotalBytes, x.m_Index, x.m_Count, x.m_Crc32, x.m_Bytes) && Valid(x); }
+template<class A> bool Fields(A &a, S_SquadActorState &x) {
+    return a(x.m_Actor, x.m_Position, x.m_Facing, x.m_ViewDirection, x.m_Velocity, x.m_Health, x.m_Stance);
+}
+template<class A> bool Fields(A &a, S_MissionCamera &x) {
+    return a(x.m_Position, x.m_Direction, x.m_Up, x.m_Fov);
+}
+template<class A> bool Fields(A &a, S_MissionUpdate &x) {
+    return a(x.m_Session, x.m_Generation, x.m_Snapshot, x.m_OwnershipRevision, x.m_Sequence,
+             x.m_MissionTime, x.m_PlayerInputEnabled, x.m_CutsceneCamera, x.m_Squad, x.m_Objectives) && Valid(x);
+}
 
 // Structural/transport validation. Catalog membership, equipment physics and
 // ownership/request replay decisions remain injected model/authority obligations.
@@ -560,6 +574,34 @@ bool Valid(const S_WorldChunk &x) {
     const auto offset = static_cast<std::size_t>(x.m_Index) * kMaxChunkBytes;
     return x.m_Bytes.size() == std::min(kMaxChunkBytes, static_cast<std::size_t>(x.m_TotalBytes) - offset);
 }
+float Dot(const std::array<float, 3> &a, const std::array<float, 3> &b) {
+    return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+}
+bool IsDirection(const std::array<float, 3> &v) {
+    const float length = Dot(v, v);
+    return length >= 0.98f && length <= 1.02f;
+}
+bool Valid(const S_MissionUpdate &x) {
+    if (!Id(x.m_Session) || !Id(x.m_Generation) || !Id(x.m_Snapshot) || !Id(x.m_OwnershipRevision) ||
+        !x.m_Sequence || x.m_Squad.empty() || x.m_Squad.size() > kMaxSoldiers ||
+        x.m_Objectives.size() > kMaxCollection ||
+        !Unique(x.m_Squad, [](const auto &record) { return record.m_Actor.m_Actor.Value(); }))
+        return false;
+    if (x.m_CutsceneCamera) {
+        const auto &camera = *x.m_CutsceneCamera;
+        if (x.m_PlayerInputEnabled || camera.m_Fov <= 0 || camera.m_Fov >= 3.142f ||
+            !IsDirection(camera.m_Direction) || !IsDirection(camera.m_Up) ||
+            std::fabs(Dot(camera.m_Direction, camera.m_Up)) > 0.02f)
+            return false;
+    }
+    for (const auto &actor : x.m_Squad) {
+        if (actor.m_Actor.m_Session != x.m_Session || actor.m_Actor.m_Generation != x.m_Generation ||
+            actor.m_Stance > 2 || !IsDirection(actor.m_Facing) || !IsDirection(actor.m_ViewDirection))
+            return false;
+    }
+    return std::all_of(x.m_Objectives.begin(), x.m_Objectives.end(), [](auto status) { return status <= 4; });
+}
+
 std::uint16_t Read16(const std::uint8_t *p) { return static_cast<std::uint16_t>(p[0] | (p[1] << 8)); }
 std::uint32_t Read32(const std::uint8_t *p) {
     return static_cast<std::uint32_t>(p[0]) | (static_cast<std::uint32_t>(p[1]) << 8) |
@@ -615,6 +657,8 @@ bool BoundPayload(const T_Message &message, bool server, const S_Accept &agreeme
             return !server && x.m_Session == session;
         else if constexpr (std::is_same<T, S_WorldChunk>::value)
             return !server && x.m_Baseline.m_Session == session && x.m_Baseline.m_PlayerEcho == player;
+        else if constexpr (std::is_same<T, S_MissionUpdate>::value)
+            return !server && (agreement.m_Features & kMissionUpdates) && x.m_Session == session;
         else return false;
     }, message);
 }
@@ -774,6 +818,8 @@ E_Route Route(E_CampaignSessionKind kind, E_Traffic traffic) {
     if (kind != E_CampaignSessionKind::CampaignCoop) return traffic == E_Traffic::Extension ? E_Route::Drop : E_Route::Legacy;
     return traffic == E_Traffic::Extension ? E_Route::Campaign : E_Route::Drop;
 }
+constexpr std::uint64_t kSupportedFeatures = kFeatures | kMissionUpdates;
+
 C_Admission::C_Admission(E_CampaignSessionKind kind, bool server, S_Hello local,
     SessionId session, PlayerId assignedPlayer, std::uint64_t nowMs)
     : m_Server(server), m_State(kind == E_CampaignSessionKind::CampaignCoop ?
@@ -785,7 +831,7 @@ C_Admission::C_Admission(E_CampaignSessionKind kind, bool server, S_Hello local,
     if (m_State != E_Admission::Dormant && (!Valid(m_Local) || !Valid(m_Local.m_Content) ||
         m_Local.m_Mod != "hd2.base-campaign-coop" || m_Local.m_Kind != E_CampaignSessionKind::CampaignCoop ||
         m_Local.m_Major != kMajor || m_Local.m_MinMinor != kMinor || m_Local.m_MaxMinor != kMinor ||
-        (m_Local.m_Offered & ~kFeatures) || (server && (!Id(session) || !Id(assignedPlayer))))) m_State = E_Admission::Rejected;
+        (m_Local.m_Offered & ~kSupportedFeatures) || (server && (!Id(session) || !Id(assignedPlayer))))) m_State = E_Admission::Rejected;
 }
 std::optional<T_Message> C_Admission::Start() const {
     if (!m_Server && m_State == E_Admission::AwaitAccept) return T_Message(m_Local);
@@ -826,7 +872,7 @@ S_Receive C_Admission::Receive(const T_Bytes &frame, std::uint64_t nowMs) {
         if (auto *hello = std::get_if<S_Hello>(&message)) {
             if (hello->m_Mod != m_Local.m_Mod || hello->m_Kind != E_CampaignSessionKind::CampaignCoop) return Reject(E_CampaignReason::ModRequired);
             if (hello->m_Major != kMajor || hello->m_MinMinor > kMinor || hello->m_MaxMinor < kMinor) return Reject(E_CampaignReason::UnsupportedVersion);
-            const auto features = hello->m_Offered & m_Local.m_Offered & kFeatures;
+            const auto features = hello->m_Offered & m_Local.m_Offered & kSupportedFeatures;
             if ((hello->m_Required & ~features) || (m_Local.m_Required & ~features)) return Reject(E_CampaignReason::MissingFeature);
             if (!SameContent(hello->m_Content, m_Local.m_Content, false)) return Reject(E_CampaignReason::ContentMismatch);
             if (!SameContent(hello->m_Content, m_Local.m_Content, true)) return Reject(E_CampaignReason::RulesMismatch);
@@ -847,7 +893,7 @@ S_Receive C_Admission::Receive(const T_Bytes &frame, std::uint64_t nowMs) {
         auto *accept = std::get_if<S_Accept>(&message);
         if (!accept) return Reject(E_CampaignReason::Malformed);
         if (accept->m_Major != kMajor || accept->m_Minor != kMinor) return Reject(E_CampaignReason::UnsupportedVersion);
-        if ((accept->m_Features & ~m_Local.m_Offered) || (accept->m_Features & ~kFeatures) ||
+        if ((accept->m_Features & ~m_Local.m_Offered) || (accept->m_Features & ~kSupportedFeatures) ||
             (m_Local.m_Required & ~accept->m_Features)) return Reject(E_CampaignReason::MissingFeature);
         if (!SameContent(accept->m_Content, m_Local.m_Content, false)) return Reject(E_CampaignReason::ContentMismatch);
         if (!SameContent(accept->m_Content, m_Local.m_Content, true)) return Reject(E_CampaignReason::RulesMismatch);
