@@ -2,14 +2,14 @@
 
 ## Coordination
 
-- Status: review
+- Status: done
 - Owner/session: Codex COOP-013, user assignment on 2026-11-18, thread `01a1edba-b5e3-7c73-bfa7-51e0b12fc205`
 - Canonical branch: `feature/coop-013-live-preparation`
 - Base commit: `fd5ad4c3e997be8a6d4a7211e04dd3319677e9a2`
 - Dependencies: [COOP-005](COOP-005.md) equipment transactions, [COOP-007](COOP-007.md) preparation screen, [COOP-012](COOP-012.md) session setup
 - Last checkpoint: tested source `5632e7b8` includes the default menu route and loading recovery
 - Checkpoint location: canonical origin branch and `.worktrees/COOP-013`
-- Review/integration: acceptance checks passed and candidate ready for integration review
+- Review/integration: reviewed head `c3f69622` merged as `73d518a5d4d2f1822c3caa5b995ebd4100c75477`. The merged tree matches the review rehearsal.
 - Pull request: [#28](https://github.com/xcntroller/HD2_BaseCoop/pull/28)
 
 ## Branch authority and completion PR

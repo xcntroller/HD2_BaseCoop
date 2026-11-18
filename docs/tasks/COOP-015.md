@@ -69,7 +69,7 @@ runtime evidence and legacy regression requirements.
 - Completed: task definition.
 - Remaining: implementation or verification and the acceptance evidence above.
 - Next action: Trace the original campaign nodes from Arctic1 mission exit to the next playable step and identify the host writeback boundary.
-- Blockers: Required results listed above must merge before implementation.
+- Blockers: COOP-013 merged at `73d518a5`. COOP-014 must merge before implementation.
 - Decisions: Preserve the original step sequence and record any necessary eligibility or transition departure decision before exposing that policy.
 - Local state: no task worktree or artifacts.
 - Review notes: none.
