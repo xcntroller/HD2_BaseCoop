@@ -40,6 +40,10 @@ namespace {
 
 // The port the game uses without GameSpy's listing.
 constexpr int kDefaultPort = 0x7B4F;
+// Separate DirectPlay application namespace for menu campaign sessions.
+constexpr GUID kCampaignSessionApplication{
+    0xd9b40cc5, 0x8f4f, 0x4d32, {0x9c, 0x6e, 0xf4, 0x1d, 0xa3, 0xfe, 0x02, 0x35}};
+
 // DirectPlay's codes and flags the session uses.
 constexpr HRESULT DPNSUCCESS_PENDING = 0x0015800E;
 constexpr HRESULT DPNERR_ENUMQUERYTOOLARGE_ = static_cast<HRESULT>(0x80158040);
@@ -180,8 +184,7 @@ uint32_t GetHostAddress(IDirectPlay8Address *address)
 int C_NetGame::Host(const S_NetSessionDesc &desc, bool firewall, const S_CampaignNetConfig *campaign)
 {
     Close(true);
-    if (campaign && g_gameProfile.m_mpSettings->dedicated)
-        return -1;
+    const bool dedicated = !campaign && g_gameProfile.m_mpSettings->dedicated;
 #ifdef HD2_DEDICATED
     GetSoundModule()->SetBackgroundMusic(-1, 0);   // (the server's is empty)
     // (DS 0x007798a4) The session's settings in a file, for a server started again; `autorestart`: the watchdog told.
@@ -269,7 +272,8 @@ int C_NetGame::Host(const S_NetSessionDesc &desc, bool firewall, const S_Campaig
     // (Fix: without DPNSVR. On current Windows, with DirectPlay's address family forced to IPv4, Host fails with
     // 0x80158185 and nothing is bound; clients always name the port, so they don't need it. The original: only the first.)
     application.flags = DPNSESSION_CLIENT_SERVER | DPNSESSION_NODPNSVR;
-    application.application = g_netApplicationGuid;
+    application.application = campaign && campaign->m_Route == E_CampaignLanRoute::CampaignSession
+        ? kCampaignSessionApplication : g_netApplicationGuid;
     application.sessionName = name;
     DPN_CAPS caps = SessionCaps();
     m_server->SetCaps(&caps, 0);
@@ -285,7 +289,7 @@ int C_NetGame::Host(const S_NetSessionDesc &desc, bool firewall, const S_Campaig
         }
         m_players.resize(CampaignProtocol::kMaxParticipants);
     }
-    g_gameRole = g_gameProfile.m_mpSettings->dedicated ? GAME_ROLE_SERVER : GAME_ROLE_SERVER | GAME_ROLE_CLIENT;
+    g_gameRole = dedicated ? GAME_ROLE_SERVER : GAME_ROLE_SERVER | GAME_ROLE_CLIENT;
     hr = m_server->Host(&application, reinterpret_cast<void **>(&address), 1, nullptr, nullptr, nullptr, 0);
     if (hr < 0) {
         if (address)
@@ -299,8 +303,8 @@ int C_NetGame::Host(const S_NetSessionDesc &desc, bool firewall, const S_Campaig
     if (firewall)
         ConfigureFirewall(port, true);
     m_string501C.assign(desc.password);
-    g_localPlayerSlot = g_gameProfile.m_mpSettings->dedicated ? -1 : 0;
-    if (!g_gameProfile.m_mpSettings->dedicated) {
+    g_localPlayerSlot = dedicated ? -1 : 0;
+    if (!dedicated) {
         m_playersLock.Enter();
         std::strncpy(m_players[0].name, g_gameProfile.GetPlayerProfile()->GetProfileName().c_str(), 0x32);
         m_players[0].left = true;
@@ -486,13 +490,15 @@ int C_NetGame::Connect(S_ServerEntry *server, const S_CampaignNetConfig *campaig
     if (hr < 0)
         return Fail(*this, hr, "SetClientInfo failed");
     DPN_APPLICATION_DESC application;
-    application.application = g_netApplicationGuid;
+    application.application = campaign && campaign->m_Route == E_CampaignLanRoute::CampaignSession
+        ? kCampaignSessionApplication : g_netApplicationGuid;
     g_gameRole = GAME_ROLE_CLIENT;
     IDirectPlay8Address *device = nullptr;
     IDirectPlay8Address *host = nullptr;
     CreateAddresses(server, &device, &host);
-    S_JoinRequest request;
-    std::strncpy(request.password, g_gameProfile.m_mpSettings->password.c_str(), sizeof request.password);
+    S_JoinRequest request{};
+    if (!campaign)
+        std::strncpy(request.password, g_gameProfile.m_mpSettings->password.c_str(), sizeof request.password);
     request.versionMajor = g_versionMajor;
     request.versionMinor = g_versionMinor;
     request.unknown1C = 2;
@@ -562,13 +568,28 @@ long __stdcall C_NetGame::HandleClientMessage(C_NetGame *net, void *, uint32_t t
     case DPN_MSGID_CONNECT_COMPLETE: {
         // Accepted: the slot the server gave in the reply; refused: the reason (its join status).
         const auto *complete = static_cast<const DPNMSG_CONNECT_COMPLETE *>(message);
-        if (complete->result == 0 && complete->replySize != 0 && complete->replyData) {
+        const bool hasReply = complete->replySize != 0 && complete->replyData;
+        if (IsCampaignNet()) {
+            using R = E_CampaignReason;
+            if (complete->result == 0 && hasReply) {
+                g_localPlayerSlot = complete->replyData[0] & 0x7F;
+                if (g_localPlayerSlot > 0 && g_localPlayerSlot < static_cast<int>(CampaignProtocol::kMaxParticipants) &&
+                    QueueCampaignPeer(0, g_localPlayerSlot))
+                    break;
+            }
+            auto reason = hasReply || complete->result == 0 ? R::Disconnected : R::Timeout;
+            if (hasReply && complete->result != 0) {
+                if (complete->replyData[0] == NET_JOIN_FULL)
+                    reason = R::SessionFull;
+                else if (complete->replyData[0] == NET_JOIN_BAD_VERSION)
+                    reason = R::UnsupportedVersion;
+            }
+            QueueCampaignJoinFailure(reason);
+        } else if (complete->result == 0 && hasReply) {
             g_localPlayerSlot = complete->replyData[0] & 0x7F;
-            if (IsCampaignNet())
-                QueueCampaignPeer(0, g_localPlayerSlot);
-            else if (net->m_serverLink)
+            if (net->m_serverLink)
                 net->m_serverLink->m_id = g_localPlayerSlot;
-        } else if (complete->replySize != 0) {
+        } else if (hasReply) {
             net->m_joinStatus = complete->replyData[0];
         }
         break;

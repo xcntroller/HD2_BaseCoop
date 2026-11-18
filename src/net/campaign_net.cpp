@@ -51,6 +51,7 @@ struct S_Peer {
 };
 
 std::atomic<bool> g_enabled{false};
+std::atomic<R> g_joinFailure{R::None};
 // Protect the provider connection registry and queue. Admission, game callbacks,
 // and DirectPlay calls execute on the game thread outside this lock.
 std::mutex g_queueLock;
@@ -122,6 +123,30 @@ void Reject(C_NetGame &net, S_Peer &peer, R reason, std::uint64_t now, bool send
     NotifyDeparture(peer, reason);
 }
 
+void CommitAdmissions(C_NetGame &net, std::uint64_t now)
+{
+    // Transport PlayerIds are allocated on connection. A later peer can finish
+    // negotiation first, but ownership commits live incarnations in ID order.
+    // Departure or the handshake deadline unblocks the next ready peer.
+    for (auto &entry : g_peers) {
+        auto &peer = entry.second;
+        if (peer.m_Admitted || peer.m_CloseAt)
+            continue;
+        if (peer.m_Admission.GetState() != E_Admission::Admitted)
+            break;
+        const auto reason = g_config.m_Admitted
+            ? g_config.m_Admitted(peer.m_Admission.GetAgreement(), peer.m_Link.m_Slot)
+            : R::NotAdmitted;
+        if (reason != R::None) {
+            Reject(net, peer, reason, now, true);
+            continue;
+        }
+        peer.m_Admitted = true;
+        if (!g_host)
+            net.m_joinStatus = NET_JOIN_CONNECTED;
+    }
+}
+
 void Receive(C_NetGame &net, S_Peer &peer, const T_Bytes &packet, std::uint64_t now)
 {
     if (peer.m_CloseAt)
@@ -135,18 +160,8 @@ void Receive(C_NetGame &net, S_Peer &peer, const T_Bytes &packet, std::uint64_t 
         Reject(net, peer, replied ? received.m_Reason : R::Disconnected, NowMs(), false);
         return;
     }
-    if (!peer.m_Admitted && peer.m_Admission.GetState() == E_Admission::Admitted) {
-        auto reason = g_config.m_Admitted
-            ? g_config.m_Admitted(peer.m_Admission.GetAgreement(), peer.m_Link.m_Slot)
-            : R::NotAdmitted;
-        if (reason != R::None) {
-            Reject(net, peer, reason, NowMs(), true);
-            return;
-        }
-        peer.m_Admitted = true;
-        if (!g_host)
-            net.m_joinStatus = NET_JOIN_CONNECTED;
-    }
+    if (!peer.m_Admitted && peer.m_Admission.GetState() == E_Admission::Admitted)
+        CommitAdmissions(net, NowMs());
     if (received.m_Payload && peer.m_Admitted && g_config.m_Received)
         g_config.m_Received(AdmittedPlayer(peer), std::move(*received.m_Payload));
 }
@@ -165,6 +180,7 @@ bool BeginCampaignNet(const S_CampaignNetConfig &config, bool host)
     g_host = host;
     g_startedAt = NowMs();
     g_awaitingServer = !host;
+    g_joinFailure.store(R::None);
     g_lastPlayer = host ? config.m_Host.Value() : 0;
     g_enabled.store(true);
     return true;
@@ -193,10 +209,15 @@ bool IsCampaignNet()
     return g_enabled.load();
 }
 
+bool IsCampaignNet(E_CampaignLanRoute route)
+{
+    return IsCampaignNet() && g_config.m_Route == route;
+}
+
 bool QueueCampaignPeer(std::uint32_t connection, int slot)
 {
     std::lock_guard<std::mutex> lock(g_queueLock);
-    if (!IsCampaignNet() || g_links.size() >= kMaxParticipants ||
+    if (!IsCampaignNet() || g_links.size() >= (g_host ? kMaxParticipants - 1 : 1) ||
         g_events.size() >= kMaxQueuedPackets + 32 || g_links.count(connection) ||
         g_lastPlayer == std::numeric_limits<std::uint64_t>::max())
         return false;
@@ -204,6 +225,11 @@ bool QueueCampaignPeer(std::uint32_t connection, int slot)
     g_links.emplace(connection, link);
     g_events.push_back({E_Event::Connected, link, NowMs(), {}});
     return true;
+}
+
+void QueueCampaignJoinFailure(E_CampaignReason reason)
+{
+    g_joinFailure.store(reason);
 }
 
 void QueueCampaignDeparture(std::uint32_t connection)
@@ -280,11 +306,17 @@ void ProcessCampaignNet(C_NetGame &net)
         else if (!g_host)
             net.Close(false);
     }
-    if (g_awaitingServer && now - g_startedAt >= kTimeoutMs) {
-        g_awaitingServer = false;
-        if (g_config.m_Departed)
-            g_config.m_Departed({}, R::Timeout);
-        net.Close(false);
+    CommitAdmissions(net, now);
+    if (g_awaitingServer) {
+        auto reason = g_joinFailure.exchange(R::None);
+        if (reason == R::None && now - g_startedAt >= kTimeoutMs)
+            reason = R::Timeout;
+        if (reason != R::None) {
+            g_awaitingServer = false;
+            if (g_config.m_Departed)
+                g_config.m_Departed({}, reason);
+            net.Close(false);
+        }
     }
 }
 
