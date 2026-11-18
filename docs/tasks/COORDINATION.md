@@ -6,11 +6,11 @@ creating or updating the operational branch. Do not merge its WIP ledger into `m
 
 ## Coordinator
 
-- Owner/session: Codex COOP-014, user assignment, thread `01a1ed7a-ddd9-7000-bbec-e292bd129d25`.
-- Contact/shared channel: this ledger and COOP-014 PR #25.
-- Integrator: Codex COOP-014 for the Arctic1 technical delivery after separate review.
+- Owner/session: Codex COOP-015, user assignment, thread `01a1eead-4d91-7b52-a8d5-cd1a32cce6d3`.
+- Contact/shared channel: this ledger and the canonical COOP-015 branch.
+- Integrator: Codex COOP-015 after separate review and acceptance checks.
 - Latest checkpoint: `HEAD` on `origin/coord/coop-work-queue`.
-- Next action: COOP-014 is integrated and has stopped coordination writes. COOP-015 is ready and unassigned. The full paired original Arctic1 route remains an owner playtest.
+- Next action: COOP-015 claims the campaign debrief and progression scope.
 
 ## Accepted task claims
 
@@ -32,6 +32,7 @@ creating or updating the operational branch. Do not merge its WIP ledger into `m
 | COOP-014 | Codex COOP-014, user assignment, thread `01a1ed7a-ddd9-7000-bbec-e292bd129d25` | `feature/coop-014-arctic1-completion` | done | PR #25 merged `619d6aec`; completion PR #30 merged `ca5ae2f8` | Technical delivery is integrated. The full paired route remains an owner playtest. |
 | COOP-013 | Codex COOP-013, explicit user assignment on 2026-11-18 | `feature/coop-013-live-preparation` | done | PR #28 merged `73d518a5`; completion PR #29 merged `e4344dfc` | First menu deployment and recovery integrated. COOP-015 still awaits COOP-014. |
 
+| COOP-015 | Codex COOP-015, assigned by user, thread `01a1eead-4d91-7b52-a8d5-cd1a32cce6d3` | `feature/coop-015-campaign-progression` | active | Base `ca5ae2f8` | Trace original campaign steps and the host writeback boundary. |
 
 Only the coordinator adds or reassigns claims. A missing row is not sufficient evidence
 of availability: check worktrees and existing task branches as well. Task records carry
@@ -268,3 +269,8 @@ missing fields. COOP-006 was notified explicitly before this stopped-writer hand
 - PR #25 merged as `619d6aec77ed902e30e0b79dddad2cf67bffaf5d`. Its tree matches the reviewed candidate `4aa68925`. The separate documentation review passed and PR #30 merged as `ca5ae2f897524cc1905e343b5b7ad3910e56f4c3`.
 - COOP-015 is ready and unassigned. The readiness entry gives the host result API and preserves its debrief and progression scope. The paired owner playtest is still pending with exact route steps. The task worktree, production build and debug-assisted evidence are preserved.
 - COOP-014 stops all ledger writes after this ordinary push. A successor can accept this published stopped-writer handoff before writing the ledger.
+
+## COOP-015 coordinator acceptance and claim
+
+- COOP-015 accepts the published stopped-writer handoff at `1adca72e`. Refreshed origin, verified both dependency merges under `ca5ae2f8`, and found no competing task branch, worktree, or PR.
+- Acknowledged the user's COOP-015 assignment. Reserved scope covers the campaign step and debrief routes, readiness and progression transport, host writeback, and continued preparation/loading and ownership boundaries. Disk persistence and mid-mission admission remain outside the task.
