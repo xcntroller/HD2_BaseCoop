@@ -6,11 +6,11 @@ creating or updating the operational branch. Do not merge its WIP ledger into `m
 
 ## Coordinator
 
-- Owner/session: handoff available; Codex COOP-005 / thread `01a1ebf9-90e7-7ca2-8a1d-987711a3d8fe` explicitly STOPS ledger writes after publishing this checkpoint (2026-11-18).
-- Contact/shared channel: this ledger and active COOP-006/007 threads below. COOP-004 declined ongoing coordination after completing its goal; COOP-006 indicated willingness to accept after this stopped-writer handoff, but no successor is recorded until they update the ledger.
-- Integrator: transferable. No unreviewed COOP-006/007 integration is approved by this handoff.
-- Latest checkpoint: `HEAD` identifies this final update. Ordinary push to `origin/coord/coop-work-queue`; never merge this branch wholesale into main.
-- Next action: successor explicitly accepts this stopped-writer handoff, records identity and notifies COOP-006/007. Review remaining candidates and preserve their active scopes/tooling.
+- Owner/session: Codex COOP-006 / thread `01a1ec01-a68f-7170-9f75-7536a079675b` accepts COOP-005's explicit stopped-writer handoff `4beabd6b` (2026-11-18).
+- Contact/shared channel: this published ledger and active COOP-006/007 threads below; COOP-001 thread is independently reviewing COOP-006 read-only.
+- Integrator: COOP-006, with separate independent review by COOP-001 before its own task can merge. No unreviewed integration is approved.
+- Latest checkpoint: `HEAD` identifies this update. Ordinary push to `origin/coord/coop-work-queue`; never merge this branch wholesale into main.
+- Next action: resolve COOP-001's COOP-006 replica-floor/manifest-coherence findings, rerun checks and obtain final independent review. Preserve COOP-007's claim and private toolchain/native UI gate.
 
 ## Accepted task claims
 
@@ -21,7 +21,7 @@ creating or updating the operational branch. Do not merge its WIP ledger into `m
 | COOP-011 | Codex COOP-011 / thread `01a1ebe7-2361-7503-8dcb-6e0739646604`, user assignment | `feature/coop-011-shared-declarations` | done | PR #6 merge `0f367ed6`; metadata PR #7 `4d6f8cc1` | Shared declarations integrated; final coordinator target/native conformance passed. |
 | COOP-004 | Codex COOP-004 / thread `01a1ebf9-60c7-74d0-9d39-cd09295875b0`, user assignment | `feature/coop-004-ownership` | done | PR #9 merge `59a480c8`; done metadata PR #14 `b72b6f63`; `.worktrees/COOP-004` | `campaign_session.{h,cpp}`, `campaign_ownership.{h,cpp}`, ownership harness and own record. Engine-independent; no shared header/legacy edits. |
 | COOP-005 | Codex COOP-005 / thread `01a1ebf9-90e7-7ca2-8a1d-987711a3d8fe`, user assignment | `feature/coop-005-preparation-model` | done | PR #8 merge `06d999d7`; done metadata PR #15 `5f561496`; `.worktrees/COOP-005` | Atomic preparation model/harness/own record; audit actual legacy rules. Native rule parity remains acceptance, injected generic fake does not satisfy it. |
-| COOP-006 | Codex COOP-006 / thread `01a1ec01-a68f-7170-9f75-7536a079675b`, user assignment | `feature/coop-006-protocol` | active; claim acknowledged by this commit | PR #13 candidate `ab192a56` (source `08a2f5e2`); further semantic refinements active; `.worktrees/COOP-006` | `src/net/campaign_protocol.{h,cpp}`, protocol harness and own record. Native dispatch audit read-only; no shared header or live hooks. |
+| COOP-006 | Codex COOP-006 / thread `01a1ec01-a68f-7170-9f75-7536a079675b`, user assignment | `feature/coop-006-protocol` | active; claim acknowledged by this commit | PR #13 candidate `6f4ea658`; independent COOP-001 review active, findings pending; `.worktrees/COOP-006` | `src/net/campaign_protocol.{h,cpp}`, protocol harness and own record. Native dispatch audit read-only; no shared header or live hooks. |
 | COOP-007 | Codex COOP-007 / thread `01a1ec02-1d0b-7791-8a57-e16ee680b905`, user assignment | `feature/coop-007-preparation-screen` | active; claim acknowledged by this commit | Checkpoint `be6aea95`; draft PR #12; `.worktrees/COOP-007` | Native `campaign_preparation_screen.{h,cpp}`, UI harness and own record. Consume merged header/layout; no legacy panel edits or production entry. Required native rendering/input evidence remains gate. |
 | COOP-001 | Codex / 2026-11-18 user assignment | `feature/coop-001-build-baseline` | done | PR #2 merge `15b572ff`; completion metadata PR #11 merge `1b9b307f` | Build/solo/native host-guest baseline and isolation accepted; guide/evidence integrated. Firing/reload/completion remain unverified downstream gates. |
 
@@ -64,3 +64,11 @@ Optional result generations describe the full current state epoch, not request-f
 presence (a later preparation includes a valid previous MissionGeneration). Ownership
 snapshots have no preparation/view revision fields, so do not invent comparisons for
 missing fields. COOP-006 was notified explicitly before this stopped-writer handoff.
+
+## COOP-006 coordinator acceptance checkpoint
+
+- COOP-005 explicitly stopped ledger writes at `4beabd6b`; COOP-006 accepts the role and notifies COOP-007/001. Existing task ownership/scopes remain unchanged.
+- Main is `5f561496`; COOP-004/005 implementation and independently reviewed completion metadata are integrated. No draft dependency is approved for merging.
+- COOP-006 `6f4ea658` passed expanded GCC/MSVC x86 eight suites (541,799 checks); sanitizer repeat in progress. COOP-001 is independently reviewing the complete code/harness, no approval yet. Its findings require a minimum observed generation/view after a delta gap and manifest nested actor/binding coherence; worker is fixing them before final review.
+- COOP-007 retains PR #12/native rendering/input acceptance gate. Its private pinned compiler/SDK/Python is borrowed read-only by COOP-006 using separate prefix/output; preserve resources and all active worktrees.
+- COOP-008/009 readiness must be updated only after COOP-006 actually merges. COOP-010 retains all live admission, dispatch, replication and host/guest runtime gates.
